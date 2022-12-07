@@ -80,7 +80,7 @@ print(SC_indices)
 
 def find_d(indices_list, a):
     miller = np.array(indices_list)
-    return a/np.sqrt(SC_miller.T[0]**2 + SC_miller.T[1]**2 + SC_miller.T[2]**2)
+    return a/np.sqrt(miller.T[0]**2 + miller.T[1]**2 + miller.T[2]**2)
 
 d_SC = find_d(SC_indices, 1)
 print(d_SC)

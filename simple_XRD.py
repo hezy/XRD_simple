@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-ef lorentz(x, wL):
+def lorentz(x, wL):
     # Lorentz with max=1 and w=FWHM: 
     gamma = wL
     return 1 / (1 + np.square(x/gamma)) 

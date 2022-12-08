@@ -63,7 +63,7 @@ def find_d(indices_list, a):
 
 
 def bragg_angels(wavelength, d_spacings):
-    return 180/np.pi * np.arcsin(wavelength/(2*d_spacings))
+    return 2 * 180/np.pi * np.arcsin(wavelength/(2*d_spacings))  # *2 for 2θ  
     
 
 def make_graph (x, y):
@@ -71,7 +71,7 @@ def make_graph (x, y):
     ax.grid(visible=True, which='both', axis='both')
     ax.minorticks_on()
     ax.set_title("XRD", fontsize=16)
-    ax.set_xlabel(r"$\theta$", fontsize=14)
+    ax.set_xlabel(r"$2 \theta$", fontsize=14)
     #ax.set_xlim()
     ax.set_ylabel(r"Intensity", fontsize=14)
     #ax.set_ylim()
@@ -81,7 +81,7 @@ def make_graph (x, y):
     
 
 N = 500
-theta_space = np.linspace (0, 25, N)
+theta_space = np.linspace (0, 50, N)
 #peaks_position = np.array([10.0,20.0,30.0,40.0,50.0,60.0,70.0,80.0,90.0])
 
 wavelength = 0.15418  # CuKα radiation in nm

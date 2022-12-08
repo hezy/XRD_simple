@@ -80,17 +80,12 @@ def make_graph (x, y):
     ax.legend()
     
 
+
 N = 500
 theta_space = np.linspace (0, 50, N)
-#peaks_position = np.array([10.0,20.0,30.0,40.0,50.0,60.0,70.0,80.0,90.0])
 
 wavelength = 0.15418  # CuKα radiation in nm
 U, V, W = 0.2, 0.1, 0.05
-
-#angular_intensity = intensity(theta_space, peaks_position, peaks_width(peaks_position, U, V, W))
-#print(angular_intensity)
-
-#make_graph(theta_space,angular_intensity)
 
 
 ### In simple cubic lattince, all Miller indices are allowed
@@ -102,10 +97,9 @@ d_SC = find_d(SC_indices, 1)
 # print(d_SC)
 
 a_SC = 0.3352 # a for SC Polonium (α-Po), from https://en.wikipedia.org/wiki/Polonium
+
 bragg_angels_SC = bragg_angels(wavelength, d_SC)
-
 angular_intensity_SC = intensity(theta_space, bragg_angels_SC, peaks_width(bragg_angels_SC, U, V, W))
-
 make_graph(theta_space,angular_intensity_SC)
 
 
@@ -117,6 +111,12 @@ for item in BCC_indices:
 # print(BCC_indices)  
 d_BCC = find_d(BCC_indices, 1)
 # print(d_BCC)
+
+a_BCC = 0.33058 # a for BCC Tantalum (α-Ta), from https://en.wikipedia.org/wiki/Tantalum
+
+bragg_angels_BCC = bragg_angels(wavelength, d_BCC)
+angular_intensity_BCC = intensity(theta_space, bragg_angels_BCC, peaks_width(bragg_angels_BCC, U, V, W))
+make_graph(theta_space,angular_intensity_BCC)
 
 
 ### In face centered cubic lattice, h,k,l must all be either odd or even

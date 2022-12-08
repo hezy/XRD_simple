@@ -8,7 +8,8 @@ Created on Wed Dec  7 14:56:13 2022
 
 import numpy as np
 import matplotlib.pyplot as plt
-
+from scipy.special import wofz
+from scipy.optimize import curve_fit
 
 def lorentz(x, wL):
     # Lorentz with max=1 and w=FWHM: 
@@ -41,73 +42,79 @@ def peak(x, x0, A, w, n):
     return A * pseudo_voigt(x-x0, w, n)
 
 
-xi = np.array([10.0,20.0,30.0,40.0,50.0,60.0,70.0,80.0,90.0])
-xi_rad = xi*np.pi/180
-U, V, W = 0.2, 0.1, 0.05
-wi = np.sqrt( U*np.tan(xi_rad/2)**2 + V*np.tan(xi_rad/2) + W)
-
-x = np.linspace (0, 120 , 500)
-y = np.zeros(500)
+def peaks_width(theta, U, V, W):
+    theta_rad = theta*np.pi/180
+    return np.sqrt( U*np.tan(theta_rad/2)**2 + V*np.tan(theta_rad/2) + W)
 
 
-for n in range(9):
-    print(n, xi[n], wi[n])
-    y = y + peak(x, xi[n], 1, wi[n], 0.5)
+def intensity(theta_space, peaks_positions, peaks_width):
+    y = np.zeros(500)
+    for n in range(9):
+        #print(n, peaks_position[n], peaks_width[n])
+        y = y + peak(theta_space, peaks_position[n], 1, peaks_width[n], 0.5)
+    return y
 
-fig1, ax = plt.subplots(figsize=(14, 8))
-ax.grid(visible=True, which='both', axis='both')
-ax.minorticks_on()
-ax.set_title("Gaussian and Lorentzian", fontsize=16)
-ax.set_xlabel("x", fontsize=14)
-#ax.set_xlim()
-ax.set_ylabel("y", fontsize=14)
-#ax.set_ylim()
-ax.plot(x,y, '.r', label='experiment')
-ax.plot(x,y, '-b', label='theory')
-#ax.plot(x,yL, '-r', label='Lorentz')
-#ax.plot(x,yG, '-b', label='Gauss')
-#ax.plot(x,yPV, '-m', label='Pseudo Voigt')
-#ax.plot(x,yV, '-g', label='Voigt')
-ax.legend()
-
-
-# In simple cubic lattince, all Miller indices are allowed
-from itertools import combinations_with_replacement
-sample_list = [0, 1, 2, 3]
-SC_indices = list(combinations_with_replacement(sample_list, 3))
-SC_indices.remove((0,0,0))
-print(SC_indices)
 
 def find_d(indices_list, a):
     miller = np.array(indices_list)
     return a/np.sqrt(miller.T[0]**2 + miller.T[1]**2 + miller.T[2]**2)
 
-d_SC = find_d(SC_indices, 1)
-print(d_SC)
+
+def make_graph (x, y):
+    fig1, ax = plt.subplots(figsize=(14, 8))
+    ax.grid(visible=True, which='both', axis='both')
+    ax.minorticks_on()
+    ax.set_title("XRD", fontsize=16)
+    ax.set_xlabel(r"$\theta$", fontsize=14)
+    #ax.set_xlim()
+    ax.set_ylabel(r"Intensity", fontsize=14)
+    #ax.set_ylim()
+    ax.plot(x,y, '.r', label='experiment')
+    ax.plot(x,y, '-b', label='theory')
+    ax.legend()
+    
+
+N = 500
+theta_space = np.linspace (0, 120, N)
+peaks_position = np.array([10.0,20.0,30.0,40.0,50.0,60.0,70.0,80.0,90.0])
+U, V, W = 0.2, 0.1, 0.05
+angular_intensity = intensity(theta_space, peaks_position, peaks_width(peaks_position, U, V, W))
+#print(angular_intensity)
+
+make_graph(theta_space,angular_intensity)
 
 
-# In body centerd cubic lattice, only indices with h+k+l=even are allowed
-BCC_indices = SC_indices[:]
-for item in BCC_indices:
-        if (item[0] + item[1] + item[2]) % 2 != 0:
-            BCC_indices.remove(item)
-print(BCC_indices)  
+# # In simple cubic lattince, all Miller indices are allowed
+# from itertools import combinations_with_replacement
+# sample_list = [0, 1, 2, 3]
+# SC_indices = list(combinations_with_replacement(sample_list, 3))
+# SC_indices.remove((0,0,0))
+# print(SC_indices)
+# d_SC = find_d(SC_indices, 1)
+# print(d_SC)
 
-d_BCC = find_d(BCC_indices, 1)
-print(d_BCC)
+
+# # In body centerd cubic lattice, only indices with h+k+l=even are allowed
+# BCC_indices = SC_indices[:]
+# for item in BCC_indices:
+#         if (item[0] + item[1] + item[2]) % 2 != 0:
+#             BCC_indices.remove(item)
+# print(BCC_indices)  
+# d_BCC = find_d(BCC_indices, 1)
+# print(d_BCC)
 
 
-#In face centered cubic lattice, h,k,l must all be either odd or even
-FCC_indices = SC_indices[:]
-for item in FCC_indices:
-        all = "mixed"
-        if (item[0]%2 != 0) and (item[1]%2 != 0) and (item[2]%2 != 0):
-            all = "all pair"
-        if (item[0]%2 == 0) and (item[1]%2 == 0) and (item[2]%2 == 0):
-            all = "all even"
-        if all == "mixed":
-            FCC_indices.remove(item)
-print(FCC_indices)    
+# #In face centered cubic lattice, h,k,l must all be either odd or even
+# FCC_indices = SC_indices[:]
+# for item in FCC_indices:
+#         all = "mixed"
+#         if (item[0]%2 != 0) and (item[1]%2 != 0) and (item[2]%2 != 0):
+#             all = "all pair"
+#         if (item[0]%2 == 0) and (item[1]%2 == 0) and (item[2]%2 == 0):
+#             all = "all even"
+#         if all == "mixed":
+#             FCC_indices.remove(item)
+# print(FCC_indices)      
+# d_FCC = find_d(FCC_indices, 1)
+# print(d_FCC)
 
-d_FCC = find_d(FCC_indices, 1)
-print(d_FCC)

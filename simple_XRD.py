@@ -133,3 +133,9 @@ for item in FCC_indices:
 d_FCC = find_d(FCC_indices, 1)
 # print(d_FCC)
 
+a_FCC = 0.392 # a for FCC Platinum, from https://en.wikipedia.org/wiki/Lattice_constant
+
+bragg_angels_FCC = bragg_angels(wavelength, d_FCC)
+angular_intensity_FCC = intensity(theta_space, bragg_angels_FCC, peaks_width(bragg_angels_FCC, U, V, W))
+make_graph(theta_space,angular_intensity_FCC)
+

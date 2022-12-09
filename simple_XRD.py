@@ -75,7 +75,7 @@ def make_graph (x, y):
     #ax.set_xlim()
     ax.set_ylabel(r"Intensity", fontsize=14)
     #ax.set_ylim()
-    ax.plot(x,y, '.r', label='experiment')
+    #ax.plot(x,y, '.r', label='experiment')
     ax.plot(x,y, '-b', label='theory')
     ax.legend()
     
@@ -85,7 +85,7 @@ N = 500
 theta_space = np.linspace (0, 50, N)
 
 wavelength = 0.15418  # CuKα radiation in nm
-U, V, W = 0.2, 0.1, 0.05
+U, V, W = 0.1, 0.05, 0.02
 
 
 ### In simple cubic lattince, all Miller indices are allowed

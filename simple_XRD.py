@@ -49,11 +49,11 @@ def peaks_width(theta, U, V, W):
     return np.sqrt( U*np.tan(theta_rad/2)**2 + V*np.tan(theta_rad/2) + W)
 
 
-def intensity(theta_space, peaks_positions, peaks_width):
-    y = np.zeros(500)
-    for n in range(9):
+def intensity(theta_space, peaks_positions, peaks_width, mixing_factor):
+    y = np.zeros(len(theta_space))
+    for n in range(len(peaks_positions)):
         #print(n, peaks_position[n], peaks_width[n])
-        y = y + peak(theta_space, peaks_positions[n], 1, peaks_width[n], 0.5)
+        y = y + peak(theta_space, peaks_positions[n], 1, peaks_width[n], mixing_factor)
     return y
 
 
@@ -99,7 +99,7 @@ d_SC = find_d(SC_indices, 1)
 a_SC = 0.3352 # a for SC Polonium (α-Po), from https://en.wikipedia.org/wiki/Polonium
 
 bragg_angels_SC = bragg_angels(wavelength, d_SC)
-angular_intensity_SC = intensity(theta_space, bragg_angels_SC, peaks_width(bragg_angels_SC, U, V, W))
+angular_intensity_SC = intensity(theta_space, bragg_angels_SC, peaks_width(bragg_angels_SC, U, V, W), 0.5)
 make_graph(theta_space,angular_intensity_SC)
 
 
@@ -115,7 +115,7 @@ d_BCC = find_d(BCC_indices, 1)
 a_BCC = 0.33058 # a for BCC Tantalum (α-Ta), from https://en.wikipedia.org/wiki/Tantalum
 
 bragg_angels_BCC = bragg_angels(wavelength, d_BCC)
-angular_intensity_BCC = intensity(theta_space, bragg_angels_BCC, peaks_width(bragg_angels_BCC, U, V, W))
+angular_intensity_BCC = intensity(theta_space, bragg_angels_BCC, peaks_width(bragg_angels_BCC, U, V, W), 0.5)
 make_graph(theta_space,angular_intensity_BCC)
 
 
@@ -136,6 +136,6 @@ d_FCC = find_d(FCC_indices, 1)
 a_FCC = 0.392 # a for FCC Platinum, from https://en.wikipedia.org/wiki/Lattice_constant
 
 bragg_angels_FCC = bragg_angels(wavelength, d_FCC)
-angular_intensity_FCC = intensity(theta_space, bragg_angels_FCC, peaks_width(bragg_angels_FCC, U, V, W))
+angular_intensity_FCC = intensity(theta_space, bragg_angels_FCC, peaks_width(bragg_angels_FCC, U, V, W), 0.5)
 make_graph(theta_space,angular_intensity_FCC)
 

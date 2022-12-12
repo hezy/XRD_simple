@@ -109,11 +109,11 @@ def make_graph (x, y):
 
 
 N = 500
-theta_space = np.linspace (0, 50, N)
+theta_space = np.linspace (0, 90, N)
 
 wavelength = 0.15418  # CuKα radiation in nm
 U, V, W = 0.1, 0.05, 0.02
-sample_list = [0, 1, 2, 3, 4]  # for Miller indices
+sample_list = [0, 1, 2, 3, 4, 5, 6]  # for Miller indices
 
 
 """

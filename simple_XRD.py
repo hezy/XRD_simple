@@ -9,8 +9,9 @@ Created on Wed Dec  7 14:56:13 2022
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import wofz
-from scipy.optimize import curve_fit
+#from scipy.optimize import curve_fit
 from itertools import combinations_with_replacement
+from itertools import product
 
 
 def lorentz(x, wL):
@@ -90,7 +91,7 @@ U, V, W = 0.2, 0.1, 0.05
 
 ### In simple cubic lattince, all Miller indices are allowed
 sample_list = [0, 1, 2, 3]
-SC_indices = list(combinations_with_replacement(sample_list, 3))
+SC_indices = list(product([0, 1, 2, 3], repeat = 3))
 SC_indices.remove((0,0,0))
 # print(SC_indices)
 d_SC = find_d(SC_indices, 1)

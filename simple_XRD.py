@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import wofz
 #from scipy.optimize import curve_fit
-from itertools import combinations_with_replacement
+#from itertools import combinations_with_replacement
 from itertools import product
 
 
@@ -51,7 +51,7 @@ def peaks_width(theta, U, V, W):
 
 
 def intensity(theta_space, peaks_positions, peaks_width):
-    y = np.zeros(500)
+    y = np.zeros(2000)
     for n in range(9):
         #print(n, peaks_position[n], peaks_width[n])
         y = y + peak(theta_space, peaks_positions[n], 1, peaks_width[n], 0.5)
@@ -82,7 +82,7 @@ def make_graph (x, y):
     
 
 
-N = 500
+N = 2000
 theta_space = np.linspace (0, 50, N)
 
 wavelength = 0.15418  # CuKα radiation in nm

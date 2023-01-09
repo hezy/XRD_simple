@@ -95,7 +95,7 @@ U, V, W = 0.2, 0.1, 0.05
 ''' Simple Cubic '''
 ### In simple cubic lattince, all Miller indices are allowed
 sample_list = [0, 1, 2, 3]
-indices_SC = list(product([0, 1, 2, 3], repeat = 3))
+indices_SC = list(product(sample_list, repeat = 3))
 indices_SC.remove((0,0,0))
 # print(SC_indices)
 
@@ -140,20 +140,12 @@ make_graph(theta_space,angular_intensity_BCC)
 ''' Face Centered Cubic '''
 ### In face centered cubic lattice, h,k,l must all be either odd or even
 indices_FCC = []
-print('before:' ,indices_SC)
+#print('before:' ,indices_SC)
 for item in indices_SC:
-        all = "mixed"
         if [(-1)**item[0], (-1)**item[1] ,(-1)**item[2]] == [1,1,1]:
-            all = "all pair"
-            print(item, all)
             indices_FCC.append(item)
         if [(-1)**item[0], (-1)**item[1] ,(-1)**item[2]] == [-1,-1,-1]:
-            all = "all even"
-            print(item, all)
-            indices_FCC.append(item)
-        if all == "mixed":
-            print(item, all)
-print('after:' ,indices_FCC)      
+            indices_FCC.append(item)  
 
 #a_FCC = 0.39242 
 #a for FCC Platinum from https://periodictable.com/Elements/078/data.html

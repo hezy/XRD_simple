@@ -64,7 +64,9 @@ def find_d(indices_list, a):
 
 
 def bragg_angels(wavelength, d_spacings):
-    return 2 * 180/np.pi * np.arcsin(wavelength/(2*d_spacings))  # *2 for 2θ  
+    sintheta = wavelength/(2*d_spacings)
+    sintheta = sintheta[abs(sintheta)<=1]  # removing values outside (-1,1)
+    return 2 * 180/np.pi * np.arcsin(sintheta)  # *2 for 2θ  
     
 
 def make_graph (x, y):
@@ -83,7 +85,7 @@ def make_graph (x, y):
 
 ''' Setup '''
 N = 2000
-theta_space = np.linspace (0, 50, N)
+theta_space = np.linspace (0, 100, N)
 
 wavelength = 0.15418  # CuKα radiation in nm
 #wavelength = 0.4122  # 
@@ -107,7 +109,7 @@ bragg_angels_SC = bragg_angels(wavelength, d_SC)
 angular_intensity_SC = intensity(theta_space,
                                  bragg_angels_SC,
                                  peaks_width(bragg_angels_SC, U, V, W))
-make_graph(theta_space,angular_intensity_SC)
+make_graph(theta_space, angular_intensity_SC)
 
 
 ''' Body Centered Cubic '''
@@ -135,14 +137,13 @@ angular_intensity_BCC = intensity(theta_space,
 make_graph(theta_space,angular_intensity_BCC)
 
 
-''' Face Centered Cubic '''
-### In face centered cubic lattice, h,k,l must all be either odd or even
+ ### In face centered cubic lattice, h,k,l must all be either odd or even
 FCC_indices = SC_indices[:]
 for item in FCC_indices:
         all = "mixed"
-        if (item[0]%2 != 0) and (item[1]%2 != 0) and (item[2]%2 != 0):
+        if [(-1)**item[0], (-1)**item[1] ,(-1)**item[2]] == [1,1,1]:
             all = "all pair"
-        if (item[0]%2 == 0) and (item[1]%2 == 0) and (item[2]%2 == 0):
+        if [(-1)**item[0], (-1)**item[1] ,(-1)**item[2]] == [-1,-1,-1]:
             all = "all even"
         if all == "mixed":
             FCC_indices.remove(item)

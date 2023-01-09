@@ -95,14 +95,14 @@ U, V, W = 0.2, 0.1, 0.05
 ''' Simple Cubic '''
 ### In simple cubic lattince, all Miller indices are allowed
 sample_list = [0, 1, 2, 3]
-SC_indices = list(product([0, 1, 2, 3], repeat = 3))
-SC_indices.remove((0,0,0))
+indices_SC = list(product([0, 1, 2, 3], repeat = 3))
+indices_SC.remove((0,0,0))
 # print(SC_indices)
 
 a_SC = 0.3352 
 # a for SC Polonium (α-Po), from https://en.wikipedia.org/wiki/Polonium
 
-d_SC = find_d(SC_indices, a_SC)
+d_SC = find_d(indices_SC, a_SC)
 # print(d_SC)
 
 bragg_angels_SC = bragg_angels(wavelength, d_SC)
@@ -114,11 +114,11 @@ make_graph(theta_space, angular_intensity_SC)
 
 ''' Body Centered Cubic '''
 ### In body centerd cubic lattice, only indices with h+k+l=even are allowed
-BCC_indices = SC_indices[:]
-for item in BCC_indices:
+indices_BCC = indices_SC[:]
+for item in indices_BCC:
         if (item[0] + item[1] + item[2]) % 2 != 0:
-            BCC_indices.remove(item)
-# print(BCC_indices)  
+            indices_BCC.remove(item)
+# print(indices_BCC)  
 
 #a_BCC = 0.33058 
 # a for BCC Tantalum (α-Ta), from https://en.wikipedia.org/wiki/Tantalum
@@ -126,7 +126,7 @@ for item in BCC_indices:
 a_BCC = 0.3155
 # a for BCC Tungsten (W), from https://en.wikipedia.org/wiki/Lattice_constant
 
-d_BCC = find_d(BCC_indices, a_BCC)
+d_BCC = find_d(indices_BCC, a_BCC)
 # print(d_BCC)
 
 
@@ -137,17 +137,23 @@ angular_intensity_BCC = intensity(theta_space,
 make_graph(theta_space,angular_intensity_BCC)
 
 
- ### In face centered cubic lattice, h,k,l must all be either odd or even
-FCC_indices = SC_indices[:]
-for item in FCC_indices:
+''' Face Centered Cubic '''
+### In face centered cubic lattice, h,k,l must all be either odd or even
+indices_FCC = []
+print('before:' ,indices_SC)
+for item in indices_SC:
         all = "mixed"
         if [(-1)**item[0], (-1)**item[1] ,(-1)**item[2]] == [1,1,1]:
             all = "all pair"
+            print(item, all)
+            indices_FCC.append(item)
         if [(-1)**item[0], (-1)**item[1] ,(-1)**item[2]] == [-1,-1,-1]:
             all = "all even"
+            print(item, all)
+            indices_FCC.append(item)
         if all == "mixed":
-            FCC_indices.remove(item)
-# print(FCC_indices)      
+            print(item, all)
+print('after:' ,indices_FCC)      
 
 #a_FCC = 0.39242 
 #a for FCC Platinum from https://periodictable.com/Elements/078/data.html
@@ -155,7 +161,7 @@ for item in FCC_indices:
 a_FCC = 0.4920 
 # a for FCC Pb, from https://en.wikipedia.org/wiki/Lattice_constant
 
-d_FCC = find_d(FCC_indices, a_FCC)
+d_FCC = find_d(indices_FCC, a_FCC)
 # print(d_FCC)
 
 bragg_angels_FCC = bragg_angels(wavelength, d_FCC)

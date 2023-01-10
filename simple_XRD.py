@@ -82,8 +82,10 @@ def make_graph (x, y):
     ax.plot(x,y, '-b', label='theory')
     ax.legend()
     
-
+''' ===== '''
 ''' Setup '''
+''' ===== '''
+
 N = 2000
 theta_space = np.linspace (0, 180, N)
 
@@ -92,14 +94,21 @@ wavelength = 0.15418  # CuKα radiation in nm
 U, V, W = 0.2, 0.1, 0.05
 
 
+''' ============ '''
 ''' Simple Cubic '''
-### In simple cubic lattince, all Miller indices are allowed
+''' ============ '''
+
+''' In simple cubic lattince, all Miller indices are allowed '''
 sample_list = [-5,-4,-3,-2,-1,0,1,2,3,4,5]
 indices_SC = list(product(sample_list, repeat = 3))
 indices_SC.remove((0,0,0))
 
+
+'''
+Lattice parameter for SC Polonium (α-Po)
+from https://en.wikipedia.org/wiki/Polonium 
+'''
 a_SC = 0.3352 
-# a for SC Polonium (α-Po), from https://en.wikipedia.org/wiki/Polonium
 
 d_SC = find_d(indices_SC, a_SC)
 
@@ -109,24 +118,31 @@ angular_intensity_SC = intensity(theta_space,
                                  peaks_width(bragg_angels_SC, U, V, W))
 make_graph(theta_space, angular_intensity_SC)
 
-
+''' =================== '''
 ''' Body Centered Cubic '''
-### In body centerd cubic lattice, only indices with h+k+l=even are allowed
+''' =================== '''
+
+''' In body centerd cubic lattice, only indices with h+k+l=even are allowed '''
 indices_BCC = []
 for item in indices_SC:
         if (item[0] + item[1] + item[2]) % 2 == 0:
             indices_BCC.append(item)
 # print(indices_BCC)  
+ 
+'''
+Lattice parameter for BCC Tantalum (α-Ta)
+from https://en.wikipedia.org/wiki/Tantalum
+'''
+a_BCC = 0.33058
 
-#a_BCC = 0.33058 
-# a for BCC Tantalum (α-Ta), from https://en.wikipedia.org/wiki/Tantalum
-
-a_BCC = 0.3155
-# a for BCC Tungsten (W), from https://en.wikipedia.org/wiki/Lattice_constant
+'''
+Lattice parameter for BCC Tungsten (W)
+from https://en.wikipedia.org/wiki/Lattice_constant
+'''
+#a_BCC = 0.3155
 
 d_BCC = find_d(indices_BCC, a_BCC)
 # print(d_BCC)
-
 
 bragg_angels_BCC = bragg_angels(wavelength, d_BCC)
 angular_intensity_BCC = intensity(theta_space,
@@ -135,8 +151,11 @@ angular_intensity_BCC = intensity(theta_space,
 make_graph(theta_space,angular_intensity_BCC)
 
 
+''' =================== '''
 ''' Face Centered Cubic '''
-### In face centered cubic lattice, h,k,l must all be either odd or even
+''' =================== '''
+
+''' In face centered cubic lattice, h,k,l must all be either odd or even '''
 indices_FCC = []
 #print('before:' ,indices_SC)
 for item in indices_SC:
@@ -145,11 +164,17 @@ for item in indices_SC:
         if [(-1)**item[0], (-1)**item[1] ,(-1)**item[2]] == [-1,-1,-1]:
             indices_FCC.append(item)  
 
-#a_FCC = 0.39242 
-#a for FCC Platinum from https://periodictable.com/Elements/078/data.html
+'''
+Lattice parameter for FCC Platinum
+from https://periodictable.com/Elements/078/data.html
+'''
+a_FCC = 0.39242 
 
-a_FCC = 0.4920 
-# a for FCC Pb, from https://en.wikipedia.org/wiki/Lattice_constant
+'''
+Lattice parameter a for FCC Pb
+from https://en.wikipedia.org/wiki/Lattice_constant
+'''
+#a_FCC = 0.4920 
 
 d_FCC = find_d(indices_FCC, a_FCC)
 # print(d_FCC)

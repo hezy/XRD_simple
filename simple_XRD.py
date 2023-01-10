@@ -111,8 +111,8 @@ Setup
 N = 2000
 theta_space = np.linspace (0, 180, N)
 
-wavelength = 0.15418  # CuKα radiation in nm
-#wavelength = 0.4122  # 
+#wavelength = 0.15418  # CuKα radiation in nm
+wavelength = 0.18125  # 
 U, V, W = 0.2, 0.2, 0.2
 
 
@@ -160,13 +160,13 @@ for item in indices_SC:
 Lattice parameter for BCC Tantalum (α-Ta)
 from https://en.wikipedia.org/wiki/Tantalum
 '''
-a_BCC = 0.33058
+#a_BCC = 0.33058
 
 '''
 Lattice parameter for BCC Tungsten (W)
 from https://en.wikipedia.org/wiki/Lattice_constant
 '''
-#a_BCC = 0.3155
+a_BCC = 0.3155
 
 d_BCC = find_d(indices_BCC, a_BCC)
 # print(d_BCC)
@@ -197,13 +197,13 @@ for item in indices_SC:
 Lattice parameter for FCC Platinum
 from https://periodictable.com/Elements/078/data.html
 '''
-a_FCC = 0.39242 
+#a_FCC = 0.39242 
 
 '''
 Lattice parameter a for FCC Pb
 from https://en.wikipedia.org/wiki/Lattice_constant
 '''
-#a_FCC = 0.4920 
+a_FCC = 0.4920 
 
 d_FCC = find_d(indices_FCC, a_FCC)
 # print(d_FCC)

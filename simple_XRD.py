@@ -52,8 +52,8 @@ def peaks_width(theta, U, V, W):
 
 def intensity(theta_space, peaks_positions, peaks_width):
     y = np.zeros(2000)
-    for n in range(9):
-        #print(n, peaks_position[n], peaks_width[n])
+    for n in range(np.size(peaks_positions)):
+        #print(n, peaks_positions[n], peaks_width[n])
         y = y + peak(theta_space, peaks_positions[n], 1, peaks_width[n], 0.5)
     return y
 

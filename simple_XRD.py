@@ -1,11 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
 """
 Created on Wed Dec  7 14:56:13 2022
+@author: Yehezkel Amiel
 
-@author: hezy
+How is it now? (2023-01-10)
+    seems to work fine for cubic symmetries (sc, bcc, fcc) with one element
+
+Things to do (short term):
+    [] function "intensity" should not use built in values
+    [] function "make_graph" should give nicer titles
+    [] add random noise
+    [] add bacground
+    [] investigate U,V,W values
+    [] export to csv
+    [] read setup and sample data from external files
+
+For the future (long term):
+    [] find Miller indecies based on lattice vectors rather than selection rules
+    [] other symmetries
+    [] more than one element    
 """
 
+''' Importing lipreries '''
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import wofz
@@ -14,6 +32,8 @@ from scipy.special import wofz
 from itertools import product
 
 
+''' Functions '''
+
 def lorentz(x, wL):
     # Lorentz with max=1 and w=FWHM: 
     gamma = wL
@@ -21,7 +41,7 @@ def lorentz(x, wL):
 
 
 def gauss(x, wG):
-    # Gauss with max=1 and w=FWHM
+    # Gauss with max=1 and w=FWH
     sigma = wG/np.sqrt(2*np.log(2))
     return np.exp(- x**2 / (2* sigma**2))
 
@@ -91,7 +111,7 @@ theta_space = np.linspace (0, 180, N)
 
 wavelength = 0.15418  # CuKα radiation in nm
 #wavelength = 0.4122  # 
-U, V, W = 0.2, 0.1, 0.05
+U, V, W = 0.2, 0.2, 0.2
 
 
 ''' ============ '''

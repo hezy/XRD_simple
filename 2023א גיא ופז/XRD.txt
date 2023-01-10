@@ -1,3 +1,4 @@
+wavelength = 0.15418nm
 Sample 1... is BCC α-Ta with a = 0.33058nm
 Sample 2... is SC α-Po with a = 0.33352nm
-Sample 3... is FCC Pא with a= 0.39242nm
+Sample 3... is FCC Pt with a= 0.39242nm

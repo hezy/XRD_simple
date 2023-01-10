@@ -94,7 +94,7 @@ U, V, W = 0.2, 0.1, 0.05
 
 ''' Simple Cubic '''
 ### In simple cubic lattince, all Miller indices are allowed
-sample_list = [0,1,2,3,4]
+sample_list = [-5,-4,-3,-2,-1,0,1,2,3,4,5]
 indices_SC = list(product(sample_list, repeat = 3))
 indices_SC.remove((0,0,0))
 

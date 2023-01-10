@@ -85,7 +85,7 @@ def make_graph (x, y):
 
 ''' Setup '''
 N = 2000
-theta_space = np.linspace (0, 100, N)
+theta_space = np.linspace (0, 180, N)
 
 wavelength = 0.15418  # CuKα radiation in nm
 #wavelength = 0.4122  # 
@@ -94,16 +94,14 @@ U, V, W = 0.2, 0.1, 0.05
 
 ''' Simple Cubic '''
 ### In simple cubic lattince, all Miller indices are allowed
-sample_list = [0, 1, 2, 3]
+sample_list = [0,1,2,3,4]
 indices_SC = list(product(sample_list, repeat = 3))
 indices_SC.remove((0,0,0))
-# print(SC_indices)
 
 a_SC = 0.3352 
 # a for SC Polonium (α-Po), from https://en.wikipedia.org/wiki/Polonium
 
 d_SC = find_d(indices_SC, a_SC)
-# print(d_SC)
 
 bragg_angels_SC = bragg_angels(wavelength, d_SC)
 angular_intensity_SC = intensity(theta_space,
@@ -114,10 +112,10 @@ make_graph(theta_space, angular_intensity_SC)
 
 ''' Body Centered Cubic '''
 ### In body centerd cubic lattice, only indices with h+k+l=even are allowed
-indices_BCC = indices_SC[:]
-for item in indices_BCC:
-        if (item[0] + item[1] + item[2]) % 2 != 0:
-            indices_BCC.remove(item)
+indices_BCC = []
+for item in indices_SC:
+        if (item[0] + item[1] + item[2]) % 2 == 0:
+            indices_BCC.append(item)
 # print(indices_BCC)  
 
 #a_BCC = 0.33058 

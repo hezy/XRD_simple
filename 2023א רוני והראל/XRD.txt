@@ -1,0 +1,4 @@
+Sample 1... is SC α-Po with a = 0.33352nm
+Sample 2... is FCC Pb with a= 0.4920nm
+Sample 3... is BCC W with a = 0.3155nm
+

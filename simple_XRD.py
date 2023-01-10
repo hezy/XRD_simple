@@ -102,9 +102,11 @@ def make_graph (x, y):
     ax.plot(x,y, '-b', label='theory')
     ax.legend()
     
-''' ===== '''
-''' Setup '''
-''' ===== '''
+'''
+===== 
+Setup 
+=====
+'''
 
 N = 2000
 theta_space = np.linspace (0, 180, N)
@@ -114,9 +116,11 @@ wavelength = 0.15418  # CuKα radiation in nm
 U, V, W = 0.2, 0.2, 0.2
 
 
-''' ============ '''
-''' Simple Cubic '''
-''' ============ '''
+'''
+============
+Simple Cubic
+============
+'''
 
 ''' In simple cubic lattince, all Miller indices are allowed '''
 sample_list = [-5,-4,-3,-2,-1,0,1,2,3,4,5]
@@ -138,9 +142,12 @@ angular_intensity_SC = intensity(theta_space,
                                  peaks_width(bragg_angels_SC, U, V, W))
 make_graph(theta_space, angular_intensity_SC)
 
-''' =================== '''
-''' Body Centered Cubic '''
-''' =================== '''
+
+'''
+===================
+Body Centered Cubic
+===================
+'''
 
 ''' In body centerd cubic lattice, only indices with h+k+l=even are allowed '''
 indices_BCC = []
@@ -171,9 +178,11 @@ angular_intensity_BCC = intensity(theta_space,
 make_graph(theta_space,angular_intensity_BCC)
 
 
-''' =================== '''
-''' Face Centered Cubic '''
-''' =================== '''
+'''
+===================
+Face Centered Cubic
+===================
+'''
 
 ''' In face centered cubic lattice, h,k,l must all be either odd or even '''
 indices_FCC = []

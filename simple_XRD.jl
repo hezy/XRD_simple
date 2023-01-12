@@ -26,7 +26,7 @@ end
 
 # ╔═╡ f712027f-7f6e-4082-95f3-cae200d7f18a
 function pseudo_Voigt(x, fwhm, n)
-	return n * Gaussian(x, fwhm) .+ (1-n) * Lorentzian(x, fwhm)
+	return n .* Gaussian(x, fwhm) .+ (1 .- n) .* Lorentzian(x, fwhm)
 end
 
 # ╔═╡ cc19ef81-ad04-42f4-b1f8-3b27b40704f0
@@ -42,35 +42,19 @@ y1 = Lorentzian(x, 1)
 y2 = Gaussian(x, 1)
 
 # ╔═╡ 0f8f7180-f4bf-43d9-a380-06ffececae20
-y3 = pseudo_Voigth(x, 1, 0.5)
+y3 = pseudo_Voigt(x, 1, 0.5)
 
 # ╔═╡ 11dc7260-dcff-4a5e-ad77-bced117ea703
-plot(x, y1)
+plot(x, y1, label="Gaussian")
 
 # ╔═╡ 69cd914d-3ead-49d4-bbbc-90a5812de6a5
-plot(x, y2)
+plot(x, y2, label="Lorentzian")
 
 # ╔═╡ 2897ae1d-4764-4119-ad20-a0f3b18d120a
 plot(x, y3)
 
 # ╔═╡ 1f795c35-f78e-436a-bf92-421340584dfe
 
-
-# ╔═╡ eeb51a41-56ff-41a2-bb1e-98a392c93ea5
-begin
-	# Define the mean and standard deviation of the Gaussian
-	mu = 0
-	sigma = 1
-	
-	# Define the x values at which to evaluate the Gaussian
-	x_ = range(-3, stop=3, length=100)
-	
-	# Evaluate the Gaussian at each x value
-	y_ = exp.(-0.5 * ((x_ .- mu) ./ sigma).^2) / (sigma * sqrt(2π))
-	
-	# Plot the Gaussian
-	plot(x_, y_, label="Gaussian")
-end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1029,6 +1013,5 @@ version = "1.4.1+0"
 # ╠═69cd914d-3ead-49d4-bbbc-90a5812de6a5
 # ╠═2897ae1d-4764-4119-ad20-a0f3b18d120a
 # ╠═1f795c35-f78e-436a-bf92-421340584dfe
-# ╠═eeb51a41-56ff-41a2-bb1e-98a392c93ea5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

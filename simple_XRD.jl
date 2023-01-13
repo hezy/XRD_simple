@@ -14,14 +14,14 @@ using Ranges
 function Lorentzian(x, fwhm)
 	l1 = 2/π
 	l2 = 4.0
-    return (l1 / fwhm) ./ ((1 .+ l2 .* x.^2) / fwhm^2 ) 
+    return @. (l1 / fwhm) / ((1 + l2 * x^2) / fwhm^2 ) 
 end
 
 # ╔═╡ c1159303-2800-460e-a6ff-e957681e4c81
 function Gaussian(x, fwhm)
 	g1 = 2.0 * sqrt(log(2)/π)
 	g2 = 4.0 * log(2)
-    return (g1 / fwhm) * exp.((-g2 .* x.^2) / (fwhm^2)) 
+    return @. (g1 / fwhm) * exp((-g2 * x^2) / (fwhm^2)) 
 end
 
 # ╔═╡ f712027f-7f6e-4082-95f3-cae200d7f18a
@@ -35,20 +35,43 @@ x = range(start=-5, stop=5, step=0.01)
 # ╔═╡ 2c83b7e1-5edf-441b-b0c2-210c2927da70
 y1 = Lorentzian(x, 1)
 
-# ╔═╡ b987a44c-92fd-4b62-9158-1a0b20e46a2e
-y2 = Gaussian(x, 1)
-
-# ╔═╡ 0f8f7180-f4bf-43d9-a380-06ffececae20
+# ╔═╡ 8741d4e6-8a32-453b-8e27-f466747628af
 y3 = pseudo_Voigt(x, 1, 0.5)
 
+# ╔═╡ 396a026f-da4f-498a-867b-a3838a065f8d
+
+
+# ╔═╡ 3be58c8e-a791-48fb-ba4e-3913e0247c1a
+begin
+	plot(x,y1, label="Lorentzian")
+	plot!(x, y2, label="Gaussian")
+	plot!(x, y3, label="Pseudo Voigt")
+end
+
+# ╔═╡ 0f8f7180-f4bf-43d9-a380-06ffececae20
+# ╠═╡ disabled = true
+#=╠═╡
+
+  ╠═╡ =#
+
 # ╔═╡ 11dc7260-dcff-4a5e-ad77-bced117ea703
-plot(x, y1, label="Lorentzian")
+
+
 
 # ╔═╡ 69cd914d-3ead-49d4-bbbc-90a5812de6a5
-plot(x, y2, label="Gaussian")
+
 
 # ╔═╡ 2897ae1d-4764-4119-ad20-a0f3b18d120a
-plot(x, y3, Label="pseudo Voigt")
+
+
+# ╔═╡ b987a44c-92fd-4b62-9158-1a0b20e46a2e
+# ╠═╡ disabled = true
+#=╠═╡
+y2 = Gaussian(x, 1)
+  ╠═╡ =#
+
+# ╔═╡ 04cb4616-a8ae-4d32-9655-65050046dcd6
+y2 = Gaussian(x, 1)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1000,6 +1023,10 @@ version = "1.4.1+0"
 # ╠═f712027f-7f6e-4082-95f3-cae200d7f18a
 # ╠═298367a4-6f27-42dd-a115-e3235371347c
 # ╠═2c83b7e1-5edf-441b-b0c2-210c2927da70
+# ╠═04cb4616-a8ae-4d32-9655-65050046dcd6
+# ╠═8741d4e6-8a32-453b-8e27-f466747628af
+# ╠═3be58c8e-a791-48fb-ba4e-3913e0247c1a
+# ╠═396a026f-da4f-498a-867b-a3838a065f8d
 # ╠═b987a44c-92fd-4b62-9158-1a0b20e46a2e
 # ╠═0f8f7180-f4bf-43d9-a380-06ffececae20
 # ╠═11dc7260-dcff-4a5e-ad77-bced117ea703

@@ -41,9 +41,10 @@ y3 = pseudo_Voigt(x, 1, 0.5)
 
 # ╔═╡ 3be58c8e-a791-48fb-ba4e-3913e0247c1a
 begin
-	plot(x,y1, label="Lorentzian")
-	plot!(x, y2, label="Gaussian")
-	plot!(x, y3, label="Pseudo Voigt")
+	plot(x,[y1 y2 y3], label=["Lorentzian" "Gaussian" "Pseudo Voigt"])
+	title!("peak functions")
+	xlabel!("x")
+	ylabel!("y")
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001

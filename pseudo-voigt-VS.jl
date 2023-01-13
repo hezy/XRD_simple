@@ -4,7 +4,7 @@
 using Plots
 using SpecialFunctions
 
-x = range(start=-2, stop=2, step=0.01)
+x = range(start=-2.5, stop=2.5, step=0.01)
 
 function Gaussian(x, fwhm)
 	g1 = 2.0 * sqrt(log(2)/π)
@@ -23,15 +23,15 @@ function pseudo_Voigt(x, fwhm, n)
 end
 
 function Voigt(x, gamma, sigma)
-    z = @. (x + 1im * gamma) / (sqrt(2)*sigma)
+    z = @. -1im * (x + 1im * gamma) / (sqrt(2)*sigma)
     return @. real(erfcx(z))/(sqrt(2pi)*sigma)
 end
-
+#erfcx
 
 y1 = Lorentzian(x, 1)
 y2 = Gaussian(x, 1)
 y3 = pseudo_Voigt(x, 1, 0.5)
-y4 = pyvoigt(x, 1, 1)
+y4 = Voigt(x, 0.25, 0.25)
 
 p = plot(x,[y1 y2 y3 y4], label=["Lorentzian" "Gaussian" "Pseudo Voigt" "Voigt"])
 title!("peak functions")

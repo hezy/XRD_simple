@@ -4,17 +4,18 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 90106cf9-825f-4e84-8b70-8566e56e60b2
+# ╔═╡ dd55a803-02d8-4bf1-8821-82fe06c07cb5
 using Plots
 
-# ╔═╡ e4bde671-3608-489a-a72b-bc3bdff88090
-using SpecialFunctions
+# ╔═╡ 8e35a688-a8be-4ff7-b07e-adc40e306032
+using Ranges
 
-# ╔═╡ 7798d654-a7d6-444d-9477-7f73a256a3f0
-
-
-# ╔═╡ 298367a4-6f27-42dd-a115-e3235371347c
-x = range(start=-2, stop=2, step=0.01)
+# ╔═╡ ab93661e-92ba-11ed-0db0-a5b6da440669
+function Lorentzian(x, fwhm)
+	l1 = 2/π
+	l2 = 4.0
+    return @. (l1 / fwhm) / ((1 + l2 * x^2) / fwhm^2 ) 
+end
 
 # ╔═╡ c1159303-2800-460e-a6ff-e957681e4c81
 function Gaussian(x, fwhm)
@@ -24,57 +25,63 @@ function Gaussian(x, fwhm)
 end
 
 # ╔═╡ f712027f-7f6e-4082-95f3-cae200d7f18a
-function Lorentzian(x, fwhm)
-	l1 = 2/π
-	l2 = 4.0
-    return @. (l1 / fwhm) / ((1 + l2 * x^2) / fwhm^2 ) 
-end
-
-# ╔═╡ 3f929a62-3acb-42b1-bc20-922a74ff6460
 function pseudo_Voigt(x, fwhm, n)
 	return n * Gaussian(x, fwhm) + (1 - n) * Lorentzian(x, fwhm)
 end
 
-# ╔═╡ aa549c27-53de-4364-a71e-160f2323b251
-function Voigt(x, gamma, sigma)
-    z = @. (x + 1im * gamma) / (sqrt(2)*sigma)
-    return @. real(erfcx(z))/(sqrt(2pi)*sigma)
-end
+# ╔═╡ 298367a4-6f27-42dd-a115-e3235371347c
+x = range(start=-5, stop=5, step=0.01)
 
 # ╔═╡ 2c83b7e1-5edf-441b-b0c2-210c2927da70
-begin
-	y1 = Lorentzian(x, 1)
-	y2 = Gaussian(x, 1)
-	y3 = pseudo_Voigt(x, 1, 0.5)
-	y4 = Voigt(x, 1, 1)
-end
+y1 = Lorentzian(x, 1)
 
-# ╔═╡ 3da55902-6e2f-4eb3-8279-0f07ac3ea21c
+# ╔═╡ 8741d4e6-8a32-453b-8e27-f466747628af
+y3 = pseudo_Voigt(x, 1, 0.5)
+
+# ╔═╡ 396a026f-da4f-498a-867b-a3838a065f8d
 
 
 # ╔═╡ 3be58c8e-a791-48fb-ba4e-3913e0247c1a
 begin
-	plot(x,[y1 y2 y3 y4], label=["Lorentzian" "Gaussian" "Pseudo Voigt" "Voigt"])
-	title!("peak functions")
-	xlabel!("x")
-	ylabel!("y")
+	plot(x,y1, label="Lorentzian")
+	plot!(x, y2, label="Gaussian")
+	plot!(x, y3, label="Pseudo Voigt")
 end
 
-# ╔═╡ ec25f97b-ed5e-4d1d-b5d7-b4894ade122b
+# ╔═╡ 0f8f7180-f4bf-43d9-a380-06ffececae20
+# ╠═╡ disabled = true
+#=╠═╡
+
+  ╠═╡ =#
+
+# ╔═╡ 11dc7260-dcff-4a5e-ad77-bced117ea703
 
 
-# ╔═╡ 8ce58fa0-0156-475d-bd24-e090f3e323d3
-(1+1im)*1im
+
+# ╔═╡ 69cd914d-3ead-49d4-bbbc-90a5812de6a5
+
+
+# ╔═╡ 2897ae1d-4764-4119-ad20-a0f3b18d120a
+
+
+# ╔═╡ b987a44c-92fd-4b62-9158-1a0b20e46a2e
+# ╠═╡ disabled = true
+#=╠═╡
+y2 = Gaussian(x, 1)
+  ╠═╡ =#
+
+# ╔═╡ 04cb4616-a8ae-4d32-9655-65050046dcd6
+y2 = Gaussian(x, 1)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+Ranges = "eb7db99b-64ae-4b81-85c2-3439b6569b78"
 
 [compat]
 Plots = "~1.38.2"
-SpecialFunctions = "~2.1.7"
+Ranges = "~0.1.0"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -83,7 +90,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.4"
 manifest_format = "2.0"
-project_hash = "a8dd5a33e0f0fc3bc96d85db5d05bc8101224619"
+project_hash = "e6b65db0d47b473fac4b4053be38f2f28b59f7e5"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -294,9 +301,9 @@ version = "1.0.2"
 
 [[deps.HTTP]]
 deps = ["Base64", "CodecZlib", "Dates", "IniFile", "Logging", "LoggingExtras", "MbedTLS", "NetworkOptions", "OpenSSL", "Random", "SimpleBufferStream", "Sockets", "URIs", "UUIDs"]
-git-tree-sha1 = "752b7f2640a30bc991d37359d5fff50ce856ecde"
+git-tree-sha1 = "fd9861adba6b9ae4b42582032d0936d456c8602d"
 uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
-version = "1.7.1"
+version = "1.6.3"
 
 [[deps.HarfBuzz_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg"]
@@ -533,9 +540,9 @@ version = "0.8.1+0"
 
 [[deps.OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
-git-tree-sha1 = "6503b77492fd7fcb9379bf73cd31035670e3c509"
+git-tree-sha1 = "df6830e37943c7aaa10023471ca47fb3065cc3c4"
 uuid = "4d8831e6-92b7-49fb-bdf8-b643e874388c"
-version = "1.3.3"
+version = "1.3.2"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -567,9 +574,9 @@ version = "10.40.0+0"
 
 [[deps.Parsers]]
 deps = ["Dates", "SnoopPrecompile"]
-git-tree-sha1 = "8175fc2b118a3755113c8e68084dc1a9e63c61ee"
+git-tree-sha1 = "6466e524967496866901a78fca3f2e9ea445a559"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.5.3"
+version = "2.5.2"
 
 [[deps.Pipe]]
 git-tree-sha1 = "6842804e7867b115ca9de748a0cf6b364523c16d"
@@ -628,6 +635,11 @@ uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 [[deps.Random]]
 deps = ["SHA", "Serialization"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+
+[[deps.Ranges]]
+git-tree-sha1 = "b5dd6c6cba97d1fa0641797cb08d4fd913c5fcd5"
+uuid = "eb7db99b-64ae-4b81-85c2-3439b6569b78"
+version = "0.1.0"
 
 [[deps.RecipesBase]]
 deps = ["SnoopPrecompile"]
@@ -1004,18 +1016,21 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═90106cf9-825f-4e84-8b70-8566e56e60b2
-# ╠═e4bde671-3608-489a-a72b-bc3bdff88090
-# ╠═7798d654-a7d6-444d-9477-7f73a256a3f0
-# ╠═298367a4-6f27-42dd-a115-e3235371347c
+# ╠═dd55a803-02d8-4bf1-8821-82fe06c07cb5
+# ╠═8e35a688-a8be-4ff7-b07e-adc40e306032
+# ╠═ab93661e-92ba-11ed-0db0-a5b6da440669
 # ╠═c1159303-2800-460e-a6ff-e957681e4c81
 # ╠═f712027f-7f6e-4082-95f3-cae200d7f18a
-# ╠═3f929a62-3acb-42b1-bc20-922a74ff6460
-# ╠═aa549c27-53de-4364-a71e-160f2323b251
+# ╠═298367a4-6f27-42dd-a115-e3235371347c
 # ╠═2c83b7e1-5edf-441b-b0c2-210c2927da70
-# ╠═3da55902-6e2f-4eb3-8279-0f07ac3ea21c
+# ╠═04cb4616-a8ae-4d32-9655-65050046dcd6
+# ╠═8741d4e6-8a32-453b-8e27-f466747628af
 # ╠═3be58c8e-a791-48fb-ba4e-3913e0247c1a
-# ╠═ec25f97b-ed5e-4d1d-b5d7-b4894ade122b
-# ╠═8ce58fa0-0156-475d-bd24-e090f3e323d3
+# ╠═396a026f-da4f-498a-867b-a3838a065f8d
+# ╠═b987a44c-92fd-4b62-9158-1a0b20e46a2e
+# ╠═0f8f7180-f4bf-43d9-a380-06ffececae20
+# ╠═11dc7260-dcff-4a5e-ad77-bced117ea703
+# ╠═69cd914d-3ead-49d4-bbbc-90a5812de6a5
+# ╠═2897ae1d-4764-4119-ad20-a0f3b18d120a
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

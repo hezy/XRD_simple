@@ -30,14 +30,11 @@ function pseudo_Voigt(x, fwhm, n)
 end
 
 # ╔═╡ 2c83b7e1-5edf-441b-b0c2-210c2927da70
-y1 = Lorentzian(x, 1)
-
-# ╔═╡ 4882ed33-5bee-4603-84d9-104cd18d02a8
-y2 = Gaussian(x, 1)
-
-# ╔═╡ 8741d4e6-8a32-453b-8e27-f466747628af
-y3 = pseudo_Voigt(x, 1, 0.5)
-
+begin
+	y1 = Lorentzian(x, 1)
+	y2 = Gaussian(x, 1)
+	y3 = pseudo_Voigt(x, 1, 0.5)
+end
 
 # ╔═╡ 3be58c8e-a791-48fb-ba4e-3913e0247c1a
 begin
@@ -989,8 +986,6 @@ version = "1.4.1+0"
 # ╠═f712027f-7f6e-4082-95f3-cae200d7f18a
 # ╠═ab93661e-92ba-11ed-0db0-a5b6da440669
 # ╠═2c83b7e1-5edf-441b-b0c2-210c2927da70
-# ╠═4882ed33-5bee-4603-84d9-104cd18d02a8
-# ╠═8741d4e6-8a32-453b-8e27-f466747628af
 # ╠═3be58c8e-a791-48fb-ba4e-3913e0247c1a
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

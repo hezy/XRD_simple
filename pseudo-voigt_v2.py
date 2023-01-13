@@ -40,30 +40,6 @@ def voigt(x, wL, wG):
     # for Lorentz sigma=0, gamma=1, c=1
     # for Gauss sigma=1, gamma=0, c=1
 
-def voigt_b(x, area, center, sigma, gamma=None):
-    """Convolution of gaussian and lorentzian curve.
-
-    see http://en.wikipedia.org/wiki/Voigt_profile
-
-    Parameters
-    ----------
-    x : array
-        independent variable
-    area : float
-        area of voigt peak
-    center : float
-        center position
-    sigma : float
-        standard deviation
-    gamma : float, optional
-        half width at half maximum of lorentzian.
-        If optional, `gamma` gets set to `sigma`
-    """
-    if gamma is None:
-        gamma = sigma
-    z = (x - center + 1j*gamma) / (sigma * s2)
-    return area*scipy.special.wofz(z).real / (sigma*s2pi)
-
 
 def pseudo_voigt(x, w, n):
     # pseudo-voigt with max=1 and w=FWHM:

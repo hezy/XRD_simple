@@ -51,7 +51,7 @@ plot(x, y1, label="Lorentzian")
 plot(x, y2, label="Gaussian")
 
 # ╔═╡ 2897ae1d-4764-4119-ad20-a0f3b18d120a
-plot(x, y3, Label="pseudo_Voigt")
+plot(x, y3, Label="pseudo Voigt")
 
 # ╔═╡ 1b22b081-c76f-42d4-92c3-56843947b69e
 

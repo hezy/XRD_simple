@@ -14,7 +14,7 @@ using Ranges
 function Lorentzian(x, fwhm)
 	l1 = 2/π
 	l2 = 4.0
-    return (l1 / fwhm) ./ ((1 .+ l2 .* x.^2) ./ fwhm^2 ) 
+    return (l1 / fwhm) ./ ((1 .+ l2 .* x.^2) / fwhm^2 ) 
 end
 
 # ╔═╡ c1159303-2800-460e-a6ff-e957681e4c81
@@ -28,9 +28,6 @@ end
 function pseudo_Voigt(x, fwhm, n)
 	return n * Gaussian(x, fwhm) + (1 - n) * Lorentzian(x, fwhm)
 end
-
-# ╔═╡ cc19ef81-ad04-42f4-b1f8-3b27b40704f0
-
 
 # ╔═╡ 298367a4-6f27-42dd-a115-e3235371347c
 x = range(start=-5, stop=5, step=0.01)
@@ -52,12 +49,6 @@ plot(x, y2, label="Gaussian")
 
 # ╔═╡ 2897ae1d-4764-4119-ad20-a0f3b18d120a
 plot(x, y3, Label="pseudo Voigt")
-
-# ╔═╡ 1b22b081-c76f-42d4-92c3-56843947b69e
-
-
-# ╔═╡ 1f795c35-f78e-436a-bf92-421340584dfe
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1007,7 +998,6 @@ version = "1.4.1+0"
 # ╠═ab93661e-92ba-11ed-0db0-a5b6da440669
 # ╠═c1159303-2800-460e-a6ff-e957681e4c81
 # ╠═f712027f-7f6e-4082-95f3-cae200d7f18a
-# ╠═cc19ef81-ad04-42f4-b1f8-3b27b40704f0
 # ╠═298367a4-6f27-42dd-a115-e3235371347c
 # ╠═2c83b7e1-5edf-441b-b0c2-210c2927da70
 # ╠═b987a44c-92fd-4b62-9158-1a0b20e46a2e
@@ -1015,7 +1005,5 @@ version = "1.4.1+0"
 # ╠═11dc7260-dcff-4a5e-ad77-bced117ea703
 # ╠═69cd914d-3ead-49d4-bbbc-90a5812de6a5
 # ╠═2897ae1d-4764-4119-ad20-a0f3b18d120a
-# ╠═1b22b081-c76f-42d4-92c3-56843947b69e
-# ╠═1f795c35-f78e-436a-bf92-421340584dfe
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

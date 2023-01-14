@@ -45,3 +45,6 @@ xlabel!("x")
 ylabel!("y")
 
 display(p)
+
+#savefig(plot,"file.png")
+

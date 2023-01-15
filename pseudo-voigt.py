@@ -18,20 +18,25 @@ import matplotlib.pyplot as plt
 #from matplotlib.ticker import MaxNLocator
 
 def lorentz(x, fwhm):
-    # Lorentz with max=1 and w=FWHM: 
+    # Normalized Lorentzian 
     gamma = fwhm
     return (gamma/np.pi) / (np.square(x) + np.square(gamma)) 
     
 
-def gauss(x, wG):
-    # Gauss with max=1 and w=FWHM
-    sigma = wG/np.sqrt(2*np.log(2))
-    return np.exp(- x**2 / (2* sigma**2))
+def gauss(x, fwhm):
+    # Normalised Gaussian
+    sigma = fwmh/(2*np.sqrt(2*np.log(2)))
+    return (1/np.sqrt(2*np.pi)/sigam) * np.exp(- x**2 / (2* sigma**2))
 
 
-def voigt(x, wL, wG):
-    gamma = wL
-    sigma = wG/np.sqrt(2*np.log(2))
+def pseudo_voigt(x, fwhm, n):
+    # Normalised pseudo-voigt
+    return n * lorentz(x,w) + (1-n) * gauss(x, w)
+
+
+def voigt(x, fwhm_l, fwhm_g):
+    gamma = fwhm_l
+    sigma = fwhm_g / 2*np.sqrt(2*np.log(2))
     z = (x + 1j*gamma)/np.sqrt(2)/sigma
     return np.sqrt(2*np.pi) * np.real(wofz(z))/np.sqrt(2*np.pi)/sigma
     # normolized Voigt (integral = 1): c * np.real(wofz((x + 1j*gamma)/(sigma * np.sqrt(2)))) / (sigma * np.sqrt(2*np.pi))
@@ -39,9 +44,6 @@ def voigt(x, wL, wG):
     # for Gauss sigma=1, gamma=0, c=1
 
 
-def pseudo_voigt(x, w, n):
-    # pseudo-voigt with max=1 and w=FWHM:
-    return n * lorentz(x,w) + (1-n) * gauss(x, w)
 
 x = np.arange (-3, 3 , 1e-2)
 xfit = np.arange (-3, 3 , 0.01)

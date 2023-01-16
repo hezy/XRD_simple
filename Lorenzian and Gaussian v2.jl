@@ -1,7 +1,6 @@
-using SymPy
+using SymEngine
 
-x = Sym("x") 
-gamma, sigma = Sym("gamma sigma")
+x, γ, σ = Sym("x γ σ")
 
 function lorentz(x, gamma)
     # non-normnormalized Lorentzian

@@ -1,5 +1,6 @@
-### A Pluto.jl notebook ###
-# v0.19.19
+# pseudo-voigt.jl
+# by Hezy Amiel
+# January 2023
 
 using Plots
 using SpecialFunctions

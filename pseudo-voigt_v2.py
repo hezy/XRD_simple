@@ -39,7 +39,7 @@ def voigt(x, wL, wG):
     # normolized Voigt (integral = 1): c * np.real(wofz((x + 1j*gamma)/(sigma * np.sqrt(2)))) / (sigma * np.sqrt(2*np.pi))
     # for Lorentz sigma=0, gamma=1, c=1
     # for Gauss sigma=1, gamma=0, c=1
-
+#erfcx
 
 def pseudo_voigt(x, w, n):
     # pseudo-voigt with max=1 and w=FWHM:

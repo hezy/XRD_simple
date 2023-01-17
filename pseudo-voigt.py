@@ -25,8 +25,8 @@ def lorentz(x, fwhm):
 
 def gauss(x, fwhm):
     # Normalised Gaussian
-    sigma = fwmh/(2*np.sqrt(2*np.log(2)))
-    return (1/np.sqrt(2*np.pi)/sigam) * np.exp(- x**2 / (2* sigma**2))
+    sigma = fwhm/(2*np.sqrt(2*np.log(2)))
+    return (1/np.sqrt(2*np.pi)/sigma) * np.exp(- x**2 / (2* sigma**2))
 
 
 def pseudo_voigt(x, fwhm, n):

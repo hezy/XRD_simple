@@ -26,6 +26,8 @@ end
 
 
 function Voigt(x, fwhm_l, fwhm_g)
+    # https://specialfunctions.juliamath.org/latest/functions_list/#SpecialFunctions.erf
+    # https://scipython.com/book/chapter-8-scipy/examples/the-voigt-profile/
     γ = fwhm_l/2
     σ = fwhm_g/(2√(2log(2)))
     z = @. -im * (x + im * γ) / (√2 * σ)

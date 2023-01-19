@@ -46,10 +46,34 @@ def voigt(x, fwhm_l, fwhm_g):
 
 
 
-x = np.arange (-3, 3 , 1e-2)
+x = np.ar
+    sigma = wG/np.sqrt(2*np.log(2))
+    return np.exp(- x**2 / (2* sigma**2))
+
+
+def voigt(x, wL, wG):
+    gamma = wL
+    sigma = wG/np.sqrt(2*np.log(2))
+    z = (x + 1j*gamma)/np.sqrt(2)/sigma
+    return np.sqrt(2*np.pi) * np.real(wofz(z))/np.sqrt(2*np.pi)/sigma
+    # normolized Voigt (integral = 1): c * np.real(wofz((x + 1j*gamma)/(sigma * np.sqrt(2)))) / (sigma * np.sqrt(2*np.pi))
+    # for Lorentz sigma=0, gamma=1, c=1
+    # for Gauss sigma=1, gamma=0, c=1ange (-3, 3 , 1e-2)
 xfit = np.arange (-3, 3 , 0.01)
 
 w = 1.0
+    sigma = wG/np.sqrt(2*np.log(2))
+    return np.exp(- x**2 / (2* sigma**2))
+
+
+def voigt(x, wL, wG):
+    gamma = wL
+    sigma = wG/np.sqrt(2*np.log(2))
+    z = (x + 1j*gamma)/np.sqrt(2)/sigma
+    return np.sqrt(2*np.pi) * np.real(wofz(z))/np.sqrt(2*np.pi)/sigma
+    # normolized Voigt (integral = 1): c * np.real(wofz((x + 1j*gamma)/(sigma * np.sqrt(2)))) / (sigma * np.sqrt(2*np.pi))
+    # for Lorentz sigma=0, gamma=1, c=1
+    # for Gauss sigma=1, gamma=0, c=1
 yL = lorentz(x, w)
 yG = gauss(x, w)
 yPV = pseudo_voigt(x, w, 0.5)

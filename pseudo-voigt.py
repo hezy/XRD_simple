@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 
 def lorentz(x, fwhm):
     # Normalized Lorentzian 
-    gamma = fwhm
+    gamma = fwhm/2
     return (gamma/np.pi) / (np.square(x) + np.square(gamma)) 
     
 
@@ -31,14 +31,15 @@ def gauss(x, fwhm):
 
 def pseudo_voigt(x, fwhm, n):
     # Normalised pseudo-voigt
-    return n * lorentz(x,w) + (1-n) * gauss(x, w)
+    return n * lorentz(x,fwhm) + (1-n) * gauss(x, fwhm)
 
 
 def voigt(x, fwhm_l, fwhm_g):
+    # Normalized Voigt
     gamma = fwhm_l
     sigma = fwhm_g / 2*np.sqrt(2*np.log(2))
     z = (x + 1j*gamma)/np.sqrt(2)/sigma
-    return np.sqrt(2*np.pi) * np.real(wofz(z))/np.sqrt(2*np.pi)/sigma
+    return np.real(wofz(z))/np.sqrt(2*np.pi)/sigma
     # normolized Voigt (integral = 1): c * np.real(wofz((x + 1j*gamma)/(sigma * np.sqrt(2)))) / (sigma * np.sqrt(2*np.pi))
     # for Lorentz sigma=0, gamma=1, c=1
     # for Gauss sigma=1, gamma=0, c=1
@@ -52,10 +53,11 @@ w = 1.0
 yL = lorentz(x, w)
 yG = gauss(x, w)
 yPV = pseudo_voigt(x, w, 0.5)
-yV = voigt(x, .562855, .562855)
+yV = voigt(x, 0.2196199, 0.53439917)
 
-popt, pcov = curve_fit(voigt, x, yPV, p0=(0.56285008, 0.56291417), sigma=None, bounds=(0,100))
-yV = voigt(x, *popt)          
+''' fitting the pseudo voigt with true voigt '''
+#popt, pcov = curve_fit(voigt, x, yPV, p0=(0.219622, 0.534399), sigma=None, bounds=(0,100))
+#yV = voigt(x, *popt)          
 #popt_L, pcov_L = curve_fit(voigt, x, yL, p0=(1., 1e-9, 1.), sigma=None, bounds=(0,100))
 #yVL = voigt(xfit, *popt_L)
 

@@ -1,7 +1,14 @@
-# pseudo-voigt.jl
-# by Hezy Amiel
-# January 2023
-# Julia 1.8.5
+"""
+pseudo-voigt.jl
+by Hezy Amiel
+January 2023
+Julia 1.8.5
+
+https://en.m.wikipedia.org/wiki/Voigt_profile
+http://journals.iucr.org/j/issues/1997/04/00/gl0484/gl0484.pdf
+http://journals.iucr.org/j/issues/2000/06/00/nt0146/nt0146.pdf
+https://www.onlinelibrary.wiley.com/doi/epdf/10.1002/sia.5521
+"""
 
 using Plots
 using SpecialFunctions

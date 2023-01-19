@@ -55,8 +55,9 @@ yG = gauss(x, w)
 yPV = pseudo_voigt(x, w, 0.5)
 yV = voigt(x, 0.2196199, 0.53439917)
 
-popt, pcov = curve_fit(voigt, x, yPV, p0=(0.219622, 0.534399), sigma=None, bounds=(0,100))
-yV = voigt(x, *popt)          
+''' fitting the pseudo voigt with true voigt '''
+#popt, pcov = curve_fit(voigt, x, yPV, p0=(0.219622, 0.534399), sigma=None, bounds=(0,100))
+#yV = voigt(x, *popt)          
 #popt_L, pcov_L = curve_fit(voigt, x, yL, p0=(1., 1e-9, 1.), sigma=None, bounds=(0,100))
 #yVL = voigt(xfit, *popt_L)
 

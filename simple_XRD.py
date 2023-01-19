@@ -84,6 +84,7 @@ def make_graph (x, y):
     ax.plot(x,y, '.r', label='experiment')
     ax.plot(x,y, '-b', label='theory')
     ax.legend()
+    return plt.show()
     
 '''
 ===== 

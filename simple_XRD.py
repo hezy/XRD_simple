@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Created on Wed Dec  7 14:56:13 2022
+Created on Wed Dec 7 14:56:13 2022
 @author: Yehezkel Amiel
 """
 
 ''' Importing lipreries '''
 import numpy as np
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as pltwhiw
 from scipy.special import wofz
 #from scipy.optimize import curve_fit
 #from itertools import combinations_with_replacement
@@ -197,3 +197,4 @@ angular_intensity_FCC = intensity(theta_space,
                                   bragg_angels_FCC,
                                   peaks_width(bragg_angels_FCC, U, V, W))
 make_graph(theta_space,angular_intensity_FCC)
+

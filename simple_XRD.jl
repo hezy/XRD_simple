@@ -8,7 +8,6 @@ Julia 1.8.5
 using Plots
 using SpecialFunctions
 
-x = range(start=-3, stop=3, step=0.01)
 
 function Gaussian(x, fwhm)
     σ = fwhm/(2√(2log(2)))
@@ -42,11 +41,16 @@ end
 
 function intensity(theta_space, peaks_positions, peaks_width)
     y = []
-    for peaks_positions
+    for peaks_positions 
         #print(n, peaks_positions[n], peaks_width[n])
         y = y + peak(theta_space, peaks_positions[n], 1, peaks_width[n], 0.5)
     return y
+end
 
+
+function find_d(indices, a)
+    return a./.√(sum(indices.^2, dims=2))
+end
 
 y1 = Lorentzian(x, 1)
 y2 = Gaussian(x, 1)
@@ -59,7 +63,21 @@ xlabel!(raw"x")
 ylabel!(raw"y")
 
 
+N = 100
+θ = LinRange(0, 180, N)
 
-indices = [[h,k,l] for h=-2:2 for k=-2:2 for l=-2:2]
-deleteat!(indices, findall(x->x==[0,0,0],indices))
+wavelength = 0.15418  # CuKα radiation in nm
+#wavelength = 0.18125  # 
+U, V, W = 0.2, 0.2, 0.2
+
+
+"""
+============
+Simple Cubic
+============
+"""
+
+""" In simple cubic lattince, all Miller indices are allowed """
+indices = [[h,k,l] for h=-2:2 for k=-2:2 for l=-2:2 if [h,k,l]!=[0,0,0]]
+#deleteat!(indices, findall(x->x==[0,0,0],indices))
 print(indices)

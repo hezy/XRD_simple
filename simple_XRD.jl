@@ -50,6 +50,6 @@ ylabel!(raw"y")
 
 
 
-indices = [[h,k,l] for h=0:2 for k=0:2 for l=0:2]
+indices = [[h,k,l] for h=-2:2 for k=-2:2 for l=-2:2]
 deleteat!(indices, findall(x->x==[0,0,0],indices))
 print(indices)

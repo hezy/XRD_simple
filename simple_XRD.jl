@@ -47,3 +47,16 @@ p = plot(x,[y1 y2 y3 y4], label=["Lorentzian" "Gaussian" "Pseudo Voigt" "Voigt"]
 title!("peak functions")
 xlabel!(raw"x")
 ylabel!(raw"y")
+
+
+indices =[]
+for h = -2:2
+    for k = -2:2
+        for l = -2:2
+            new_index = [h,k,l]
+            push!(indices, new_index)
+        end
+    end
+end
+deleteat!(indices, findall(x->x==[0,0,0],indices))
+print(indices)

@@ -40,6 +40,11 @@ function Voigt(x, fwhm_L, fwhm_G)
 end
 
 
+function peak(θ, θ₀, A, w, n)
+    return @. A * Pseudo_Voigt(θ-θ₀, w, n)
+end
+
+
 function peaks_width(two_θ_deg, U, V, W)
     two_θ_rad = two_θ_deg * π/180
     return @. √(U * tan(two_θ_rad/2)^2 + V * tan(two_θ_rad/2) + W)
@@ -186,6 +191,6 @@ from https://en.wikipedia.org/wiki/Lattice_constant
 
 indices_FCC = Miller_indices("FCC", -5, 5)
                 
-y_FCC = (background(θ) + intensity_vs_angle(θ, indices_FCC, λ, a_SC, U, V, W))  .* rand(Normal(1, 0.1), N) 
+y_FCC = (background(θ) + intensity_vs_angle(θ, indices_FCC, λ, a_FCC, U, V, W))  .* rand(Normal(1, 0.1), N) 
 
 plot_it(θ, y_FCC, "XRD - FCC")

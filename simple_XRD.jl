@@ -93,8 +93,8 @@ function Miller_indices(cell_type, min, max)
 end
 
 
-function background(θ, a0, a1, a2, a3, a4, a5)
-    return @. a0 + a1*θ + a2*θ^2 + a3*θ^3 + a4*θ^4 + a5*θ^5
+function background(θ)
+    return @. 2 + θ*(360-θ)/15000
 end
 
 
@@ -110,9 +110,6 @@ y = zeros(N)
 λ = 0.15418  # CuKα radiation in nm
 U, V, W = 0.2, 0.2, 0.2
 
-y_background = @. 1 + θ*(200-θ)/5000
-#plot(θ,y_background)
-
 Random.seed!(347) # Setting the seed for random noise
 
 
@@ -126,29 +123,11 @@ Simple Cubic
 Lattice parameter for SC Polonium (α-Po)
 from https://en.wikipedia.org/wiki/Polonium 
 """
-
 a_SC = 0.3352
-"""
-Lattice parameter for FCC Platinum
-from https://periodictable.com/Elements/078/data.html
-"""
-a_FCC = 0.39242 
-
-#"""
-#Lattice parameter a for FCC Pb
-#from https://en.wikipedia.org/wiki/Lattice_constant
-#"""
-#a_FCC = 0.4920 
-
-indices_FCC = Miller_indices("FCC", -5, 5)
-                
-y_FCC = (y_background + intensity_vs_angle(θ, indices_FCC, λ, a_FCC, U, V, W)) .* rand(Normal(1, 0.15), N)
-
-plot_it(θ, y_FCC, "XRD - FCC")                   
 
 indices_SC = Miller_indices("SC", -5, 5)
 
-y_SC = (y_background + intensity_vs_angle(θ, indices_SC, λ, a_SC, U, V, W)) .* rand(Normal(1, 0.15), N) 
+y_SC = (background(θ) + intensity_vs_angle(θ, indices_SC, λ, a_SC, U, V, W))  .* rand(Normal(1, 0.1), N) 
 
 plot_it(θ, y_SC, "XRD - SC")
 
@@ -173,7 +152,7 @@ from https://en.wikipedia.org/wiki/Lattice_constant
 
 indices_BCC = Miller_indices("BCC", -5, 5)
 
-y_BCC = (y_background + intensity_vs_angle(θ, indices_BCC, λ, a_BCC, U, V, W)) .* rand(Normal(1, 0.15), N) 
+y_BCC = (background(θ) + intensity_vs_angle(θ, indices_BCC, λ, a_BCC, U, V, W))  .* rand(Normal(1, 0.1), N) 
 
 plot_it(θ, y_BCC, "XRD - BCC")
 
@@ -198,6 +177,6 @@ from https://en.wikipedia.org/wiki/Lattice_constant
 
 indices_FCC = Miller_indices("FCC", -5, 5)
                 
-y_FCC = (y_background + intensity_vs_angle(θ, indices_FCC, λ, a_FCC, U, V, W)) .* rand(Normal(1, 0.15), N)
+y_FCC = (background(θ) + intensity_vs_angle(θ, indices_FCC, λ, a_SC, U, V, W))  .* rand(Normal(1, 0.1), N) 
 
-plot_it(θ, y_FCC, "XRD - FCC")                   
+plot_it(θ, y_FCC, "XRD - FCC")

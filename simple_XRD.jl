@@ -8,9 +8,11 @@ Julia 1.8.5
 using Plots, SpecialFunctions, Random, Distributions
 
 
-""" ========= """
-""" Functions """
-""" ========= """
+""" 
+=========
+Functions
+=========
+"""
 
 
 function Gaussian(x, fwhm)
@@ -73,7 +75,7 @@ function plot_it(θ, y, Title)
 end
 
 
-unction Miller_indices(cell_type, min, max)
+function Miller_indices(cell_type, min, max)
     if cell_type == "SC"
         # In simple cubic lattince, all Miller indices are allowed
         return [[h,k,l] for h=min:max for k=min:max for l=min:max if [h,k,l]!=[0,0,0]]
@@ -125,7 +127,8 @@ Lattice parameter for SC Polonium (α-Po)
 from https://en.wikipedia.org/wiki/Polonium 
 """
 
-a_SC = 0.3352"""
+a_SC = 0.3352
+"""
 Lattice parameter for FCC Platinum
 from https://periodictable.com/Elements/078/data.html
 """

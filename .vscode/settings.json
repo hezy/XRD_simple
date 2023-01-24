@@ -1,4 +1,3 @@
 {
-    "julia.executablePath": "/home/hezy/.local/bin/julia",
-    "python.defaultInterpreterPath": "/home/hezy/miniconda3/bin/python"
+    "julia.executablePath": "/home/hezy/.julia/juliaup/julia-1.8.5+0.x64.linux.gnu"
 }

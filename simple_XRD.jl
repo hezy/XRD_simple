@@ -126,6 +126,22 @@ Random.seed!(347) # Setting the seed for random noise
 
 
 """
+## Lattice parameter for some elements (in Å)
+
+### SC lattice:
+Po  0.3352
+
+### BCC lattice:
+Fe  0.2856   ;   Mo  0.3142   ;   W   0.3155   ;   V   0.30399  ;   Nb  0.33008  ;   Ta  0.33058
+
+### FCC lattice:
+Al  0.4046   ;   Ni  0.3499   ;   Cu  0.3594   ;   Pd  0.3859   ;   Ag  0.4079   ;   Pt  0.4920   ;   Au  0.4065   ;   Pb  0.4920
+
+from https://en.wikipedia.org/wiki/Lattice_constant
+"""
+
+
+"""
 ============
 Simple Cubic
 ============
@@ -156,12 +172,6 @@ from https://en.wikipedia.org/wiki/Tantalum
 """
 a_BCC = 0.33058
 
-"""
-Lattice parameter for BCC Tungsten (W)
-from https://en.wikipedia.org/wiki/Lattice_constant
-"""
-#a_BCC = 0.3155
-
 indices_BCC = Miller_indices("BCC", -5, 5)
 
 y_BCC = (background(θ) + intensity_vs_angle(θ, indices_BCC, λ, a_BCC, U, V, W))  .* rand(Normal(1, 0.1), N) 
@@ -179,13 +189,7 @@ Face Centered Cubic
 Lattice parameter for FCC Platinum
 from https://periodictable.com/Elements/078/data.html
 """
-a_FCC = 0.39242 
-
-"""
-Lattice parameter a for FCC Pb
-from https://en.wikipedia.org/wiki/Lattice_constant
-"""
-#a_FCC = 0.4920 
+a_FCC = 0.39242
 
 indices_FCC = Miller_indices("FCC", -5, 5)
                 

@@ -58,6 +58,15 @@ function d_list(indices, a)
 end
 
 
+function sum_peaks(θ, two_θ_list, U, V, W)
+    y = zeros(size(θ))
+    for item in two_θ_list
+        y = y + peak(θ, item, 1, peaks_width(θ, U, V, W), 0.5)
+    end
+    return y
+end
+
+
 function intensity_vs_angle(θ, indices, λ, a, U, V, W)
     indices = (reduce(hcat, indices))'
     two_θ_list = bragg_angels(λ, d_list(indices, a));

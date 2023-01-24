@@ -81,11 +81,9 @@ end
 
 
 function plot_it(θ, y, Title)
-    p = plot(θ, y)
-    title!(Title)
-    xlabel!(raw"2θ (deg)")
-    ylabel!(raw"Intensity (arb.)")
-    return p
+    default(show = true)
+    plt = plot(θ, y, title=Title, xlabel="2θ (deg)", ylabel="Intensity (arb.)")
+    gui(plt)
 end
 
 

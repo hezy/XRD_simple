@@ -1,3 +1,4 @@
 {
-    "julia.executablePath": "/home/hezy/.julia/juliaup/julia-1.8.5+0.x64.linux.gnu"
+    "julia.executablePath": "/home/hezy/.julia/juliaup/julia-1.8.5+0.x64.linux.gnu",
+    "julia.environmentPath": "/home/hezy/Repos/XRD_simple"
 }

@@ -164,9 +164,10 @@ indices_SC = Miller_indices("SC", -5, 5)
 y_SC =
     (background(θ) + intensity_vs_angle(θ, indices_SC, λ, a_SC, U, V, W)) .*
     rand(Normal(1, 0.1), N)
-print(y_SC)
 
-plot_it(θ, y_SC, "XRD - SC")
+plot1 = plot_it(θ, y_SC, "XRD - SC")
+display(plot1)
+savefig(plot1, "SC")
 
 
 """
@@ -187,7 +188,9 @@ y_BCC =
     (background(θ) + intensity_vs_angle(θ, indices_BCC, λ, a_BCC, U, V, W)) .*
     rand(Normal(1, 0.1), N)
 
-plot_it(θ, y_BCC, "XRD - BCC")
+plot2 = plot_it(θ, y_BCC, "XRD - BCC")
+display(plot2)
+savefig(plot2, "BCC")
 
 
 """
@@ -208,4 +211,7 @@ y_FCC =
     (background(θ) + intensity_vs_angle(θ, indices_FCC, λ, a_FCC, U, V, W)) .*
     rand(Normal(1, 0.1), N)
 
-plot_it(θ, y_FCC, "XRD - FCC")
+plot3 = plot_it(θ, y_FCC, "XRD - FCC")
+display(plot3)
+savefig(plot3, "FCC")
+

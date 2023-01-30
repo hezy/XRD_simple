@@ -7,6 +7,8 @@ Julia 1.8.5
 
 using Plots, SpecialFunctions, Random, Distributions
 
+Random.seed!(347) # Setting the seed
+
 
 """ 
 =========
@@ -45,9 +47,8 @@ function peak(θ, θ₀, A, w, n)
 end
 
 
-function peaks_width(two_θ_deg, U, V, W)
-    two_θ_rad = two_θ_deg * π / 180
-    return @. √(U * tan(two_θ_rad / 2)^2 + V * tan(two_θ_rad / 2) + W)
+function peaks_width(two_θ, U, V, W)
+    return @. √(U * tand(two_θ/2)^2 + V * tand(two_θ/2) + W)
 end
 
 

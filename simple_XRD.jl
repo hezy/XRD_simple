@@ -82,7 +82,6 @@ end
 function plot_it(θ, y, Title)
     default(show = true)
     plt = plot(θ, y, title = Title, xlabel = "2θ (deg)", ylabel = "Intensity (arb.)")
-    gui(plt)
 end
 
 
@@ -159,18 +158,16 @@ Lattice parameter for SC Polonium (α-Po)
 from https://en.wikipedia.org/wiki/Polonium 
 """
 a_SC = 0.3352
-print(a_SC)
 
 indices_SC = Miller_indices("SC", -5, 5)
-print(indices_SC)
 
 y_SC =
     (background(θ) + intensity_vs_angle(θ, indices_SC, λ, a_SC, U, V, W)) .*
     rand(Normal(1, 0.1), N)
 print(y_SC)
 
-#plot_it(θ, y_SC, "XRD - SC")
-plot(θ,y_SC)
+plot_it(θ, y_SC, "XRD - SC")
+
 
 """
 ===================

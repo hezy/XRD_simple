@@ -47,3 +47,5 @@ p = plot(x, [y1 y2 y3 y4], label = ["Lorentzian" "Gaussian" "Pseudo Voigt" "Voig
 title!("peak functions")
 xlabel!(raw"x")
 ylabel!(raw"y")
+
+savefig("psedo_voigt")

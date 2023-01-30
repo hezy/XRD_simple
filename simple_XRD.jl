@@ -14,7 +14,6 @@ Functions
 =========
 """
 
-
 function Gaussian(x, fwhm)
     σ = fwhm / (2√(2log(2)))
     return @. 1 / √(2π) / σ * exp(-x^2 / 2σ^2)
@@ -160,15 +159,18 @@ Lattice parameter for SC Polonium (α-Po)
 from https://en.wikipedia.org/wiki/Polonium 
 """
 a_SC = 0.3352
+print(a_SC)
 
 indices_SC = Miller_indices("SC", -5, 5)
+print(indices_SC)
 
 y_SC =
     (background(θ) + intensity_vs_angle(θ, indices_SC, λ, a_SC, U, V, W)) .*
     rand(Normal(1, 0.1), N)
+print(y_SC)
 
-plot_it(θ, y_SC, "XRD - SC")
-
+#plot_it(θ, y_SC, "XRD - SC")
+plot(θ,y_SC)
 
 """
 ===================

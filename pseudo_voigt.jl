@@ -43,9 +43,10 @@ y2 = Gaussian(x, 1)
 y3 = pseudo_Voigt(x, 1, 0.5)
 y4 = Voigt(x, 0.45, 0.72)
 
-p = plot(x, [y1 y2 y3 y4], label = ["Lorentzian" "Gaussian" "Pseudo Voigt" "Voigt"])
+plot1 = plot(x, [y1 y2 y3 y4], label = ["Lorentzian" "Gaussian" "Pseudo Voigt" "Voigt"])
 title!("peak functions")
 xlabel!(raw"x")
 ylabel!(raw"y")
 
-savefig("psedo_voigt")
+display(plot1)
+savefig(plot1, "psedo_voigt")

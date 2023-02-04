@@ -1,5 +1,5 @@
 """
-pseudo-voigt.jl
+pseudo_voigt.jl
 by Hezy Amiel
 January 2023
 Julia 1.8.5
@@ -30,10 +30,10 @@ function Gaussian(x, fwhm)
 end
 
 
-mix_functions(f1, f2, n) = n * f1 + (1 - n) * f2
+mix_fun(f1, f2, n) = n * f1 + (1 - n) * f2
 
 
-pseudo_Voigt(x, fwhm, n) =  mix_functions(Lorentzian(x, fwhm), Gaussian(x, fwhm), n)
+pseudo_Voigt(x, fwhm, n) =  mix_fun(Lorentzian(x, fwhm), Gaussian(x, fwhm), n)
 
 
 function Voigt(x, fwhm_L, fwhm_G)

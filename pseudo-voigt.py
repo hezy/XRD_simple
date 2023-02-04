@@ -1,6 +1,11 @@
 # %% [markdown]
-# Jan 2023
-# @author: hezya
+# # pseudo_voigt_jl.ipynb
+# 
+# by Hezy Amiel
+# 
+# January 2023
+# 
+# Python 3.11
 # 
 # https://en.m.wikipedia.org/wiki/Voigt_profile
 # http://journals.iucr.org/j/issues/1997/04/00/gl0484/gl0484.pdf
@@ -32,8 +37,12 @@ def gauss(x, fwhm):
     # return (1/np.sqrt(2*np.pi)/sigma) * np.exp(- x**2 / (2* sigma**2))
 
 # %%
+def mix_fun(f1, f2, n):
+    return n * f1 + (1 - n) * f2
+
+# %%
 def pseudo_voigt (x, fwhm, n):
-    return n * lorentz(x, fwhm) + (1 - n) * gauss(x, fwhm)
+    return mix_fun(lorentz(x, fwhm), gauss(x, fwhm), n)
 
 # %%
 def voigt(x, fwhm_l, fwhm_g):

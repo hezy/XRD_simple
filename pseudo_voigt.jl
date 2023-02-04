@@ -10,20 +10,23 @@ http://journals.iucr.org/j/issues/2000/06/00/nt0146/nt0146.pdf
 https://www.onlinelibrary.wiley.com/doi/epdf/10.1002/sia.5521
 """
 
-#using PyPlot
-using Plots
-using SpecialFunctions
+using Plots, Distributions, SpecialFunctions
 
 
 function Lorentzian(x, fwhm)
     γ = fwhm / 2
-    return @. (γ / pi) / (x^2 + γ^2)
+    #return @. (γ / pi) / (x^2 + γ^2)
+    return pdf.(Cauchy(0.0, γ), x)
+    # equivalent to:
+    # return @. (γ / pi) / (x^2 + γ^2)
 end
 
 
 function Gaussian(x, fwhm)
     σ = fwhm / (2√(2log(2)))
-    return @. 1 / √(2π) / σ * exp(-x^2 / 2σ^2)
+    return pdf.(Normal(0.0, σ), x)
+    # equivalent to:
+    #return @. 1 / √(2π) / σ * exp(-x^2 / 2σ^2)
 end
 
 
@@ -55,4 +58,3 @@ ylabel!(raw"y")
 
 display(plot1)
 savefig(plot1, "psedo_voigt")
-println("The End")

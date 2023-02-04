@@ -14,21 +14,24 @@ https://www.onlinelibrary.wiley.com/doi/epdf/10.1002/sia.5521
 using Plots
 using SpecialFunctions
 
-x = range(start = -3, stop = 3, step = 0.01)
-
-function Gaussian(x, fwhm)
-    σ = fwhm / (2√(2log(2)))
-    return @. 1 / √(2π) / σ * exp(-x^2 / 2σ^2)
-end
 
 function Lorentzian(x, fwhm)
     γ = fwhm / 2
     return @. (γ / pi) / (x^2 + γ^2)
 end
 
-function pseudo_Voigt(x, fwhm, n)
-    return n * Lorentzian(x, fwhm) + (1 - n) * Gaussian(x, fwhm)
+
+function Gaussian(x, fwhm)
+    σ = fwhm / (2√(2log(2)))
+    return @. 1 / √(2π) / σ * exp(-x^2 / 2σ^2)
 end
+
+
+mix_functions(f1, f2, n) = n * f1 + (1 - n) * f2
+
+
+pseudo_Voigt(x, fwhm, n) =  mix_functions(x, Lorentzian, Gaussian, fwhm, n)
+
 
 function Voigt(x, fwhm_L, fwhm_G)
     γ = fwhm_L / 2
@@ -37,6 +40,8 @@ function Voigt(x, fwhm_L, fwhm_G)
     return @. real(erfcx(z)) / (√(2pi) * σ)
 end
 
+
+x = range(start = -3, stop = 3, step = 0.01)
 
 y1 = Lorentzian(x, 1)
 y2 = Gaussian(x, 1)

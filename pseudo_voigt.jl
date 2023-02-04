@@ -30,7 +30,7 @@ end
 mix_functions(f1, f2, n) = n * f1 + (1 - n) * f2
 
 
-pseudo_Voigt(x, fwhm, n) =  mix_functions(x, Lorentzian, Gaussian, fwhm, n)
+pseudo_Voigt(x, fwhm, n) =  mix_functions(Lorentzian(x, fwhm), Gaussian(x, fwhm), n)
 
 
 function Voigt(x, fwhm_L, fwhm_G)
@@ -55,3 +55,4 @@ ylabel!(raw"y")
 
 display(plot1)
 savefig(plot1, "psedo_voigt")
+println("The End")

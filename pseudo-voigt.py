@@ -10,12 +10,12 @@ https://www.onlinelibrary.wiley.com/doi/epdf/10.1002/sia.5521
 """
 
 import numpy as np
+from scipy.stats import norm
+from scipy.stats import cauchy
 from scipy.special import wofz
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
-#import matplotlib as mpl
-#from matplotlib.colors import BoundaryNorm
-#from matplotlib.ticker import MaxNLocator
+
 
 def lorentz(x, fwhm):
     # Normalized Lorentzian 
@@ -29,9 +29,13 @@ def gauss(x, fwhm):
     return (1/np.sqrt(2*np.pi)/sigma) * np.exp(- x**2 / (2* sigma**2))
 
 
-def pseudo_voigt(x, fwhm, n):
-    # Normalised pseudo-voigt
-    return n * lorentz(x,fwhm) + (1-n) * gauss(x, fwhm)
+def mix_functions(x, f1, f2, fwhm, n):
+    # mixing two fuctions
+    return n * f1(x,fwhm) + (1-n) * f2(x, fwhm)
+
+
+def pseudo_voigt (x, fwhm, n):
+    return mix_functions(x, lorentz, gauss, fwhm, n)
 
 
 def voigt(x, fwhm_l, fwhm_g):

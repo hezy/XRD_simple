@@ -20,13 +20,17 @@ import matplotlib.pyplot as plt
 def lorentz(x, fwhm):
     # Normalized Lorentzian 
     gamma = fwhm/2
-    return (gamma/np.pi) / (np.square(x) + np.square(gamma)) 
+    return cauchy.pdf(x/gamma) / gamma
+    # equivalent to:
+    # return (gamma/np.pi) / (np.square(x) + np.square(gamma))
     
 
 def gauss(x, fwhm):
     # Normalised Gaussian
     sigma = fwhm/(2*np.sqrt(2*np.log(2)))
-    return (1/np.sqrt(2*np.pi)/sigma) * np.exp(- x**2 / (2* sigma**2))
+    return norm.pdf(x, 0, sigma)
+    # equivalent to:
+    # return (1/np.sqrt(2*np.pi)/sigma) * np.exp(- x**2 / (2* sigma**2))
 
 
 def mix_functions(x, f1, f2, fwhm, n):

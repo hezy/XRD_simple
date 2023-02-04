@@ -22,22 +22,27 @@ import matplotlib.pyplot as plt
 def lorentz(x, fwhm):
     # Normalized Lorentzian 
     gamma = fwhm/2
-    return (gamma/np.pi) / (np.square(x) + np.square(gamma)) 
+    return cauchy.pdf(x/gamma) / gamma
+    #equivalent to: return (gamma/np.pi) / (np.square(x) + np.square(gamma))
     
 
-#def gauss(x, fwhm):
+def gauss(x, fwhm):
     # Normalised Gaussian
-#    sigma = fwhm/(2*np.sqrt(2*np.log(2)))
-#    return (1/np.sqrt(2*np.pi)/sigma) * np.exp(- x**2 / (2* sigma**2))
+    sigma = fwhm/(2*np.sqrt(2*np.log(2)))
+    return norm.pdf(x, 0, sigma)
+    #equivalent to: return (1/np.sqrt(2*np.pi)/sigma) * np.exp(- x**2 / (2* sigma**2))
+
+
+def mix_functions(f1, f2, n):
+    return n * f1 + (1 - n) * f2
 
 
 def pseudo_voigt(x, fwhm, n):
     # Normalised pseudo-voigt
-    gamma = fwhm/2
-    sigma = fwhm/(2*np.sqrt(2*np.log(2)))
-    return n * cauchy.pdf(x/gamma) + (1-n) * norm.pdf(x, 0, sigma)
-    # return n * lorentz(x,fwhm) + (1-n) * gauss(x, fwhm)
-#plt.plot(x, norm.pdf(x, mu, sigma))
+    return mix_functions(lorentz(x, fwhm), gauss(x, fwhm), n)
+    # this option makes mix_functions redundant:
+    # return n * cauchy.pdf(x/gamma) / gamma + (1-n) * norm.pdf(x, 0, sigma)
+
 
 def voigt(x, fwhm_l, fwhm_g):
     # Normalized Voigt

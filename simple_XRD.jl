@@ -5,7 +5,7 @@ January 2023
 Julia 1.8.5
 """
 
-using Plots, SpecialFunctions, Random, Distributions
+using Plots, SpecialFunctions, Random, Distributions, DataFrames, CSV
 
 
 """ 
@@ -14,21 +14,31 @@ Functions
 =========
 """
 
-function Gaussian(x, fwhm)
-    σ = fwhm / (2√(2log(2)))
-    return @. 1 / √(2π) / σ * exp(-x^2 / 2σ^2)
-end
-
-
 function Lorentzian(x, fwhm)
     γ = fwhm / 2
-    return @. (γ / pi) / (x^2 + γ^2)
+    return pdf.(Cauchy(0.0, γ), x)
+    # equivalent to:
+    # return @. (γ / pi) / (x^2 + γ^2)
 end
+
+
+function Gaussian(x, fwhm)
+    σ = fwhm / (2√(2log(2)))
+    return pdf.(Normal(0.0, σ), x)
+    # equivalent to:
+    #return @. 1 / √(2π) / σ * exp(-x^2 / 2σ^2)
+end
+
+
+mix_fun(f1, f2, n) = n * f1 + (1 - n) * f2
 
 
 function Pseudo_Voigt(x, fwhm, n)
     return n * Lorentzian(x, fwhm) + (1 - n) * Gaussian(x, fwhm)
 end
+
+
+pseudo_Voigt(x, fwhm, n) =  mix_fun(Lorentzian(x, fwhm), Gaussian(x, fwhm), n)
 
 
 function Voigt(x, fwhm_L, fwhm_G)
@@ -40,7 +50,8 @@ end
 
 
 function peak(θ, θ₀, A, w, n)
-    return @. A * Pseudo_Voigt(θ - θ₀, w, n)
+    return @. A * pseudo_Voigt(θ-θ₀, w, n)
+    # return @. A * Voigt(θ-θ₀, w, n)
 end
 
 
@@ -81,7 +92,11 @@ end
 
 function plot_it(θ, y, Title)
     default(show = true)
-    plt = plot(θ, y, title = Title, xlabel = "2θ (deg)", ylabel = "Intensity (arb.)")
+    p = plot(θ, y)
+    title!(Title)
+    xlabel!(raw"2θ (deg)")
+    ylabel!(raw"Intensity (arb.)")
+    return p
 end
 
 

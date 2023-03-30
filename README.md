@@ -1,2 +1,2 @@
 # XRD_simple
- Simple simulation of powder XRD
+Simple simulation of powder XRD

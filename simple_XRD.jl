@@ -82,33 +82,54 @@ function sum_peaks(θ, two_θ_list, U, V, W)
 end
 
 
-function intensity_vs_angle(θ, indices, λ, a, U, V, W)
-    indices = (reduce(hcat, indices))'
-    two_θ_list = bragg_angels(λ, d_list(indices, a))
-    y = sum_peaks(θ, two_θ_list, U, V, W)
-    return y
+ function intensity_vs_angle(θ, indices, λ, a, U, V, W)
+     indices = (reduce(hcat, indices))'
+     two_θ_list = bragg_angels(λ, d_list(indices, a))
+     y = sum_peaks(θ, two_θ_list, U, V, W)
+     return y
 end
 
 
-function plot_it(θ, y, Title)
-    default(show = true)
-    p = plot(θ, y)
-    title!(Title)
-    xlabel!(raw"2θ (deg)")
-    ylabel!(raw"Intensity (arb.)")
+
+# function plot_it(θ, y, Title)
+#     default(show = true)
+#     p = plot(θ, y)
+#     title!(Title)
+#     xlabel!(raw"2θ (deg)")
+#     ylabel!(raw"Intensity (arb.)")
+#     return p
+# end
+
+
+function plot_it(θ, y; title="", xlabel="2θ (deg)", ylabel="Intensity (arb.)", show_plot=true)
+    p = plot(θ, y, xlabel=xlabel, ylabel=ylabel, title=title)
+    if show_plot
+        default(show=true)
+        display(p)
+    end
     return p
 end
 
 
 function Miller_indices(cell_type, min, max)
+    if !(cell_type in ["SC", "BCC", "FCC"])
+        error("Invalid cell_type: $cell_type. Expected 'SC', 'BCC', or 'FCC'.")
+    end
+    if min > max
+        error("Minimum value cannot be greater than maximum value.")
+    end
+    if !(isa(min, Int) && isa(max, Int))
+        error("Minimum and maximum values must be integers.")
+    end
+    
     if cell_type == "SC"
-        # In simple cubic lattince, all Miller indices are allowed
+        # In simple cubic lattice, all Miller indices are allowed
         return [
             [h, k, l] for h = min:max for k = min:max for
             l = min:max if [h, k, l] != [0, 0, 0]
         ]
     elseif cell_type == "BCC"
-        # In body centerd cubic lattice, only indices with h+k+l=even are allowed
+        # In body centered cubic lattice, only indices with h+k+l=even are allowed
         return [
             [h, k, l] for h = min:max for k = min:max for
             l = min:max if iseven(h + k + l) && [h, k, l] != [0, 0, 0]
@@ -120,14 +141,18 @@ function Miller_indices(cell_type, min, max)
             ((iseven(h) && iseven(k) && iseven(l)) || (isodd(h) && isodd(k) && isodd(l))) &&
             [h, k, l] != [0, 0, 0]
         ]
-    else
-        return [0, 0, 0]
     end
 end
 
 
+
 function background(θ)
     return @. 2 + θ * (360 - θ) / 15000
+end
+
+
+function make_noisy(θ, y)
+    return (background(θ) + y) .* rand(Normal(1, 0.1), size(θ))
 end
 
 
@@ -177,10 +202,10 @@ a_SC = 0.3352
 indices_SC = Miller_indices("SC", -5, 5)
 
 y_SC =
-    (background(θ) + intensity_vs_angle(θ, indices_SC, λ, a_SC, U, V, W)) .*
-    rand(Normal(1, 0.1), N)
+     (background(θ) + intensity_vs_angle(θ, indices_SC, λ, a_SC, U, V, W)) .*
+     rand(Normal(1, 0.1), N)
 
-plot1 = plot_it(θ, y_SC, "XRD - SC")
+ plot1 = plot_it(θ, y_SC, "XRD - SC")
 display(plot1)
 savefig(plot1, "SC")
 

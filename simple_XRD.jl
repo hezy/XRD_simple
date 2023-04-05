@@ -91,24 +91,24 @@ end
 
 
 
-# function plot_it(θ, y, Title)
-#     default(show = true)
-#     p = plot(θ, y)
-#     title!(Title)
-#     xlabel!(raw"2θ (deg)")
-#     ylabel!(raw"Intensity (arb.)")
+function plot_it(θ, y, Title)
+     default(show = true)
+     p = plot(θ, y)
+     title!(Title)
+     xlabel!(raw"2θ (deg)")
+     ylabel!(raw"Intensity (arb.)")
+     return p
+ end
+
+
+# function plot_it(θ, y; title="", xlabel="2θ (deg)", ylabel="Intensity (arb.)", show_plot=true)
+#     p = plot(θ, y, xlabel=xlabel, ylabel=ylabel, title=title)
+#     if show_plot
+#         default(show=true)
+#         display(p)
+#     end
 #     return p
 # end
-
-
-function plot_it(θ, y; title="", xlabel="2θ (deg)", ylabel="Intensity (arb.)", show_plot=true)
-    p = plot(θ, y, xlabel=xlabel, ylabel=ylabel, title=title)
-    if show_plot
-        default(show=true)
-        display(p)
-    end
-    return p
-end
 
 
 function Miller_indices(cell_type, min, max)
@@ -156,35 +156,53 @@ function make_noisy(θ, y)
 end
 
 
+function read_file(filename::AbstractString)
+    input_data = Dict{AbstractString,Any}()
+    lattice_params = Dict{AbstractString,Float64}()
+
+    # read file line by line
+    for line in eachline(filename)
+        # split the line by whitespace and remove empty strings
+        tokens = filter(x -> x ≠ "", split(line))
+
+        if length(tokens) > 0 && tokens[1] ≠ "#"
+            if tokens[1] in ["θ_min", "θ_max", "N"]
+                input_data[tokens[1]] = parse(Int, tokens[2])
+            elseif tokens[1] == "λ"
+                input_data[tokens[1]] = parse(Float64, tokens[2])
+            elseif tokens[1] in ["U", "V", "W"]
+                input_data[tokens[1]] = parse(Float64, tokens[2])
+            elseif tokens[1] in ["SC", "BCC", "FCC"]
+                lattice_params[tokens[1]] = parse(Float64, tokens[3])
+            end
+        elseif length(tokens) > 1 && tokens[1] == "BCC" && tokens[2] ≠ "#"
+            lattice_params[tokens[1]] = parse(Float64, tokens[3])
+        elseif length(tokens) > 1 && tokens[1] == "FCC" && tokens[2] ≠ "#"
+            lattice_params[tokens[1]] = parse(Float64, tokens[3])
+        elseif length(tokens) > 1 && tokens[1] == "SC" && tokens[2] ≠ "#"
+            lattice_params[tokens[1]] = parse(Float64, tokens[3])
+        end
+    end
+
+    return input_data, lattice_params
+end
+
+
 """
 ================
 General Settings
 ================
 """
 
-N = 1000
-θ = collect(LinRange(0, 180, N))
-y = zeros(N)
-λ = 0.15418  # CuKα radiation in nm
-U, V, W = 0.2, 0.2, 0.2
+inst, lattice_par = read_file("simple_XRD.txt")
+
+N = inst["N"]
+θ = collect(LinRange(inst["θ_min"], inst["θ_max"], inst["N"]))
+y = zeros(inst["N"])
+λ = inst["λ"]
+U, V, W = inst["U"], inst["V"], inst["W"] 
 
 Random.seed!(347) # Setting the seed for random noise
-
-
-"""
-## Lattice parameter for some elements (in Å)
-
-### SC lattice:
-Po  0.3352
-
-### BCC lattice:
-Fe  0.2856   ;   Mo  0.3142   ;   W   0.3155   ;   V   0.30399  ;   Nb  0.33008  ;   Ta  0.33058
-
-### FCC lattice:
-Al  0.4046   ;   Ni  0.3499   ;   Cu  0.3594   ;   Pd  0.3859   ;   Ag  0.4079   ;   Pt  0.4920   ;   Au  0.4065   ;   Pb  0.4920
-
-from https://en.wikipedia.org/wiki/Lattice_constant
-"""
 
 
 """

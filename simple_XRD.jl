@@ -75,29 +75,19 @@ end
 end
 
 
-function plot_it(θ, y; title="XRD", xlabel="2θ (deg)", ylabel="Intensity (arb.)", show_plot=true, save_plot=true)
+function plot_it(θ, y, title="XRD", xlabel="2θ (deg)", ylabel="Intensity (arb.)", show_plot=true, save_plot=true)
     """ploting the graphs """
-     p = plot(θ, y, xlabel=xlabel, ylabel=ylabel, title=title)
-     if show_plot
+    p = plot(θ, y, xlabel=xlabel, ylabel=ylabel, title=title)
+    if show_plot
         default(show=true)
         display(p)
     end
     if save_plot
-        savefig(plot, title)
-        print("saved " * title)
+        savefig(p, 123)
+        print(title)
     end
     return p
  end
-
-
-# function plot_it(θ, y; title="", xlabel="2θ (deg)", ylabel="Intensity (arb.)", show_plot=true)
-#     p = plot(θ, y, xlabel=xlabel, ylabel=ylabel, title=title)
-#     if show_plot
-#         default(show=true)
-#         display(p)
-#     end
-#     return p
-# end
 
 
 function Miller_indices(cell_type::String, min::Int64, max::Int64)
@@ -199,8 +189,9 @@ function do_it(file_name::String, lattice_type::String)
         rand(Normal(1, 0.1), N)
 
     Title = "XRD - " * lattice_type
-    plot = plot_it(θ, y; title=Title)
-    #display(plot)
+    plot = plot_it(θ, y, title=Title)
+    display(plot)
+    savefig(plot, Title)
     
 end
 

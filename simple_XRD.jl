@@ -14,42 +14,6 @@ Functions
 =========
 """
 
-# function Lorentzian(x, fwhm)
-#     """Returns a Lorenzian function of x around 0 with a given full width at half maximun"""
-#     γ = fwhm / 2
-#     return pdf.(Cauchy(0.0, γ), x)
-#     # equivalent to:
-#     # return @. (γ / pi) / (x^2 + γ^2)
-# end
-
-
-# function Gaussian(x, fwhm)
-#     """Returns a Gaussian function of x around 0 with a given full width at half maximun"""
-#     σ = fwhm / (2√(2log(2)))
-#     return pdf.(Normal(0.0, σ), x)
-#     # equivalent to:
-#     #return @. 1 / √(2π) / σ * exp(-x^2 / 2σ^2)
-# end
-
-
-# mix_fun(f1, f2, n) = n * f1 + (1 - n) * f2
-
-
-# function Pseudo_Voigt(x, fwhm, n)
-#     return n * Lorentzian(x, fwhm) + (1 - n) * Gaussian(x, fwhm)
-# end
-
-
-# pseudo_Voigt(x, fwhm, n) =  mix_fun(Lorentzian(x, fwhm), Gaussian(x, fwhm), n)
-
-
-# function Voigt(x, fwhm_L, fwhm_G)
-#     γ = fwhm_L / 2
-#     σ = fwhm_G / (2√(2log(2)))
-#     z = @. -im * (x + im * γ) / (√2 * σ)
-#     return @. real(erfcx(z)) / (√(2pi) * σ)
-# end
-
 
 function Voigt_peak(θ::Vector, θ₀, A, w_L, w_G, n)
     """Returns a Voigt peak centered around θ₀, with amplitude A, width w, and mixing factor n """
@@ -66,6 +30,8 @@ function pseudo_Voigt_peak(θ::Vector, θ₀, A, w, n)
     γ = w / 2
     σ = w / (2√(2log(2)))
     return @. A * (n * pdf.(Cauchy(θ₀, γ), θ) + (1-n) * pdf.(Normal(θ₀, σ), θ))
+    # equivalent to:
+    # return @. A * (n* (γ / pi) / ((θ - θ₀)^2 + γ^2) + (1 - n) * 1 / √(2π) / σ * exp(-(θ - θ₀)^2 / 2σ^2)
 end
 
 
@@ -109,11 +75,18 @@ end
 end
 
 
-function plot_it(θ::Vector, y::Vector; title="", xlabel="2θ (deg)", ylabel="Intensity (arb.)")
+function plot_it(θ, y; title="XRD", xlabel="2θ (deg)", ylabel="Intensity (arb.)", show_plot=true, save_plot=true)
     """ploting the graphs """
-     default(show = true)
      p = plot(θ, y, xlabel=xlabel, ylabel=ylabel, title=title)
-     return p
+     if show_plot
+        default(show=true)
+        display(p)
+    end
+    if save_plot
+        savefig(plot, title)
+        print("saved " * title)
+    end
+    return p
  end
 
 
@@ -127,7 +100,7 @@ function plot_it(θ::Vector, y::Vector; title="", xlabel="2θ (deg)", ylabel="In
 # end
 
 
-function Miller_indices(cell_type::String, min::Float64, max::Float64)
+function Miller_indices(cell_type::String, min::Int64, max::Int64)
     """Returns a list of Miller indices for each one of the cubic symmetries"""
     if !(cell_type in ["SC", "BCC", "FCC"])
         error("Invalid cell_type: $cell_type. Expected 'SC', 'BCC', or 'FCC'.")
@@ -225,9 +198,10 @@ function do_it(file_name::String, lattice_type::String)
         intensity_vs_angle(θ, indices, λ, a, U, V, W)) .*
         rand(Normal(1, 0.1), N)
 
-    plot = plot_it(θ, y, "XRD - " * lattice_type)
-    display(plot)
-    savefig(plot, lattice_type)
+    Title = "XRD - " * lattice_type
+    plot = plot_it(θ, y; title=Title)
+    #display(plot)
+    
 end
 
 

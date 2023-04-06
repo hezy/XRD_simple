@@ -218,6 +218,6 @@ main
 
 Random.seed!(347) # Setting the seed for random noise
 
-do_it("simple_XRD.txt", "SC")
-do_it("simple_XRD.txt", "BCC")
-do_it("simple_XRD.txt", "FCC")
+for lattice_type in ("SC", "BCC", "FCC")
+    do_it("simple_XRD.txt", lattice_type)
+end

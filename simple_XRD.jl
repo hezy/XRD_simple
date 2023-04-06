@@ -91,7 +91,7 @@ end
 
 
 
-function plot_it(θ, y, Title)
+function plot_it(θ::Vector, y::Vector, Title::String)
      default(show = true)
      p = plot(θ, y)
      title!(Title)
@@ -145,7 +145,6 @@ function Miller_indices(cell_type, min, max)
 end
 
 
-
 function background(θ)
     return @. 2 + θ * (360 - θ) / 15000
 end
@@ -157,7 +156,7 @@ end
 
 
 function read_file(filename::AbstractString)
-    input_data = Dict{AbstractString,Any}()
+    instrument_data = Dict{AbstractString,Any}()
     lattice_params = Dict{AbstractString,Float64}()
 
     # read file line by line
@@ -167,11 +166,11 @@ function read_file(filename::AbstractString)
 
         if length(tokens) > 0 && tokens[1] ≠ "#"
             if tokens[1] in ["θ_min", "θ_max", "N"]
-                input_data[tokens[1]] = parse(Int, tokens[2])
+                instrument_data[tokens[1]] = parse(Int, tokens[2])
             elseif tokens[1] == "λ"
-                input_data[tokens[1]] = parse(Float64, tokens[2])
+                instrument_data[tokens[1]] = parse(Float64, tokens[2])
             elseif tokens[1] in ["U", "V", "W"]
-                input_data[tokens[1]] = parse(Float64, tokens[2])
+                instrument_data[tokens[1]] = parse(Float64, tokens[2])
             elseif tokens[1] in ["SC", "BCC", "FCC"]
                 lattice_params[tokens[1]] = parse(Float64, tokens[3])
             end
@@ -184,92 +183,41 @@ function read_file(filename::AbstractString)
         end
     end
 
-    return input_data, lattice_params
+    return instrument_data, lattice_params
+end
+
+
+function do_it(file_name::String, lattice_type::String)
+    instrument_data, lattice_params = read_file(file_name)
+
+    N = instrument_data["N"]
+    θ = collect(LinRange(instrument_data["θ_min"], instrument_data["θ_max"], instrument_data["N"]))
+    y = zeros(instrument_data["N"])
+    λ = instrument_data["λ"]
+    U, V, W = instrument_data["U"], instrument_data["V"], instrument_data["W"] 
+    
+    a = lattice_params[lattice_type]
+
+    indices = Miller_indices(lattice_type, -5, 5)
+
+    y = (background(θ) + 
+        intensity_vs_angle(θ, indices, λ, a, U, V, W)) .*
+        rand(Normal(1, 0.1), N)
+
+    plot = plot_it(θ, y, "XRD - " * lattice_type)
+    display(plot)
+    savefig(plot, lattice_type)
 end
 
 
 """
 ================
-General Settings
+main
 ================
 """
 
-inst, lattice_par = read_file("simple_XRD.txt")
-
-N = inst["N"]
-θ = collect(LinRange(inst["θ_min"], inst["θ_max"], inst["N"]))
-y = zeros(inst["N"])
-λ = inst["λ"]
-U, V, W = inst["U"], inst["V"], inst["W"] 
-
 Random.seed!(347) # Setting the seed for random noise
 
-
-"""
-============
-Simple Cubic
-============
-"""
-
-"""
-Lattice parameter for SC Polonium (α-Po)
-from https://en.wikipedia.org/wiki/Polonium 
-"""
-a_SC = 0.3352
-
-indices_SC = Miller_indices("SC", -5, 5)
-
-y_SC =
-     (background(θ) + intensity_vs_angle(θ, indices_SC, λ, a_SC, U, V, W)) .*
-     rand(Normal(1, 0.1), N)
-
- plot1 = plot_it(θ, y_SC, "XRD - SC")
-display(plot1)
-savefig(plot1, "SC")
-
-
-"""
-===================
-Body centered Cubic
-===================
-"""
-
-"""
-Lattice parameter for BCC Tantalum (α-Ta)
-from https://en.wikipedia.org/wiki/Tantalum
-"""
-a_BCC = 0.33058
-
-indices_BCC = Miller_indices("BCC", -5, 5)
-
-y_BCC =
-    (background(θ) + intensity_vs_angle(θ, indices_BCC, λ, a_BCC, U, V, W)) .*
-    rand(Normal(1, 0.1), N)
-
-plot2 = plot_it(θ, y_BCC, "XRD - BCC")
-display(plot2)
-savefig(plot2, "BCC")
-
-
-"""
-===================
-Face Centered Cubic
-===================
-"""
-
-"""
-Lattice parameter for FCC Platinum
-from https://periodictable.com/Elements/078/data.html
-"""
-a_FCC = 0.39242
-
-indices_FCC = Miller_indices("FCC", -5, 5)
-
-y_FCC =
-    (background(θ) + intensity_vs_angle(θ, indices_FCC, λ, a_FCC, U, V, W)) .*
-    rand(Normal(1, 0.1), N)
-
-plot3 = plot_it(θ, y_FCC, "XRD - FCC")
-display(plot3)
-savefig(plot3, "FCC")
-
+do_it("simple_XRD.txt", "SC")
+do_it("simple_XRD.txt", "BCC")
+do_it("simple_XRD.txt", "FCC")

@@ -14,6 +14,9 @@ W   0.2
 
 ### Lattice parameter for some elements (in Å)
 ### from https://en.wikipedia.org/wiki/Lattice_constant
+### SC Polonium (α-Po) from https://en.wikipedia.org/wiki/Polonium
+### BCC Tantalum (α-Ta) from https://en.wikipedia.org/wiki/Tantalum
+### FCC Platinum from https://periodictable.com/Elements/078/data.html
 
 
 ### SC lattice:

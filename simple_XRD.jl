@@ -66,7 +66,7 @@ function sum_peaks(θ::Vector, two_θ_list, U, V, W)
 end
 
 
- function intensity_vs_angle(θ, indices, λ, a, U, V, W)
+function intensity_vs_angle(θ, indices, λ, a, U, V, W)
     """Building the XRD patterns """
      indices = (reduce(hcat, indices))'
      two_θ_list = bragg_angels(λ, d_list(indices, a))
@@ -87,7 +87,7 @@ function plot_it(θ, y, title="XRD", xlabel="2θ (deg)", ylabel="Intensity (arb.
         print(title)
     end
     return p
- end
+end
 
 
 function Miller_indices(cell_type::String, min::Int64, max::Int64)

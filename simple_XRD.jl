@@ -83,7 +83,7 @@ end
 
 
  function intensity_vs_angle(θ, indices, λ, a, U, V, W)
-     indices = (reduce(hcat, indices))'
+     indices = (reduce(hcat, indices))
      two_θ_list = bragg_angels(λ, d_list(indices, a))
      y = sum_peaks(θ, two_θ_list, U, V, W)
      return y

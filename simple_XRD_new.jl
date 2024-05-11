@@ -1,7 +1,6 @@
 """
 simple_XRD_new.jl
 by Hezy Amiel
-
 April 2023
 Julia 1.8.5
 """

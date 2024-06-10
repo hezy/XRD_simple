@@ -190,8 +190,10 @@ function do_it(file_name, lattice_type)
 
     the_title = "XRD - " * lattice_type
 
+    plot_name = "plot_" * lattice_type
+    
     p = plot(θ, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)")
-    display(p)
+    display(p) 
     sleep(2)
     println("Press Enter to continue plot...")
     readline()  # Wait for user input to continue    savefig(p, the_title)

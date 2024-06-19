@@ -194,7 +194,7 @@ function do_it(file_name, lattice_type)
     
     p = plot(θ, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)")
     display(p) 
-    sleep(2)
+    sleep(1)
     println("Press Enter to continue plot...")
     readline()  # Wait for user input to continue    savefig(p, the_title)
     return θ, y

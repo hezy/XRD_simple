@@ -192,11 +192,12 @@ function do_it(file_name, lattice_type)
 
     plot_name = "plot_" * lattice_type
     
-    p = plot(θ, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)")
-    display(p) 
+    plot_name = plot(θ, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)")
+    display(plot_name) 
     sleep(1)
-    println("Press Enter to continue plot...")
-    readline()  # Wait for user input to continue    savefig(p, the_title)
+    println("$plot_name . Press Enter to continue...")
+    readline()  # Wait for user input to continue    
+    savefig(plot_name, the_title)
     return θ, y
 end
 

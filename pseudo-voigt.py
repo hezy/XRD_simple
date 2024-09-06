@@ -17,7 +17,8 @@ import numpy as np
 from scipy.stats import norm
 from scipy.stats import cauchy
 from scipy.special import wofz
-from scipy.optimize import curve_fit
+
+# from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 
 

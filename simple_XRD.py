@@ -6,9 +6,9 @@ Created on Wed Dec  7 14:56:13 2022
 @author: Yehezkel Amiel
 """
 
-""" Importing lipreries """
+""" Importing libreries """
 import numpy as np
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
 from scipy.special import wofz
 
 # from scipy.optimize import curve_fit

@@ -10,8 +10,9 @@ Created on Wed Dec  7 14:56:13 2022
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.special import wofz
-from scipy.optimize import curve_fit
-from itertools import combinations_with_replacement
+
+# from scipy.optimize import curve_fit
+# from itertools import combinations_with_replacement
 from itertools import product
 
 

@@ -20,18 +20,17 @@ Functions
 """
 
 
+"Returns a Voigt peak centered around θ₀, with amplitude A, width w, and mixing factor n "
 function Voigt_peak(θ::Vector, θ₀, A, w_L, w_G, n)
-    """Returns a Voigt peak centered around θ₀, with amplitude A, width w, and mixing factor n """
-    """untested"""
-    γ = w_L / 2
+d    γ = w_L / 2
     σ = w_G / (2√(2log(2)))
     z = @. -im * ((θ - θ₀) + im * γ) / (√2 * σ)
     return @. real(erfcx(z)) / (√(2pi) * σ)
 end
 
 
+"Returns a pseudo Voigt peak centered around θ₀, with amplitude A, width w, and mixing factor n "
 function pseudo_Voigt_peak(θ::Vector, θ₀, A, w, n)
-    """Returns a pseudo Voigt peak centered around θ₀, with amplitude A, width w, and mixing factor n """
     γ = w / 2
     σ = w / (2√(2log(2)))
     return @. A * (n * pdf.(Cauchy(θ₀, γ), θ) + (1-n) * pdf.(Normal(θ₀, σ), θ))
@@ -40,29 +39,29 @@ function pseudo_Voigt_peak(θ::Vector, θ₀, A, w, n)
 end
 
 
+"Returns the width of a peak as afunction of 2θ with U, V, W parameters"
 function peaks_width(two_θ_deg, U, V, W)
-    """Returns the width of a peak as afunction of 2θ with U, V, W parameters"""
     two_θ_rad = two_θ_deg * π / 180
     return @. √(U * tan(two_θ_rad / 2)^2 + V * tan(two_θ_rad / 2) + W)
 end
 
 
+"Calculating the Bragg angles coresponding to each d-spacing"
 function bragg_angels(wavelength, d_spacings)
-    """ calculating the Bragg angles coresponding to each d-spacing"""
     sinθ = wavelength ./ (2 * d_spacings)
     sinθ_cleaned = [item for item in sinθ if abs(item) <= 1]  # removing values outside (-1,1)
     return 2 * (180 / π) * asin.(sinθ_cleaned)  # *2 for 2θ  
 end
 
 
+"Returnes the inter-layers distances as a function of Miller_indices "
 function d_list(indices, a)
-    """Returnes the inter-layers distances as a function of Miller_indices """
     return a ./ .√(sum(indices .^ 2, dims = 2))
 end
 
 
+"Sums peak functions to return intensity vs angle "
 function sum_peaks(θ::Vector, two_θ_list, U, V, W)
-    """Sums peak functions to return intensity vs angle """
     y = zeros(size(θ))
     for item in two_θ_list
         y = y + pseudo_Voigt_peak(θ, item, 1, peaks_width(θ, U, V, W), 0.5)
@@ -71,8 +70,8 @@ function sum_peaks(θ::Vector, two_θ_list, U, V, W)
 end
 
 
+"Building the XRD patterns "
 function intensity_vs_angle(θ, indices, λ, a, U, V, W)
-    """Building the XRD patterns """
     indices = (reduce(hcat, indices))'
     two_θ_list = bragg_angels(λ, d_list(indices, a))
     y = sum_peaks(θ, two_θ_list, U, V, W)
@@ -80,8 +79,8 @@ function intensity_vs_angle(θ, indices, λ, a, U, V, W)
 end
 
 
+"Returns a list of Miller indices for each one of the cubic symmetries"
 function Miller_indices(cell_type::String, min::Int64, max::Int64)
-    """Returns a list of Miller indices for each one of the cubic symmetries"""
     if !(cell_type in ["SC", "BCC", "FCC"])
         error("Invalid cell_type: $cell_type. Expected 'SC', 'BCC', or 'FCC'.")
     end
@@ -115,20 +114,20 @@ function Miller_indices(cell_type::String, min::Int64, max::Int64)
 end
 
 
+"background function for the XRD pattern "
 function background(θ::Vector)
-    """background function for the XRD pattern """
     return @. 2 + θ * (360 - θ) / 15000
 end
 
 
+"Adding some noise to the data "
 function make_noisy(θ::Vector, y::Vector)
-    """Adding some noise to the data """
     return (background(θ) + y) .* rand(Normal(1, 0.1), size(θ))
 end
 
 
+"Reading a text file with instrument data, and lattice parameters "
 function read_file(filename)
-    """Reading a text file with instrument data, and lattice parameters """
     instrument_data = Dict{AbstractString,Any}()
     lattice_params = Dict{AbstractString,Float64}()
 
@@ -160,8 +159,8 @@ function read_file(filename)
 end
 
 
+"colecting input data, building the XRD pattern with background and noise, plotting it "
 function do_it_zero(file_name)
-    """colecting input data, building the XRD pattern with background and noise, plotting it """
     instrument_data, lattice_params = read_file(file_name)
 
     θ = collect(LinRange(instrument_data["θ_min"], instrument_data["θ_max"], instrument_data["N"]))
@@ -169,8 +168,8 @@ function do_it_zero(file_name)
 end
 
 
+"colecting input data, building the XRD pattern with background and noise, plotting it "
 function do_it(file_name, lattice_type)
-    """colecting input data, building the XRD pattern with background and noise, plotting it """
     instrument_data, lattice_params = read_file(file_name)
 
     N = instrument_data["N"]

@@ -46,7 +46,7 @@ function peaks_width(two_θ_deg, U, V, W)
 end
 
 
-" calculating the Bragg angles coresponding to each d-spacing"
+"Calculating the Bragg angles coresponding to each d-spacing"
 function bragg_angels(wavelength, d_spacings)
     sinθ = wavelength ./ (2 * d_spacings)
     sinθ_cleaned = [item for item in sinθ if abs(item) <= 1]  # removing values outside (-1,1)

@@ -20,6 +20,7 @@ Functions
 =========
 """
 
+
 "Returns a Voigt peak centered around θ₀, with amplitude A, width w, and mixing factor n "
 function Voigt_peak(θ::Vector, θ₀, A, w_L, w_G, n)
     γ = w_L / 2
@@ -77,6 +78,7 @@ function intensity_vs_angle(θ, indices, λ, a, U, V, W)
     y = sum_peaks(θ, two_θ_list, U, V, W)
     return y
 end
+
 
 "Returns a list of Miller indices for each one of the cubic symmetries"
 function Miller_indices(cell_type::String, min::Int64, max::Int64)
@@ -195,6 +197,7 @@ function do_it(file_name, lattice_type)
     println("$plot_name . Press Enter to continue...")
     readline()  # Wait for user input to continue    
     savefig(plot_name, the_title)
+    
     return θ, y
 end
 

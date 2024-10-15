@@ -6,6 +6,7 @@ Julia 1.8.5
 """
 
 using Plots
+gr()
 using SpecialFunctions
 using Random
 using Distributions
@@ -214,3 +215,4 @@ for lattice_type in ("SC", "BCC", "FCC")
 end
 
 CSV.write("XRD_results.csv", df)
+

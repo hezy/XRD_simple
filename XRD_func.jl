@@ -189,30 +189,10 @@ function do_it(file_name, lattice_type)
 
     the_title = "XRD - " * lattice_type
 
-    p = plot(θ, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)")
-    display(p)
-    savefig(p, the_title)
-
-    return θ, y
+    plot_name = "plot_" * lattice_type
+    
+    plot_name = plot(θ, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)")
+    
+    return θ, y, the_title, plot_name
 end
-
-
-
-"""
-================
-main
-================
-"""
-
-
-Random.seed!(347) # Setting the seed for random noise
-
-θ₀ = do_it_zero("simple_XRD.txt")
-df = DataFrame(θ=θ₀, SC=θ₀, BCC=θ₀, FCC=θ₀)
-
-for lattice_type in ("SC", "BCC", "FCC")
-    df[:, "θ"], df[:, lattice_type] = do_it("simple_XRD.txt", lattice_type)
-end
-
-CSV.write("XRD_results.csv", df)
 

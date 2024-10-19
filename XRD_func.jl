@@ -92,18 +92,18 @@ function Miller_indices(cell_type::String, min::Int64, max::Int64)
         error("Minimum and maximum values must be integers.")
     end
     
-    if cell_type == "SC"
+    if cell_type == "SC"    
         # In simple cubic lattice, all Miller indices are allowed
         return [
-            [h, k, l] for h = min:max for k = min:max for
-            l = min:max if [h, k, l] != [0, 0, 0]
+            [h, k, l] for h = min:max for k = min:max for l = min:max if [h, k, l] != [0, 0, 0]
         ]
-    elseif cell_type == "BCC"
+    
+    elseif cell_type == "BCC"    
         # In body centered cubic lattice, only indices with h+k+l=even are allowed
         return [
-            [h, k, l] for h = min:max for k = min:max for
-            l = min:max if iseven(h + k + l) && [h, k, l] != [0, 0, 0]
+            [h, k, l] for h = min:max for k = min:max for l = min:max if iseven(h + k + l) && [h, k, l] != [0, 0, 0]
         ]
+    
     elseif cell_type == "FCC"
         # In face centered cubic lattice, h,k,l must all be either odd or even
         return [
@@ -111,7 +111,9 @@ function Miller_indices(cell_type::String, min::Int64, max::Int64)
             ((iseven(h) && iseven(k) && iseven(l)) || (isodd(h) && isodd(k) && isodd(l))) &&
             [h, k, l] != [0, 0, 0]
         ]
+    
     end
+
 end
 
 

@@ -40,7 +40,7 @@ function pseudo_Voigt_peak(θ::Vector, θ₀, A, w, n)
 end
 
 
-"Returns the width of a peak as afunction of 2θ with U, V, W parameters"
+"Returns the width of a peak as a function of 2θ with U, V, W parameters"
 function peaks_width(two_θ_deg, U, V, W)
     two_θ_rad = two_θ_deg * π / 180
     return @. √(U * tan(two_θ_rad / 2)^2 + V * tan(two_θ_rad / 2) + W)
@@ -55,13 +55,13 @@ function bragg_angels(wavelength, d_spacings)
 end
 
 
-"Returnes the inter-layers distances as a function of Miller_indices "
+"Returnes the inter-layers distances as a function of Miller_indices"
 function d_list(indices, a)
     return a ./ .√(sum(indices .^ 2, dims = 2))
 end
 
 
-"Sums peak functions to return intensity vs angle "
+"Sums peak functions to return intensity vs angle"
 function sum_peaks(θ::Vector, two_θ_list, U, V, W)
     y = zeros(size(θ))
     for item in two_θ_list
@@ -71,7 +71,7 @@ function sum_peaks(θ::Vector, two_θ_list, U, V, W)
 end
 
 
-"Building the XRD patterns "
+"Building the XRD patterns"
 function intensity_vs_angle(θ, indices, λ, a, U, V, W)
     indices = (reduce(hcat, indices))'
     two_θ_list = bragg_angels(λ, d_list(indices, a))
@@ -117,19 +117,19 @@ function Miller_indices(cell_type::String, min::Int64, max::Int64)
 end
 
 
-"background function for the XRD pattern "
+"background function for the XRD pattern"
 function background(θ::Vector)
     return @. 2 + θ * (360 - θ) / 15000
 end
 
 
-"Adding some noise to the data "
+"Adding some noise to the data"
 function make_noisy(θ::Vector, y::Vector)
     return (background(θ) + y) .* rand(Normal(1, 0.1), size(θ))
 end
 
 
-"Reading a text file with instrument data, and lattice parameters "
+"Reading a text file with instrument data, and lattice parameters"
 function read_file(filename)
     instrument_data = Dict{AbstractString,Any}()
     lattice_params = Dict{AbstractString,Float64}()
@@ -162,7 +162,7 @@ function read_file(filename)
 end
 
 
-"colecting input data, building the XRD pattern with background and noise, plotting it "
+"colecting input data, building the XRD pattern with background and noise, plotting it"
 function do_it_zero(file_name)
     instrument_data, lattice_params = read_file(file_name)
 
@@ -171,7 +171,7 @@ function do_it_zero(file_name)
 end
 
 
-"colecting input data, building the XRD pattern with background and noise, plotting it "
+"colecting input data, building the XRD pattern with background and noise, plotting it"
 function do_it(file_name, lattice_type)
     instrument_data, lattice_params = read_file(file_name)
 

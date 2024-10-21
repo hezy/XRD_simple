@@ -5,8 +5,7 @@ April 2023
 Julia 1.8.5
 """
 
-#using Plots
-#gr()
+#using Plots, gr()
 #using SpecialFunctions
 using Random
 #using Distributions

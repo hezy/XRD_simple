@@ -20,7 +20,7 @@ main
 ================
 """
 
-include("XRD_func.jl")
+include("functions.jl")
 
 Random.seed!(347) # Setting the seed for random noise
 

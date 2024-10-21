@@ -5,13 +5,13 @@ April 2023
 Julia 1.8.5
 """
 
-using Plots
-gr()
+#using Plots
+#gr()
 #using SpecialFunctions
-#using Random
+using Random
 #using Distributions
 using DataFrames
-#using CSV
+using CSV
 
 
 """

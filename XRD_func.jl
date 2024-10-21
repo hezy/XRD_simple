@@ -22,7 +22,7 @@ Functions
 
 
 "Returns a Voigt peak centered around θ₀, with amplitude A, width w, and mixing factor n "
-function Voigt_peak(θ::Vector{Float64}, θ₀::Float64, A::Float64, w_L::Vector{Float64}, w_G::Vector{Float64}, n::Float64)
+function Voigt_peak(θ::Vector{Float64}, θ₀::Float64, A::Float64, w_L::Vector{Float64}, w_G::Vector{Float64}, n::Float64)::Vector{Float64}
     γ = w_L / 2
     σ = w_G / (2√(2log(2)))
     z = @. -im * ((θ - θ₀) + im * γ) / (√2 * σ)
@@ -31,7 +31,7 @@ end
 
 
 "Returns a pseudo Voigt peak centered around θ₀, with amplitude A, width w, and mixing factor n "
-function pseudo_Voigt_peak(θ::Vector{Float64}, θ₀::Float64, A::Float64, w::Vector{Float64}, n::Float64)
+function pseudo_Voigt_peak(θ::Vector{Float64}, θ₀::Float64, A::Float64, w::Vector{Float64}, n::Float64)::Vector{Float64}
     γ = w / 2
     σ = w / (2√(2log(2)))
     return @. A * (n * pdf.(Cauchy(θ₀, γ), θ) + (1-n) * pdf.(Normal(θ₀, σ), θ))
@@ -41,14 +41,14 @@ end
 
 
 "Returns the width of a peak as a function of 2θ with U, V, W parameters"
-function peaks_width(two_θ_deg::Vector{Float64}, U::Float64, V::Float64, W::Float64)
+function peaks_width(two_θ_deg::Vector{Float64}, U::Float64, V::Float64, W::Float64)::Vector{Float64}
     # two_θ_rad = two_θ_deg * π / 180
     return @. √(U * tan(two_θ_deg * π / 360)^2 + V * tan(two_θ_deg * π / 360) + W)
 end
 
 
 "Calculating the Bragg angles coresponding to each d-spacing"
-function bragg_angels(wavelength::Float64, d_spacings::Vector{Float64})
+function bragg_angels(wavelength::Float64, d_spacings::Vector{Float64})::Vector{Float64}
     sinθ = wavelength ./ (2 * d_spacings)
     sinθ_cleaned = [item for item in sinθ if abs(item) <= 1]  # removing values outside (-1,1)
     return 2 * (180 / π) * asin.(sinθ_cleaned)  # *2 for 2θ  
@@ -57,13 +57,13 @@ end
 
 
 "Returnes the inter-layers distances as a function of Miller_indices"
-function d_list(indices::Vector{Vector{Int64}}, a::Float64)
+function d_list(indices::Vector{Vector{Int64}}, a::Float64)::Vector{Float64}
     return a ./ [sqrt(i^2 + j^2 + k^2) for (i, j, k) in indices]
 end
 
 
 "sums peak functions to return intensity vs angle"
-function sum_peaks(θ::Vector{Float64}, two_θ_list::Vector{Float64}, U::Float64, V::Float64, W::Float64)
+function sum_peaks(θ::Vector{Float64}, two_θ_list::Vector{Float64}, U::Float64, V::Float64, W::Float64)::Vector{Float64}
     y = zeros(size(θ))
     for item in two_θ_list
         y = y + pseudo_Voigt_peak(θ, item, 1.0, peaks_width(θ, U, V, W), 0.5)
@@ -73,7 +73,7 @@ end
 
 
 "Building the XRD patterns"
-function intensity_vs_angle(θ::Vector{Float64}, indices::Vector{Vector{Int64}}, λ::Float64, a::Float64, U::Float64, V::Float64, W::Float64)
+function intensity_vs_angle(θ::Vector{Float64}, indices::Vector{Vector{Int64}}, λ::Float64, a::Float64, U::Float64, V::Float64, W::Float64)::Vector{Float64}
     two_θ_list = bragg_angels(λ, d_list(indices, a))
     y = sum_peaks(θ, two_θ_list, U, V, W)
     return y
@@ -81,7 +81,7 @@ end
 
 
 "Returns a list of Miller indices for each one of the cubic symmetries"
-function Miller_indices(cell_type::String, min::Integer, max::Integer)
+function Miller_indices(cell_type::String, min::Int64, max::Int64)::Vector{Vector{Int64}}
     if !(cell_type in ["SC", "BCC", "FCC"])
         error("Invalid cell_type: $cell_type. Expected 'SC', 'BCC', or 'FCC'.")
     end
@@ -118,19 +118,19 @@ end
 
 
 "background function for the XRD pattern"
-function background(θ::Vector{Float64})
+function background(θ::Vector{Float64})::Vector{Float64}
     return @. 2 + θ * (360 - θ) / 15000
 end
 
 
 "Adding some noise to the data"
-function make_noisy(θ::Vector{Float64}, y::Vector{Float64})
+function make_noisy(θ::Vector{Float64}, y::Vector{Float64})::Vector{Float64}
     return (background(θ) + y) .* rand(Normal(1, 0.1), size(θ))
 end
 
 
 "Reading a text file with instrument data, and lattice parameters"
-function read_file(filename::String)
+function read_file(filename::String)::Tuple{Dict, Dict}
     instrument_data = Dict{AbstractString,Any}()
     lattice_params = Dict{AbstractString,Float64}()
 
@@ -163,7 +163,7 @@ end
 
 
 "colecting input data, building the XRD pattern with background and noise, plotting it"
-function do_it_zero(file_name::String)
+function do_it_zero(file_name::String)::Vector{Float64}
     instrument_data, lattice_params = read_file(file_name)
 
     θ = collect(LinRange(instrument_data["θ_min"], instrument_data["θ_max"], instrument_data["N"]))
@@ -172,7 +172,7 @@ end
 
 
 "colecting input data, building the XRD pattern with background and noise, plotting it"
-function do_it(file_name::String, lattice_type::String)
+function do_it(file_name::String, lattice_type::String)::Tuple{Vector, Vector, String, Plots.Plot}
     instrument_data, lattice_params = read_file(file_name)
 
     N = instrument_data["N"]

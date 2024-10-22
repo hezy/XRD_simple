@@ -80,7 +80,7 @@ function d_list(indices::Vector{Vector{Int64}},
                 a::Float64
                 )::Vector{Float64}
 
-    return a ./ [sqrt(i^2 + j^2 + k^2) for (i, j, k) in indices]
+    return a ./ [√(i^2 + j^2 + k^2) for (i, j, k) in indices]
 end
 
 

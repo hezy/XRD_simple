@@ -76,7 +76,7 @@ end
 
 
 "Returnes the inter-layers distances as a function of Miller_indices"
-function d_list(indices::Vector{Vector{Int64}},
+function d_list(indices::Vector{Vector{Int8}},
                 a::Float64
                 )::Vector{Float64}
 
@@ -102,7 +102,7 @@ end
 
 "Building the XRD patterns"
 function intensity_vs_angle(θ::Vector{Float64},
-                            indices::Vector{Vector{Int64}},
+                            indices::Vector{Vector{Int8}},
                             λ::Float64,
                             a::Float64,
                             U::Float64,
@@ -118,9 +118,9 @@ end
 
 "Returns a list of Miller indices for each one of the cubic symmetries"
 function Miller_indices(cell_type::String,
-                        min::Int64,
-                        max::Int64
-                        )::Vector{Vector{Int64}}
+                        min::Int8,
+                        max::Int8
+                        )::Vector{Vector{Int8}}
     
     if !(cell_type in ["SC", "BCC", "FCC"])
         error("Invalid cell_type: $cell_type. Expected 'SC', 'BCC', or 'FCC'.")
@@ -128,7 +128,7 @@ function Miller_indices(cell_type::String,
     if min > max
         error("Minimum value cannot be greater than maximum value.")
     end
-    if !(isa(min, Int) && isa(max, Int))
+    if !(isa(min, Int8) && isa(max, Int8))
         error("Minimum and maximum values must be integers.")
     end
 
@@ -187,8 +187,10 @@ function read_file(filename::String
         tokens = filter(x -> x ≠ "", split(line))
 
         if length(tokens) > 0 && tokens[1] ≠ "#"
-            if tokens[1] in ["θ_min", "θ_max", "N"]
-                instrument_data[tokens[1]] = parse(Int, tokens[2])
+            if tokens[1] in ["θ_min", "θ_max"]
+                instrument_data[tokens[1]] = parse(Float64, tokens[2])
+            elseif tokens[1] == "N"
+                instrument_data[tokens[1]] = parse(Int64, tokens[2])    
             elseif tokens[1] == "λ"
                 instrument_data[tokens[1]] = parse(Float64, tokens[2])
             elseif tokens[1] in ["U", "V", "W"]
@@ -234,7 +236,9 @@ function do_it(file_name::String,
 
     a = lattice_params[lattice_type]
 
-    indices = Miller_indices(lattice_type, -5, 5)
+    index_min::Int8 = -5
+    index_max::Int8 = 5 
+    indices = Miller_indices(lattice_type, index_min, index_max)
 
     y = (background(θ) +
          intensity_vs_angle(θ, indices, λ, a, U, V, W)) .*

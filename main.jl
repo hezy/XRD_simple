@@ -1,8 +1,7 @@
 """
-simple_XRD_new.jl
+simple XRD
 by Hezy Amiel
-April 2023
-Julia 1.8.5
+2023 - 2024
 """
 
 #using Plots; gr()

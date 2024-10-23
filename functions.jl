@@ -246,10 +246,8 @@ function do_it(file_name::String,
 
     the_title = "XRD - " * lattice_type
 
-    plot_name = "plot_" * lattice_type
+    the_plot = plot(θ, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)")
 
-    plot_name = plot(θ, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)")
-
-    return θ, y, the_title, plot_name
+    return θ, y, the_title, the_plot
 end
 

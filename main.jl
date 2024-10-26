@@ -26,7 +26,7 @@ Random.seed!(347) # Setting the seed for random noise
 df = DataFrame(θ=θ₀, SC=θ₀, BCC=θ₀, FCC=θ₀)
 
 for lattice_type in ("SC", "BCC", "FCC")
-    df[:, "θ"], df[:, lattice_type], the_title, the_plot = do_it("simple_XRD.txt", lattice_type)
+    df[:, "θ"], df[:, lattice_type], the_title, the_plot = do_it("simple_XRD.txt", lattice_type, :dark)
 
     display(the_plot) 
     sleep(1)

@@ -223,7 +223,8 @@ end
 
 "colecting input data, building the XRD pattern with background and noise, plotting it"
 function do_it(file_name::String,
-               lattice_type::String
+               lattice_type::String,
+               plot_theme::Symbol
                )::Tuple{Vector,Vector,String,Plots.Plot}
     
     instrument_data, lattice_params = read_file(file_name)
@@ -246,6 +247,8 @@ function do_it(file_name::String,
 
     the_title = "XRD - " * lattice_type
 
+    theme(plot_theme)
+    
     the_plot = plot(θ, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)")
 
     return θ, y, the_title, the_plot

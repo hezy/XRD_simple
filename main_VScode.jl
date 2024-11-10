@@ -1,8 +1,7 @@
 """
-simple_XRD_new.jl
+simple XRD
 by Hezy Amiel
-April 2023
-Julia 1.8.5
+2023 - 2024
 """
 
 #using Plots; gr()
@@ -30,9 +29,8 @@ for lattice_type in ("SC", "BCC", "FCC")
     df[:, "θ"], df[:, lattice_type], the_title, the_plot = do_it("simple_XRD.txt", lattice_type, :dark)
 
     display(the_plot) 
-    savefig(the_plot, the_title)
-
+    savefig(the_plot, "./results/$the_title")
 end
 
-CSV.write("XRD_results.csv", df)
+CSV.write("./results/XRD_results.csv", df)
 

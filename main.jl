@@ -32,9 +32,8 @@ for lattice_type in ("SC", "BCC", "FCC")
     sleep(1)
     println("$lattice_type. Press Enter to continue...")
     readline()  # Wait for user input to continue    
-    savefig(the_plot, the_title)
-
+    savefig(the_plot, "./results/$the_title")
 end
 
-CSV.write("XRD_results.csv", df)
+CSV.write("./results/XRD_results.csv", df)
 

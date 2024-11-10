@@ -48,3 +48,11 @@ docs/site/
 Manifest.toml
 
 # end of https://github.com/github/gitignore/blob/main/Julia.gitignore
+
+# Ignore the output files in the results dir
+results/
+
+# To have the results files updated once, use: 
+# git add -f results/*
+# git commit -m "reults update"
+# git push

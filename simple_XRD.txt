@@ -1,7 +1,7 @@
 ### Data for simple_XRD.jl
 
-θ_min   0
-θ_max   180
+θ_min   10
+θ_max   80
 N   1000
 
 λ   0.15418

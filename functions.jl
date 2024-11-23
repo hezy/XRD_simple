@@ -115,7 +115,7 @@ Notes:
 - Mixing factor is computed using the Humps2 approximation
 - Implements bounds checking to improve performance for large datasets
 """
- function pseudo_Voigt_peak(θ::Vector{Float64},
+function pseudo_Voigt_peak(θ::Vector{Float64},
                          θ₀::Float64,
                          A::Float64,
                          w_L::Vector{Float64},
@@ -123,22 +123,26 @@ Notes:
                          cutoff_sigma::Float64=5.0,
                          normalize::Bool=false
                          )::Vector{Float64}
-                         
+    
     # Validate parameters
-
-    # Initialize output array
-    result = zeros(Float64, length(θ))
+    A > 0 || throw(ArgumentError("Amplitude A must be positive"))
+    all(w_L .> 0) || throw(ArgumentError("Lorentzian width w_L must be positive"))
+    all(w_G .> 0) || throw(ArgumentError("Gaussian width w_G must be positive"))
+    cutoff_sigma > 0 || throw(ArgumentError("cutoff_sigma must be positive"))
     
     # Calculate width parameters
     γ = w_L / 2
     σ = w_G / (2√(2log(2)))
     
-    # Calculate mixing factor using Humps2 approximation
-    # Reference: P. Thompson et al., J. Appl. Cryst. (1987). 20, 79-83
-    @. η = 1.36603 * (w_L/w_eff) - 0.47719 * (w_L/w_eff)^2 + 0.11116 * (w_L/w_eff)^3
-    
-    # Effective width for cutoff
+    # Calculate effective width 
     w_eff = @. 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
+    
+    # Calculate mixing factor using Humps2 approximation
+    η = @. 1.36603 * (w_L/w_eff) - 0.47719 * (w_L/w_eff)^2 + 0.11116 * (w_L/w_eff)^3
+    
+    # Initialize output array
+    result = zeros(Float64, length(θ))
+ 
     
     # Calculate profile only for points within the cutoff region
     for i in eachindex(θ)
@@ -175,7 +179,7 @@ Estimates the distance from peak center where profile falls below a given tolera
 Works for both Voigt and pseudo-Voigt profiles. Returns maximum bound for vector inputs.
 """
 # Scalar version
-function estimate_peak_bounds(w_L::Float64, w_G::Float64, tol::Float64=1e-6)
+function estimate_peak_bounds(w_L::Float64, w_G::Float64, tol::Float64=1e-6)::Float64
     γ = w_L / 2
     σ = w_G / (2√(2log(2)))
     
@@ -186,7 +190,7 @@ function estimate_peak_bounds(w_L::Float64, w_G::Float64, tol::Float64=1e-6)
 end
 
 # Vector version
-function estimate_peak_bounds(w_L::Vector{Float64}, w_G::Vector{Float64}, tol::Float64=1e-6)
+function estimate_peak_bounds(w_L::Vector{Float64}, w_G::Vector{Float64}, tol::Float64=1e-6)::Float64
     length(w_L) == length(w_G) || throw(DimensionMismatch("w_L and w_G must have same length"))
     
     γ = w_L ./ 2
@@ -209,12 +213,12 @@ Calculates the full width at half maximum for either Voigt or pseudo-Voigt profi
 Handles both scalar and vector inputs.
 """
 # Scalar version
-function peak_fwhm(w_L::Float64, w_G::Float64)
+function peak_fwhm(w_L::Float64, w_G::Float64)::Float64
     return 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
 end
 
 # Vector version
-function peak_fwhm(w_L::Vector{Float64}, w_G::Vector{Float64})
+function peak_fwhm(w_L::Vector{Float64}, w_G::Vector{Float64})::Vector{Float64}
     length(w_L) == length(w_G) || throw(DimensionMismatch("w_L and w_G must have same length"))
     return @. 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
 end
@@ -224,7 +228,7 @@ end
 Calculates the width of the Gaussian as a function 2θ with U, V, W parameters -
 Caglioti formula
 """
-function peaks_width(two_θ::Vector{Float64},
+function Gaussian_peaks_width(two_θ::Vector{Float64},
                      U::Float64,
                      V::Float64,
                      W::Float64
@@ -238,7 +242,7 @@ end
 Calculates the width of the Lorntzian as a function 2θ with K, ϵ, λ, D parameters -
 Strain (Stokes-Wilson) and size (Scherrer) broadening
 """
-function peaks_width(two_θ::Vector{Float64},
+function Lorentzian_peaks_width(two_θ::Vector{Float64},
                      K::Float64,
                      ϵ::Float64,
                      λ::Float64,
@@ -292,7 +296,8 @@ function sum_peaks(θ::Vector{Float64},
     y = zeros(size(θ))
     for item in two_θ_list
         # y = y + pseudo_Voigt_peak(θ, item, 1.0, peaks_width(θ, U, V, W), 0.5)
-        y = y + Voigt_peak(θ, item, 1.0, w_L, w_G)
+        y = y + pseudo_Voigt_peak(θ, item, 1.0, w_L, w_G)
+
     end
     return y
 end
@@ -434,12 +439,12 @@ function do_it(file_name::String,
     K, ϵ, D = instrument_data["K"], instrument_data["ϵ"], instrument_data["D"]
     a = lattice_params[lattice_type]
 
-    index_min::Int8 = -5
-    index_max::Int8 = 5 
+    index_min::Int8 = -4
+    index_max::Int8 = 4
     indices = Miller_indices(lattice_type, index_min, index_max)
 
     y = (background(θ) +
-         intensity_vs_angle(θ, indices, λ, a, U, V, W)) .*
+         intensity_vs_angle(θ, indices, λ, a, w_L, w_G)) .*
         rand(Normal(1, 0.1), N)
 
     the_title = "XRD - " * lattice_type

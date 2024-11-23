@@ -59,7 +59,7 @@ function Voigt_peak(θ::Vector{Float64},
                     θ₀::Float64,
                     A::Float64,
                     w_L::Vector{Float64},
-                    w_G::Vector{Float64},
+                    w_G::Vector{Float64};
                     cutoff_sigma::Float64=5.0,
                     normalize::Bool=false
                     )::Vector{Float64}
@@ -166,12 +166,15 @@ end
 
 # Utility functions that work with both peak types
 
+
 """
     estimate_peak_bounds(w_L::Float64, w_G::Float64, tol::Float64=1e-6)
+    estimate_peak_bounds(w_L::Vector{Float64}, w_G::Vector{Float64}, tol::Float64=1e-6)
 
 Estimates the distance from peak center where profile falls below a given tolerance.
-Works for both Voigt and pseudo-Voigt profiles.
+Works for both Voigt and pseudo-Voigt profiles. Returns maximum bound for vector inputs.
 """
+# Scalar version
 function estimate_peak_bounds(w_L::Float64, w_G::Float64, tol::Float64=1e-6)
     γ = w_L / 2
     σ = w_G / (2√(2log(2)))
@@ -182,15 +185,38 @@ function estimate_peak_bounds(w_L::Float64, w_G::Float64, tol::Float64=1e-6)
     return max(gaussian_cutoff, lorentzian_cutoff)
 end
 
+# Vector version
+function estimate_peak_bounds(w_L::Vector{Float64}, w_G::Vector{Float64}, tol::Float64=1e-6)
+    length(w_L) == length(w_G) || throw(DimensionMismatch("w_L and w_G must have same length"))
+    
+    γ = w_L ./ 2
+    σ = w_G ./ (2√(2log(2)))
+    
+    gaussian_cutoffs = fill(√(-2 * log(tol)), length(w_L))
+    lorentzian_cutoffs = @. γ * √(1/tol - 1) / σ
+    
+    # Return the maximum bound to ensure coverage of entire peak
+    return maximum(max.(gaussian_cutoffs, lorentzian_cutoffs))
+end
+
 
 
 """
     peak_fwhm(w_L::Float64, w_G::Float64)
+    peak_fwhm(w_L::Vector{Float64}, w_G::Vector{Float64})
 
 Calculates the full width at half maximum for either Voigt or pseudo-Voigt profile.
+Handles both scalar and vector inputs.
 """
+# Scalar version
 function peak_fwhm(w_L::Float64, w_G::Float64)
     return 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
+end
+
+# Vector version
+function peak_fwhm(w_L::Vector{Float64}, w_G::Vector{Float64})
+    length(w_L) == length(w_G) || throw(DimensionMismatch("w_L and w_G must have same length"))
+    return @. 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
 end
 
 
@@ -198,13 +224,13 @@ end
 Calculates the width of the Gaussian as a function 2θ with U, V, W parameters -
 Caglioti formula
 """
-function peaks_width(two_θ_deg::Vector{Float64},
+function peaks_width(two_θ::Vector{Float64},
                      U::Float64,
                      V::Float64,
                      W::Float64
                      )::Vector{Float64}
 
-        return @. √(U * tan(two_θ_deg * π / 360)^2 + V * tan(two_θ_deg * π / 360) + W)
+        return @. √(U * tan(two_θ)^2 + V * tan(two_θ) + W)
 end
 
 
@@ -212,7 +238,7 @@ end
 Calculates the width of the Lorntzian as a function 2θ with K, ϵ, λ, D parameters -
 Strain (Stokes-Wilson) and size (Scherrer) broadening
 """
-function peaks_width(two_θ_deg::Vector{Float64},
+function peaks_width(two_θ::Vector{Float64},
                      K::Float64,
                      ϵ::Float64,
                      λ::Float64,
@@ -220,10 +246,11 @@ function peaks_width(two_θ_deg::Vector{Float64},
                      )::Vector{Float64}
 
     # Strain broadening (Stokes-Wilson)
-    w_L_strain = @. 4 * ε * tan(θ)  # where ε is microstrain
+    w_L_strain = @. 4 * ε * tan(two_θ)
+    # ε is microstrain
 
     # Size broadening (Scherrer)
-    w_L_size = @. K * λ / (D * cos(θ))  # where:
+    w_L_size = @. K * λ / (D * cos(two_θ))
     # K is the Scherrer constant (typically ≈ 0.9)
     # λ is wavelength
     # D is crystallite size
@@ -241,7 +268,7 @@ function bragg_angels(wavelength::Float64,
 
     sinθ = wavelength ./ (2 * d_spacings)
     sinθ_cleaned = [item for item in sinθ if abs(item) <= 1]  # removing values outside (-1,1)
-    return 2 * (180 / π) * asin.(sinθ_cleaned)  # *2 for 2θ  
+    return 2 * asin.(sinθ_cleaned)  # *2 for 2θ  ***************** check this !!! ******************************************************** 
 end
 
 
@@ -258,15 +285,14 @@ end
 "sums peak functions to return intensity vs angle"
 function sum_peaks(θ::Vector{Float64},
                    two_θ_list::Vector{Float64},
-                   U::Float64,
-                   V::Float64,
-                   W::Float64
+                   w_L::Vector{Float64},
+                   w_G::Vector{Float64},
                    )::Vector{Float64}
     
     y = zeros(size(θ))
     for item in two_θ_list
         # y = y + pseudo_Voigt_peak(θ, item, 1.0, peaks_width(θ, U, V, W), 0.5)
-        y = y + Voigt_peak(θ, item, 1.0, peaks_width(θ, U, V, W), 0.5)
+        y = y + Voigt_peak(θ, item, 1.0, w_L, w_G)
     end
     return y
 end
@@ -277,13 +303,12 @@ function intensity_vs_angle(θ::Vector{Float64},
                             indices::Vector{Vector{Int8}},
                             λ::Float64,
                             a::Float64,
-                            U::Float64,
-                            V::Float64,
-                            W::Float64
+                            w_L::Float64,
+                            w_G::Float64,
                             )::Vector{Float64}
     
     two_θ_list = bragg_angels(λ, d_list(indices, a))
-    y = sum_peaks(θ, two_θ_list, U, V, W)
+    y = sum_peaks(θ, two_θ_list, w_L, w_G)
     return y
 end
 
@@ -333,7 +358,7 @@ end
 function background(θ::Vector{Float64}
                     )::Vector{Float64}
     
-    return @. 2 + θ * (360 - θ) / 15000
+    return @. 2 + θ * (2π - θ) / 2500       
 end
 
 
@@ -406,7 +431,7 @@ function do_it(file_name::String,
     y = zeros(instrument_data["N"])
     λ = instrument_data["λ"]
     U, V, W = instrument_data["U"], instrument_data["V"], instrument_data["W"]
-
+    K, ϵ, D = instrument_data["K"], instrument_data["ϵ"], instrument_data["D"]
     a = lattice_params[lattice_type]
 
     index_min::Int8 = -5

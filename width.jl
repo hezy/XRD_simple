@@ -7,19 +7,19 @@ include("functions.jl")
 θ = deg2rad.(θ_deg)                 # convert to radians
 
 # Parameters for broadening
-λ = 1.54056  # Cu Kα wavelength in Å
-D = 50.0     # crystallite size in nm
-K = 0.9      # Scherrer constant
-Y = K * λ / (D * 10)  # size parameter
+λ = 0.154056   # Cu Kα wavelength in nm
+D = 100.0      # crystallite size in nm
+K = 0.9        # Scherrer constant
+Y = K * λ / D  # size parameter
 
-ε = 0.002    # 0.2% microstrain
-X = 4 * ε    # strain parameter
+ε = 0.001      # 0.1% microstrain
+X = 4 * ε      # strain parameter
 
 # Calculate angle-dependent widths
 w_L = @. X * tan(θ) + Y / cos(θ)    # total Lorentzian width
 
 # Gaussian instrumental broadening (Caglioti formula)
-U, V, W = 0.1, 0.05, 0.01
+U, V, W = 0.001, 0.0005, 0.00001
 w_G = @. √(U * tan(θ)^2 + V * tan(θ) + W)
 
 # Calculate peaks at different angles

@@ -11,6 +11,9 @@ U   0.2
 V   0.2
 W   0.2
 
+K   0.9 
+ϵ   0.002
+D   50.0
 
 ### Lattice parameter for some elements (in Å)
 ### from https://en.wikipedia.org/wiki/Lattice_constant

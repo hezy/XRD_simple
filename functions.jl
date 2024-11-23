@@ -21,10 +21,9 @@ Functions
 
 
 """
-    Voigt_peak(θ, θ₀, A, w_L, w_G)
+    abstract_peak(θ, θ₀, A, w_L, w_G; cutoff_sigma=5.0, normalize=false)
 
-Returns a Voigt peak profile computed as the convolution of Gaussian and Lorentzian functions
-using the complex error function.
+Template for peak profile functions (Voigt and Pseudo-Voigt).
 
 Arguments:
 - `θ::Vector{Float64}`: Position values where to evaluate the peak
@@ -35,12 +34,23 @@ Arguments:
 
 Keyword Arguments:
 - `cutoff_sigma::Float64=5.0`: Number of standard deviations beyond which to set peak to zero
-- `normalize::Bool=false`: If true, normalize peak height to 1.0Returns:
+- `normalize::Bool=false`: If true, normalize peak height to 1.0
+
+Returns:
 - `Vector{Float64}`: Peak intensity at each θ position
+"""
+
+
+"""
+    Voigt_peak(θ, θ₀, A, w_L, w_G; cutoff_sigma=5.0, normalize=false)
+
+Computes Voigt peak profile as the convolution of Gaussian and Lorentzian functions
+using the complex error function.
+
+See `abstract_peak` for parameter descriptions.
 
 Notes:
 - Uses the scaled complementary error function (erfcx) for numerical stability
-- The Voigt profile is the convolution of Gaussian and Lorentzian profiles
 - More computationally expensive but more accurate than pseudo-Voigt approximation
 - Implements bounds checking to improve performance for large datasets
 - The cutoff region is based on both Gaussian and Lorentzian widths
@@ -58,7 +68,8 @@ function Voigt_peak(θ::Vector{Float64},
     A > 0 || throw(ArgumentError("Amplitude A must be positive"))
     all(w_L .> 0) || throw(ArgumentError("Lorentzian width w_L must be positive"))
     all(w_G .> 0) || throw(ArgumentError("Gaussian width w_G must be positive"))
-
+    cutoff_sigma > 0 || throw(ArgumentError("cutoff_sigma must be positive"))    
+    
     # Initialize output array
     result = zeros(Float64, length(θ))                   
 
@@ -79,7 +90,7 @@ function Voigt_peak(θ::Vector{Float64},
         end
     end
 
-    # Normalize, if asked to
+    # Normalize if needed
     if normalize
         maxval = maximum(result)
         if maxval > 0
@@ -91,40 +102,102 @@ function Voigt_peak(θ::Vector{Float64},
 end
 
 
+
 """
-    pseudo_Voigt_peak(θ, θ₀, A, w, n)
+    pseudo_Voigt_peak(θ, θ₀, A, w_L, w_G; cutoff_sigma=5.0, normalize=false)
 
-Returns a pseudo-Voigt peak profile as a linear combination of Gaussian and Lorentzian functions.
+Computes pseudo-Voigt peak profile as a linear combination of Gaussian and Lorentzian functions.
+The mixing factor is calculated based on the relative widths of the components.
 
-Arguments:
-- `θ::Vector{Float64}`: Position values where to evaluate the peak
-- `θ₀::Float64`: Center position of the peak
-- `A::Float64`: Peak amplitude (must be positive)
-- `w::Vector{Float64}`: Peak width (FWHM) (must be positive)
-- `n::Float64`: Mixing parameter between Lorentzian (n=1) and Gaussian (n=0) profiles
+See `abstract_peak` for parameter descriptions.
 
-Returns:
-- `Vector{Float64}`: Peak intensity at each θ position
+Notes:
+- Mixing factor is computed using the Humps2 approximation
+- Implements bounds checking to improve performance for large datasets
 """
-function pseudo_Voigt_peak(θ::Vector{Float64},
-                           θ₀::Float64,
-                           A::Float64,
-                           w::Vector{Float64},
-                           n::Float64
-                           )::Vector{Float64}
-         # Validate parameters
-    0 ≤ n ≤ 1 || throw(ArgumentError("Mixing parameter n must be between 0 and 1"))
-    A > 0 || throw(ArgumentError("Amplitude A must be positive"))
-    all(w .> 0) || throw(ArgumentError("Width w must be positive"))                      
-    γ = w / 2
-    σ = w / (2√(2log(2)))
-    return @. A * (n * pdf.(Cauchy(θ₀, γ), θ) + (1 - n) * pdf.(Normal(θ₀, σ), θ))
-    # equivalent to:
-    # return @. A * (n* (γ / π) / ((θ - θ₀)^2 + γ^2) + (1 - n) * 1 / √(2π) / σ * exp(-(θ - θ₀)^2 / 2σ^2)
+ function pseudo_Voigt_peak(θ::Vector{Float64},
+                         θ₀::Float64,
+                         A::Float64,
+                         w_L::Vector{Float64},
+                         w_G::Vector{Float64};
+                         cutoff_sigma::Float64=5.0,
+                         normalize::Bool=false
+                         )::Vector{Float64}
+                         
+    # Validate parameters
+
+    # Initialize output array
+    result = zeros(Float64, length(θ))
+    
+    # Calculate width parameters
+    γ = w_L / 2
+    σ = w_G / (2√(2log(2)))
+    
+    # Calculate mixing factor using Humps2 approximation
+    # Reference: P. Thompson et al., J. Appl. Cryst. (1987). 20, 79-83
+    @. η = 1.36603 * (w_L/w_eff) - 0.47719 * (w_L/w_eff)^2 + 0.11116 * (w_L/w_eff)^3
+    
+    # Effective width for cutoff
+    w_eff = @. 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
+    
+    # Calculate profile only for points within the cutoff region
+    for i in eachindex(θ)
+        if abs(θ[i] - θ₀) ≤ cutoff_sigma * w_eff[i]
+            # Lorentzian component
+            L = γ[i] / (π * ((θ[i] - θ₀)^2 + γ[i]^2))
+            # Gaussian component
+            G = exp(-(θ[i] - θ₀)^2 / (2σ[i]^2)) / (σ[i] * √(2π))
+            # Combined profile
+            result[i] = A * (η[i] * L + (1 - η[i]) * G)
+        end
+    end
+    
+    if normalize
+        maxval = maximum(result)
+        if maxval > 0
+            result ./= maxval
+        end
+    end
+    
+    return result
 end
 
 
-"Returns the width of a peak as a function of 2θ with U, V, W parameters"
+
+# Utility functions that work with both peak types
+
+"""
+    estimate_peak_bounds(w_L::Float64, w_G::Float64, tol::Float64=1e-6)
+
+Estimates the distance from peak center where profile falls below a given tolerance.
+Works for both Voigt and pseudo-Voigt profiles.
+"""
+function estimate_peak_bounds(w_L::Float64, w_G::Float64, tol::Float64=1e-6)
+    γ = w_L / 2
+    σ = w_G / (2√(2log(2)))
+    
+    gaussian_cutoff = √(-2 * log(tol))
+    lorentzian_cutoff = γ * √(1/tol - 1) / σ
+    
+    return max(gaussian_cutoff, lorentzian_cutoff)
+end
+
+
+
+"""
+    peak_fwhm(w_L::Float64, w_G::Float64)
+
+Calculates the full width at half maximum for either Voigt or pseudo-Voigt profile.
+"""
+function peak_fwhm(w_L::Float64, w_G::Float64)
+    return 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
+end
+
+
+"""
+Calculates the width of the Gaussian as a function 2θ with U, V, W parameters -
+Caglioti formula
+"""
 function peaks_width(two_θ_deg::Vector{Float64},
                      U::Float64,
                      V::Float64,
@@ -133,6 +206,32 @@ function peaks_width(two_θ_deg::Vector{Float64},
 
         return @. √(U * tan(two_θ_deg * π / 360)^2 + V * tan(two_θ_deg * π / 360) + W)
 end
+
+
+"""
+Calculates the width of the Lorntzian as a function 2θ with K, ϵ, λ, D parameters -
+Strain (Stokes-Wilson) and size (Scherrer) broadening
+"""
+function peaks_width(two_θ_deg::Vector{Float64},
+                     K::Float64,
+                     ϵ::Float64,
+                     λ::Float64,
+                     D::Float64,
+                     )::Vector{Float64}
+
+    # Strain broadening (Stokes-Wilson)
+    w_L_strain = @. 4 * ε * tan(θ)  # where ε is microstrain
+
+    # Size broadening (Scherrer)
+    w_L_size = @. K * λ / (D * cos(θ))  # where:
+    # K is the Scherrer constant (typically ≈ 0.9)
+    # λ is wavelength
+    # D is crystallite size
+
+    # Combined broadening
+    return @. w_L_strain + w_L_size        
+end
+
 
 
 "Calculating the Bragg angles coresponding to each d-spacing"
@@ -166,7 +265,8 @@ function sum_peaks(θ::Vector{Float64},
     
     y = zeros(size(θ))
     for item in two_θ_list
-        y = y + pseudo_Voigt_peak(θ, item, 1.0, peaks_width(θ, U, V, W), 0.5)
+        # y = y + pseudo_Voigt_peak(θ, item, 1.0, peaks_width(θ, U, V, W), 0.5)
+        y = y + Voigt_peak(θ, item, 1.0, peaks_width(θ, U, V, W), 0.5)
     end
     return y
 end

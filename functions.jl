@@ -20,30 +20,102 @@ Functions
 """
 
 
-"Returns a Voigt peak centered around θ₀, with amplitude A, width w, and mixing factor n "
+"""
+    Voigt_peak(θ, θ₀, A, w_L, w_G)
+
+Returns a Voigt peak profile computed as the convolution of Gaussian and Lorentzian functions
+using the complex error function.
+
+Arguments:
+- `θ::Vector{Float64}`: Position values where to evaluate the peak
+- `θ₀::Float64`: Center position of the peak
+- `A::Float64`: Peak amplitude (must be positive)
+- `w_L::Vector{Float64}`: Lorentzian full width at half maximum (FWHM) (must be positive)
+- `w_G::Vector{Float64}`: Gaussian full width at half maximum (FWHM) (must be positive)
+
+Keyword Arguments:
+- `cutoff_sigma::Float64=5.0`: Number of standard deviations beyond which to set peak to zero
+- `normalize::Bool=false`: If true, normalize peak height to 1.0Returns:
+- `Vector{Float64}`: Peak intensity at each θ position
+
+Notes:
+- Uses the scaled complementary error function (erfcx) for numerical stability
+- The Voigt profile is the convolution of Gaussian and Lorentzian profiles
+- More computationally expensive but more accurate than pseudo-Voigt approximation
+- Implements bounds checking to improve performance for large datasets
+- The cutoff region is based on both Gaussian and Lorentzian widths
+"""
 function Voigt_peak(θ::Vector{Float64},
                     θ₀::Float64,
                     A::Float64,
                     w_L::Vector{Float64},
                     w_G::Vector{Float64},
-                    n::Float64
+                    cutoff_sigma::Float64=5.0,
+                    normalize::Bool=false
                     )::Vector{Float64}
-                    
-    γ = w_L / 2
-    σ = w_G / (2√(2log(2)))
-    z = @. -im * ((θ - θ₀) + im * γ) / (√2 * σ)
-    return @. A * real(erfcx(z)) / (√(2π) * σ)
+
+    # Validate parameters
+    A > 0 || throw(ArgumentError("Amplitude A must be positive"))
+    all(w_L .> 0) || throw(ArgumentError("Lorentzian width w_L must be positive"))
+    all(w_G .> 0) || throw(ArgumentError("Gaussian width w_G must be positive"))
+
+    # Initialize output array
+    result = zeros(Float64, length(θ))                   
+
+    # Calculate width parameters
+    γ = w_L / 2                                    # Lorentzian HWHM    
+    σ = w_G / (2√(2log(2)))                        # Gaussian standard deviation
+
+    # Effective width for cutoff (combination of Gaussian and Lorentzian contributions)
+    # This is an approximation of the Voigt width
+    w_eff = @. 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
+    
+    # Calculate profile only for points within the cutoff region
+    for i in eachindex(θ)
+        # Check if point is within cutoff region
+        if abs(θ[i] - θ₀) ≤ cutoff_sigma * w_eff[i]
+            z = -im * (θ[i] - θ₀ + im * γ[i]) / (√2 * σ[i])    # Complex argument for erfcx
+            result[i] = A * real(erfcx(z)) / (√(2π) * σ[i])
+        end
+    end
+
+    # Normalize, if asked to
+    if normalize
+        maxval = maximum(result)
+        if maxval > 0
+            result ./= maxval
+        end
+    end
+    
+    return result
 end
 
 
-"Returns a pseudo Voigt peak centered around θ₀, with amplitude A, width w, and mixing factor n "
+"""
+    pseudo_Voigt_peak(θ, θ₀, A, w, n)
+
+Returns a pseudo-Voigt peak profile as a linear combination of Gaussian and Lorentzian functions.
+
+Arguments:
+- `θ::Vector{Float64}`: Position values where to evaluate the peak
+- `θ₀::Float64`: Center position of the peak
+- `A::Float64`: Peak amplitude (must be positive)
+- `w::Vector{Float64}`: Peak width (FWHM) (must be positive)
+- `n::Float64`: Mixing parameter between Lorentzian (n=1) and Gaussian (n=0) profiles
+
+Returns:
+- `Vector{Float64}`: Peak intensity at each θ position
+"""
 function pseudo_Voigt_peak(θ::Vector{Float64},
                            θ₀::Float64,
                            A::Float64,
                            w::Vector{Float64},
                            n::Float64
                            )::Vector{Float64}
-                           
+         # Validate parameters
+    0 ≤ n ≤ 1 || throw(ArgumentError("Mixing parameter n must be between 0 and 1"))
+    A > 0 || throw(ArgumentError("Amplitude A must be positive"))
+    all(w .> 0) || throw(ArgumentError("Width w must be positive"))                      
     γ = w / 2
     σ = w / (2√(2log(2)))
     return @. A * (n * pdf.(Cauchy(θ₀, γ), θ) + (1 - n) * pdf.(Normal(θ₀, σ), θ))

@@ -234,24 +234,24 @@ end
 
 
 """
-Calculates the width of the Gaussian as a function 2θ with U, V, W parameters -
+Calculates the width of the Gaussian as a function θ with U, V, W parameters -
 Caglioti formula
 """
-function Gaussian_peaks_width(two_θ::Vector{Float64},
-                     U::Float64,
-                     V::Float64,
-                     W::Float64
-                     )::Vector{Float64}
+function Gaussian_peaks_width(θ::Vector{Float64},
+                              U::Float64,
+                              V::Float64,
+                              W::Float64
+                              )::Vector{Float64}
 
-        return @. √(U * tan(two_θ)^2 + V * tan(two_θ) + W)
+        return @. √(U * tan(θ)^2 + V * tan(θ) + W)
 end
 
 
 """
-Calculates the width of the Lorntzian as a function 2θ with K, ϵ, λ, D parameters -
+Calculates the width of the Lorntzian as a function θ with K, ϵ, λ, D parameters -
 Strain (Stokes-Wilson) and size (Scherrer) broadening
 """
-function Lorentzian_peaks_width(two_θ::Vector{Float64},
+function Lorentzian_peaks_width(θ::Vector{Float64},
                                 K::Float64,
                                 ϵ::Float64,
                                 λ::Float64,
@@ -259,11 +259,11 @@ function Lorentzian_peaks_width(two_θ::Vector{Float64},
                                 )::Vector{Float64}
 
     # Strain broadening (Stokes-Wilson)
-    w_L_strain = @. 4 * ε * tan(two_θ)
+    w_L_strain = @. 4 * ε * tan(θ)
     # ε is microstrain
 
     # Size broadening (Scherrer)
-    w_L_size = @. K * λ / (D * cos(two_θ))
+    w_L_size = @. K * λ / (D * cos(θ))
     # K is the Scherrer constant (typically ≈ 0.9)
     # λ is wavelength
     # D is crystallite size
@@ -281,7 +281,7 @@ function bragg_angels(wavelength::Float64,
 
     sinθ = wavelength ./ (2 * d_spacings)
     sinθ_cleaned = [item for item in sinθ if abs(item) <= 1]  # removing values outside (-1,1)
-    return 2 * asin.(sinθ_cleaned)  # *2 for 2θ  ***************** check this !!! ******************************************************** 
+    return asin.(sinθ_cleaned)   
 end
 
 
@@ -297,14 +297,14 @@ end
 
 "sums peak functions to return intensity vs angle"
 function sum_peaks(θ::Vector{Float64},
-                   two_θ_list::Vector{Float64},
+                   θ_list::Vector{Float64},
                    w_L::Vector{Float64},
                    w_G::Vector{Float64},
                    )::Vector{Float64}
     
     y = zeros(size(θ))
     cutoff = estimate_peak_bounds(w_L, w_G; tol=1e-6)
-    for item in two_θ_list
+    for item in θ_list
         # y = y + pseudo_Voigt_peak(θ, item, 1.0, w_L, w_G; cutoff_sigma=cutoff, normalize=true)
         y = y + Voigt_peak(θ, item, 1.0, w_L, w_G; cutoff_sigma=cutoff, normalize=true)
     end
@@ -321,8 +321,8 @@ function intensity_vs_angle(θ::Vector{Float64},
                             w_G::Vector{Float64},
                             )::Vector{Float64}
     
-    two_θ_list = bragg_angels(λ, d_list(indices, a))
-    y = sum_peaks(θ, two_θ_list, w_L, w_G)
+    θ_list = bragg_angels(λ, d_list(indices, a))
+    y = sum_peaks(θ, θ_list, w_L, w_G)
     return y
 end
 
@@ -372,7 +372,7 @@ end
 function background(θ::Vector{Float64}
                     )::Vector{Float64}
 
-    return @. 2 + 0.5 * θ * (2π - θ)       
+    return @. 2 + 0.5 * θ * (π - θ)       
 end
 
 
@@ -381,7 +381,7 @@ function make_noisy(θ::Vector{Float64},
                     y::Vector{Float64}
                     )::Vector{Float64}
     
-    return (background(θ) + y) .* 0.5* rand(Normal(1, 0.1), size(θ))
+    return (background(θ) + y) .* 0.5 * rand(Normal(1, 0.1), size(θ))
 end
 
 
@@ -398,7 +398,7 @@ function read_file(filename::String
         tokens = filter(x -> x ≠ "", split(line))
 
         if length(tokens) > 0 && tokens[1] ≠ "#"
-            if tokens[1] in ["θ_min", "θ_max"]
+            if tokens[1] in ["2θ_min", "2θ_max"]
                 instrument_data[tokens[1]] = deg2rad(parse(Float64, tokens[2]))
             elseif tokens[1] == "N"
                 instrument_data[tokens[1]] = parse(Int64, tokens[2])    
@@ -429,8 +429,8 @@ function do_it_zero(file_name::String
                     )::Vector{Float64}
     
     instrument_data, lattice_params = read_file(file_name)
-    θ = collect(LinRange((instrument_data["θ_min"]),
-                         (instrument_data["θ_max"]),
+    θ = collect(LinRange((instrument_data["2θ_min"]/2),
+                         (instrument_data["2θ_max"]/2),
                          instrument_data["N"]))
     return θ
 end
@@ -440,13 +440,13 @@ end
 function do_it(file_name::String,
                lattice_type::String,
                plot_theme::Symbol
-               )::Tuple{Vector, Vector, String, Plots.Plot}
+               )::Tuple{Vector{Float64}, Vector{Float64}, String, Plots.Plot}
     
     instrument_data, lattice_params = read_file(file_name)
 
     N = instrument_data["N"]
-    θ = collect(LinRange((instrument_data["θ_min"]),
-                         (instrument_data["θ_max"]),
+    θ = collect(LinRange((instrument_data["2θ_min"]/2),
+                         (instrument_data["2θ_max"]/2),
                          instrument_data["N"]))
     y = zeros(instrument_data["N"])
     λ = instrument_data["λ"]
@@ -466,9 +466,9 @@ function do_it(file_name::String,
 
     theme(plot_theme)
 
-    θ_deg = rad2deg.(θ)
-    the_plot = plot(θ_deg, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)")
+    twoθ_deg = 2 * rad2deg.(θ)
+    the_plot = plot(twoθ_deg, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)")
 
-    return θ_deg, y, the_title, the_plot
+    return twoθ_deg, y, the_title, the_plot
 end
 

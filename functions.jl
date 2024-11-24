@@ -305,9 +305,8 @@ function sum_peaks(θ::Vector{Float64},
     y = zeros(size(θ))
     cutoff = estimate_peak_bounds(w_L, w_G; tol=1e-6)
     for item in two_θ_list
-        # y = y + pseudo_Voigt_peak(θ, item, 1.0, peaks_width(θ, U, V, W), 0.5)
-        y = y + pseudo_Voigt_peak(θ, item, 1.0, w_L, w_G; cutoff_sigma=cutoff, normalize=true)
-
+        # y = y + pseudo_Voigt_peak(θ, item, 1.0, w_L, w_G; cutoff_sigma=cutoff, normalize=true)
+        y = y + Voigt_peak(θ, item, 1.0, w_L, w_G; cutoff_sigma=cutoff, normalize=true)
     end
     return y
 end

@@ -1,12 +1,11 @@
 ### Data for simple_XRD.jl
 
-θ_min   10
-θ_max   170
+2θ_min   2
+2θ_max   170
 N   1000
 
-λ   0.15418
-# CuKα radiation in nm
-
+λ   1.5418
+# CuKα radiation in Å
 U   0.0001
 V   0.00005
 W   0.00001

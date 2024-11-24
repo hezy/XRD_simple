@@ -24,7 +24,7 @@ w_G = @. √(U * tan(θ)^2 + V * tan(θ) + W)
 
 # Calculate peaks at different angles
 angles = [15, 30, 45, 60]  # degrees
-p = plot(xlabel="2θ (degrees)", 
+p = plot(xlabel="θ (degrees)", 
         ylabel="Normalized Intensity",
         title="Peak Shapes at Different Angles")
 

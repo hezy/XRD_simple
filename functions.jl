@@ -77,9 +77,8 @@ function Voigt_peak(θ::Vector{Float64},
     γ = w_L / 2                                    # Lorentzian HWHM    
     σ = w_G / (2√(2log(2)))                        # Gaussian standard deviation
 
-    # Effective width for cutoff (combination of Gaussian and Lorentzian contributions)
-    # This is an approximation of the Voigt width
-    w_eff = @. 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
+    # Calculate effective width 
+    w_eff = peak_fwhm(w_L, w_G)    
     
     # Calculate profile only for points within the cutoff region
     for i in eachindex(θ)
@@ -135,7 +134,7 @@ function pseudo_Voigt_peak(θ::Vector{Float64},
     σ = w_G / (2√(2log(2)))
     
     # Calculate effective width 
-    w_eff = @. 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
+    w_eff = peak_fwhm(w_L, w_G)    
     
     # Calculate mixing factor using Humps2 approximation
     η = @. 1.36603 * (w_L/w_eff) - 0.47719 * (w_L/w_eff)^2 + 0.11116 * (w_L/w_eff)^3
@@ -190,7 +189,10 @@ function estimate_peak_bounds(w_L::Float64, w_G::Float64, tol::Float64=1e-6)::Fl
 end
 
 # Vector version
-function estimate_peak_bounds(w_L::Vector{Float64}, w_G::Vector{Float64}, tol::Float64=1e-6)::Float64
+function estimate_peak_bounds(w_L::Vector{Float64},
+                              w_G::Vector{Float64};
+                              tol::Float64=1e-5
+                              )::Float64
     length(w_L) == length(w_G) || throw(DimensionMismatch("w_L and w_G must have same length"))
     
     γ = w_L ./ 2
@@ -213,13 +215,20 @@ Calculates the full width at half maximum for either Voigt or pseudo-Voigt profi
 Handles both scalar and vector inputs.
 """
 # Scalar version
-function peak_fwhm(w_L::Float64, w_G::Float64)::Float64
+function peak_fwhm(w_L::Float64,
+                   w_G::Float64
+                   )::Float64
+                   
     return 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
 end
 
 # Vector version
-function peak_fwhm(w_L::Vector{Float64}, w_G::Vector{Float64})::Vector{Float64}
+function peak_fwhm(w_L::Vector{Float64},
+                   w_G::Vector{Float64}
+                   )::Vector{Float64}
+                   
     length(w_L) == length(w_G) || throw(DimensionMismatch("w_L and w_G must have same length"))
+    
     return @. 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
 end
 
@@ -243,11 +252,11 @@ Calculates the width of the Lorntzian as a function 2θ with K, ϵ, λ, D parame
 Strain (Stokes-Wilson) and size (Scherrer) broadening
 """
 function Lorentzian_peaks_width(two_θ::Vector{Float64},
-                     K::Float64,
-                     ϵ::Float64,
-                     λ::Float64,
-                     D::Float64,
-                     )::Vector{Float64}
+                                K::Float64,
+                                ϵ::Float64,
+                                λ::Float64,
+                                D::Float64,
+                                )::Vector{Float64}
 
     # Strain broadening (Stokes-Wilson)
     w_L_strain = @. 4 * ε * tan(two_θ)
@@ -294,9 +303,10 @@ function sum_peaks(θ::Vector{Float64},
                    )::Vector{Float64}
     
     y = zeros(size(θ))
+    cutoff = estimate_peak_bounds(w_L, w_G; tol=1e-6)
     for item in two_θ_list
         # y = y + pseudo_Voigt_peak(θ, item, 1.0, peaks_width(θ, U, V, W), 0.5)
-        y = y + pseudo_Voigt_peak(θ, item, 1.0, w_L, w_G)
+        y = y + pseudo_Voigt_peak(θ, item, 1.0, w_L, w_G; cutoff_sigma=cutoff, normalize=true)
 
     end
     return y
@@ -308,8 +318,8 @@ function intensity_vs_angle(θ::Vector{Float64},
                             indices::Vector{Vector{Int8}},
                             λ::Float64,
                             a::Float64,
-                            w_L::Float64,
-                            w_G::Float64,
+                            w_L::Vector{Float64},
+                            w_G::Vector{Float64},
                             )::Vector{Float64}
     
     two_θ_list = bragg_angels(λ, d_list(indices, a))
@@ -362,8 +372,8 @@ end
 "background function for the XRD pattern"
 function background(θ::Vector{Float64}
                     )::Vector{Float64}
-    
-    return @. 2 + θ * (2π - θ) / 2500       
+
+    return @. 2 + 0.5 * θ * (2π - θ)       
 end
 
 
@@ -372,7 +382,7 @@ function make_noisy(θ::Vector{Float64},
                     y::Vector{Float64}
                     )::Vector{Float64}
     
-    return (background(θ) + y) .* rand(Normal(1, 0.1), size(θ))
+    return (background(θ) + y) .* 0.5* rand(Normal(1, 0.1), size(θ))
 end
 
 
@@ -390,12 +400,14 @@ function read_file(filename::String
 
         if length(tokens) > 0 && tokens[1] ≠ "#"
             if tokens[1] in ["θ_min", "θ_max"]
-                instrument_data[tokens[1]] = parse(Float64, tokens[2])
+                instrument_data[tokens[1]] = deg2rad(parse(Float64, tokens[2]))
             elseif tokens[1] == "N"
                 instrument_data[tokens[1]] = parse(Int64, tokens[2])    
             elseif tokens[1] == "λ"
                 instrument_data[tokens[1]] = parse(Float64, tokens[2])
             elseif tokens[1] in ["U", "V", "W"]
+                instrument_data[tokens[1]] = parse(Float64, tokens[2])
+            elseif tokens[1] in ["K", "ϵ", "D"]
                 instrument_data[tokens[1]] = parse(Float64, tokens[2])
             elseif tokens[1] in ["SC", "BCC", "FCC"]
                 lattice_params[tokens[1]] = parse(Float64, tokens[3])
@@ -418,7 +430,9 @@ function do_it_zero(file_name::String
                     )::Vector{Float64}
     
     instrument_data, lattice_params = read_file(file_name)
-    θ = collect(LinRange(instrument_data["θ_min"], instrument_data["θ_max"], instrument_data["N"]))
+    θ = collect(LinRange((instrument_data["θ_min"]),
+                         (instrument_data["θ_max"]),
+                         instrument_data["N"]))
     return θ
 end
 
@@ -427,32 +441,35 @@ end
 function do_it(file_name::String,
                lattice_type::String,
                plot_theme::Symbol
-               )::Tuple{Vector,Vector,String,Plots.Plot}
+               )::Tuple{Vector, Vector, String, Plots.Plot}
     
     instrument_data, lattice_params = read_file(file_name)
 
     N = instrument_data["N"]
-    θ = collect(LinRange(instrument_data["θ_min"], instrument_data["θ_max"], instrument_data["N"]))
+    θ = collect(LinRange((instrument_data["θ_min"]),
+                         (instrument_data["θ_max"]),
+                         instrument_data["N"]))
     y = zeros(instrument_data["N"])
     λ = instrument_data["λ"]
     U, V, W = instrument_data["U"], instrument_data["V"], instrument_data["W"]
     K, ϵ, D = instrument_data["K"], instrument_data["ϵ"], instrument_data["D"]
     a = lattice_params[lattice_type]
 
-    index_min::Int8 = -4
-    index_max::Int8 = 4
+    index_min::Int8 = -5
+    index_max::Int8 = 5
     indices = Miller_indices(lattice_type, index_min, index_max)
 
     y = (background(θ) +
          intensity_vs_angle(θ, indices, λ, a, w_L, w_G)) .*
-        rand(Normal(1, 0.1), N)
+        0.1 .* rand(Normal(1, 0.1), N)
 
     the_title = "XRD - " * lattice_type
 
     theme(plot_theme)
-    
-    the_plot = plot(θ, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)")
 
-    return θ, y, the_title, the_plot
+    θ_deg = rad2deg.(θ)
+    the_plot = plot(θ_deg, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)")
+
+    return θ_deg, y, the_title, the_plot
 end
 

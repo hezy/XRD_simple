@@ -22,11 +22,11 @@ include("functions.jl")
 
 Random.seed!(347) # Setting the seed for random noise
 
-θ₀ = do_it_zero("simple_XRD.txt")
+θ₀ = do_it_zero("data.toml")
 df = DataFrame(θ=θ₀, SC=θ₀, BCC=θ₀, FCC=θ₀)
 
 for lattice_type in ("SC", "BCC", "FCC")
-    df[:, "θ"], df[:, lattice_type], the_title, the_plot = do_it("simple_XRD.txt", lattice_type, :dark)
+    df[:, "θ"], df[:, lattice_type], the_title, the_plot = do_it("data.toml", lattice_type, :dark)
 
     display(the_plot) 
     sleep(1)

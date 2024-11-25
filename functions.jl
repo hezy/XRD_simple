@@ -11,6 +11,7 @@ using SpecialFunctions
 using Distributions
 #using DataFrames
 #using CSV
+using TOML
 
 
 """ 
@@ -248,18 +249,18 @@ end
 
 
 """
-Calculates the width of the Lorntzian as a function θ with K, ϵ, λ, D parameters -
+Calculates the width of the Lorntzian as a function θ with K, E, λ, D parameters -
 Strain (Stokes-Wilson) and size (Scherrer) broadening
 """
 function Lorentzian_peaks_width(θ::Vector{Float64},
                                 K::Float64,
-                                ϵ::Float64,
+                                E::Float64,
                                 λ::Float64,
                                 D::Float64,
                                 )::Vector{Float64}
 
     # Strain broadening (Stokes-Wilson)
-    w_L_strain = @. 4 * ε * tan(θ)
+    w_L_strain = @. 4 * E * tan(θ)
     # ε is microstrain
 
     # Size broadening (Scherrer)
@@ -332,10 +333,10 @@ function sum_peaks(θ::Vector{Float64},
                    )::Vector{Float64}
     
     y = zeros(size(θ))
-    cutoff = estimate_peak_bounds(w_L, w_G; tol=1e-6)
+    # cutoff = estimate_peak_bounds(w_L, w_G; tol=1e-6)
     for item in θ_list
-        # y = y + pseudo_Voigt_peak(θ, item, 1.0, w_L, w_G; cutoff_sigma=cutoff, normalize=true)
-        y = y + Voigt_peak(θ, item, 1.0, w_L, w_G; cutoff_sigma=cutoff, normalize=true)
+        y = y + pseudo_Voigt_peak(θ, item, 1.0, w_L, w_G) #; cutoff_sigma=cutoff, normalize=true)
+        # y = y + Voigt_peak(θ, item, 1.0, w_L, w_G; cutoff_sigma=cutoff, normalize=true)
     end
     return y
 end
@@ -383,7 +384,7 @@ end
 
 "Returns a list of Miller indices for each one of the cubic symmetries"
 function Miller_indices(cell_type::String,
-                        min::Int,
+                        min::Int, 
                         max::Int
                         )::Vector{Vector{Int}}
     
@@ -439,53 +440,54 @@ function make_noisy(θ::Vector{Float64},
 end
 
 
-"Reading a text file with instrument data, and lattice parameters"
-function read_file(filename::String
-                   )::Tuple{Dict,Dict}
+
+"""
+        read_xrd_config(filename::String) -> 
+        (Dict{String,Any}, Dict{String,Float64}, Dict{String,Tuple{String,Float64}})
+
+Read XRD configuration from TOML file, returning instrument, peak width, and lattice parameters.
+
+# Arguments
+- `filename`: Path to TOML configuration file
+
+# Returns
+Tuple with:
+- "instrument": Dict of instrument parameters (two_theta_min, two_theta_max, N, lambda)
+- "peak_width": Dict of peak width parameters (U, V, W, K, Epsilon, D)
+- "lattice": Dict of lattice parameters by structure type
+
+Note: Angular parameters (two_theta_min, two_theta_max) are automatically converted to radians.
+"""
+function read_xrd_config(filename::String)
+    config = TOML.parsefile(filename)
     
-    instrument_data = Dict{AbstractString,Any}()
-    lattice_params = Dict{AbstractString,Float64}()
-
-    # read file line by line
-    for line in eachline(filename)
-        # split the line by whitespace and remove empty strings
-        tokens = filter(x -> x ≠ "", split(line))
-
-        if length(tokens) > 0 && tokens[1] ≠ "#"
-            if tokens[1] in ["2θ_min", "2θ_max"]
-                instrument_data[tokens[1]] = deg2rad(parse(Float64, tokens[2]))
-            elseif tokens[1] == "N"
-                instrument_data[tokens[1]] = parse(Int64, tokens[2])    
-            elseif tokens[1] == "λ"
-                instrument_data[tokens[1]] = parse(Float64, tokens[2])
-            elseif tokens[1] in ["U", "V", "W"]
-                instrument_data[tokens[1]] = parse(Float64, tokens[2])
-            elseif tokens[1] in ["K", "ϵ", "D"]
-                instrument_data[tokens[1]] = parse(Float64, tokens[2])
-            elseif tokens[1] in ["SC", "BCC", "FCC"]
-                lattice_params[tokens[1]] = parse(Float64, tokens[3])
-            end
-        elseif length(tokens) > 1 && tokens[1] == "BCC" && tokens[2] ≠ "#"
-            lattice_params[tokens[1]] = parse(Float64, tokens[3])
-        elseif length(tokens) > 1 && tokens[1] == "FCC" && tokens[2] ≠ "#"
-            lattice_params[tokens[1]] = parse(Float64, tokens[3])
-        elseif length(tokens) > 1 && tokens[1] == "SC" && tokens[2] ≠ "#"
-            lattice_params[tokens[1]] = parse(Float64, tokens[3])
+    instrument = Dict{String,Any}(
+        k => (k in ["two_theta_min", "two_theta_max"] ? deg2rad(v) : v)
+        for (k,v) in config["instrument"]
+    )
+    
+    peak_width = Dict{String,Float64}(config["peak_width"])
+    
+    lattice = Dict{String,Tuple{String,Float64}}()
+    for (structure, elements) in config["lattice"]
+        for (element, value) in elements
+            lattice[structure] = (element, value)
         end
     end
-
-    return instrument_data, lattice_params
+    
+    return instrument, peak_width, lattice
 end
+
 
 
 "colecting input data, building the XRD pattern with background and noise, plotting it"
 function do_it_zero(file_name::String
                     )::Vector{Float64}
     
-    instrument_data, lattice_params = read_file(file_name)
-    θ = collect(LinRange((instrument_data["2θ_min"]/2),
-                         (instrument_data["2θ_max"]/2),
-                         instrument_data["N"]))
+    instrument_data, peak_width, lattice_params = read_xrd_config(file_name)
+    θ = collect(LinRange((instrument["two_theta_min"]/2),
+                         (instrument["two_theta_max"]/2),
+                         instrument["N"]))
     return θ
 end
 
@@ -496,17 +498,17 @@ function do_it(file_name::String,
                plot_theme::Symbol
                )::Tuple{Vector{Float64}, Vector{Float64}, String, Plots.Plot}
     
-    instrument_data, lattice_params = read_file(file_name)
+    instrument, peak_width, lattice = read_xrd_config(file_name)
 
-    N = instrument_data["N"]
-    θ = collect(LinRange((instrument_data["2θ_min"]/2),
-                         (instrument_data["2θ_max"]/2),
-                         instrument_data["N"]))
-    y = zeros(instrument_data["N"])
-    λ = instrument_data["λ"]
-    U, V, W = instrument_data["U"], instrument_data["V"], instrument_data["W"]
-    K, ϵ, D = instrument_data["K"], instrument_data["ϵ"], instrument_data["D"]
-    a = lattice_params[lattice_type]
+    N = instrument["N"]
+    θ = collect(LinRange((instrument["two_theta_min"]/2),
+                         (instrument["two_theta_max"]/2),
+                         instrument["N"]))
+    y = zeros(instrument["N"])
+    λ = instrument["lambda"]
+    U, V, W = peak_width["U"], peak_width["V"], peak_width["W"]
+    K, ϵ, D = peak_width["K"], peak_width["Epsilon"], peak_width["D"]
+    a = lattice[lattice_type][2]
 
     index_min::Int = -5
     index_max::Int = 5
@@ -515,8 +517,7 @@ function do_it(file_name::String,
     w_L = Lorentzian_peaks_width(θ, K, ϵ, λ, D)
     w_G = Gaussian_peaks_width(θ, U, V, W)
     y = (background(θ) +
-         intensity_vs_angle(θ, indices, λ, a, w_L, w_G)) .*
-        0.1 .* rand(Normal(1, 0.1), N)
+         intensity_vs_angle(θ, indices, λ, a, w_L, w_G)) # .* 0.01 .* rand(Normal(1, 0.1), N)
 
     the_title = "XRD - " * lattice_type
 

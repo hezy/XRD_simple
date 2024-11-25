@@ -5,11 +5,11 @@ N = 1000
 lambda = 1.5418
 
 [peak_width]
-U = 0.0001
-V = 0.00005
-W = 0.00001
+U = 0.001
+V = 0.005
+W = 0.01
 K = 0.9
-Epsilon = 0.001
+Epsilon = 0.02
 D = 500.0
 
 [lattice]

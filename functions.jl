@@ -1,8 +1,8 @@
 """
 simple_XRD_new.jl
 by Hezy Amiel
-April 2023
-Julia 1.8.5
+2023-2024
+Julia > 1.8
 """
 
 
@@ -166,13 +166,13 @@ Notes:
 """
 # Scaler w's version
 function pseudo_Voigt_peak(θ::Vector{Float64},
-                         θ₀::Float64,
-                         A::Float64,
-                         w_L::Float64,
-                         w_G::Float64;
-                         cutoff_sigma::Float64=5.0,
-                         normalize::Bool=false
-                         )::Vector{Float64}
+                           θ₀::Float64,
+                           A::Float64,
+                           w_L::Float64,
+                           w_G::Float64;
+                           cutoff_sigma::Float64=5.0,
+                           normalize::Bool=false
+                           )::Vector{Float64}
     
     # Validate parameters
     A > 0 || throw(ArgumentError("Amplitude A must be positive"))
@@ -197,7 +197,7 @@ function pseudo_Voigt_peak(θ::Vector{Float64},
     for i in eachindex(θ)
         if abs(θ[i] - θ₀) ≤ cutoff_sigma * w_eff
             # Lorentzian component
-            L = γ[i] / (π * ((θ[i] - θ₀)^2 + γ^2))
+            L = γ / (π * ((θ[i] - θ₀)^2 + γ^2))
             # Gaussian component
             G = exp(-(θ[i] - θ₀)^2 / (2σ^2)) / (σ * √(2π))
             # Combined profile

@@ -1,7 +1,7 @@
 ### Data for simple_XRD.jl
 
-2θ_min   2
-2θ_max   170
+θ_min   3
+θ_max   70
 N   1000
 
 λ   1.5418
@@ -11,7 +11,7 @@ V   0.00005
 W   0.00001
 
 K   0.9 
-ϵ   0.001
+E   0.001
 D   500.0
 
 ### Lattice parameter for some elements (in Å)
@@ -25,16 +25,16 @@ D   500.0
 SC  Po  0.3352
 
 ### BCC lattice:
-#BCC Fe  0.2856
-BCC Mo  0.3142
+BCC Fe  0.2856
+#BCC Mo  0.3142
 #BCC W   0.3155
 #BCC V   0.30399
 #BCC Nb  0.33008
 #BCC Ta  0.33058
 
 ### FCC lattice:
-#FCC Al  0.4046
-FCC Ni  0.3499
+FCC Al  0.4046
+#FCC Ni  0.3499
 #FCC Cu  0.3594
 #FCC Pd  0.3859
 #FCC Ag  0.4079

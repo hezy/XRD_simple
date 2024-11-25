@@ -1,0 +1,35 @@
+[instrument]
+two_theta_min = 2.0
+two_theta_max = 170.0
+N = 1000
+lambda = 1.5418
+
+[peak_width]
+U = 0.0001
+V = 0.00005
+W = 0.00001
+K = 0.9
+Epsilon = 0.001
+D = 500.0
+
+[lattice]
+[lattice.SC]
+Po = 0.3352
+
+[lattice.BCC]
+# Fe = 0.2856
+Mo = 0.3142
+# W  = 0.3155
+# V  = 0.30399
+# Nb = 0.33008
+# Ta = 0.33058
+
+[lattice.FCC]
+#Al = 0.4046
+Ni = 0.3499
+#Cu = 0.3594
+#Pd = 0.3859
+#Ag = 0.4079
+#Pt = 0.4920
+#Au = 0.4065
+#Pb = 0.4920

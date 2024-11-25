@@ -18,7 +18,7 @@ main
 ================
 """
 
-include("functions.jl")
+include("functions_simple.jl")
 
 Random.seed!(347) # Setting the seed for random noise
 

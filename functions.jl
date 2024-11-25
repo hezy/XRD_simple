@@ -274,20 +274,49 @@ end
 
 
 
-"Calculating the Bragg angles coresponding to each d-spacing"
-function bragg_angels(wavelength::Float64,
+"""
+   bragg_angles(wavelength::Float64, d_spacings::Vector{Float64})::Tuple{Vector{Float64}, Vector{Int}}
+
+Calculate the Bragg diffraction angles (θ) for a given X-ray wavelength and set of crystal plane d-spacings.
+
+Uses Bragg's law: nλ = 2d·sin(θ), where n=1, λ is the wavelength, and d is the interplanar spacing.
+
+# Arguments
+- `wavelength::Float64`: X-ray wavelength in Angstroms (Å)
+- `d_spacings::Vector{Float64}`: Vector of interplanar spacings in Angstroms (Å)
+
+# Returns
+- `Tuple{Vector{Float64}, Vector{Int}}`: 
+   - First element: Vector of Bragg angles in radians where |sin(θ)| ≤ 1
+   - Second element: Vector of indices corresponding to the valid angles in the original d_spacings
+
+# Examples
+```julia
+λ = 1.54  # Cu Kα radiation
+d = [2.814, 2.024, 1.431]  # d-spacings in Å
+angles, valid_indices = bragg_angles(λ, d)
+```
+
+# Throws
+* ArgumentError: If wavelength ≤ 0 or any d-spacing ≤ 0
+"""
+function bragg_angles(wavelength::Float64,
                       d_spacings::Vector{Float64}
-                      )::Vector{Float64}
+                      )::Tuple{Vector{Float64}, Vector{Int}}
+    wavelength <= 0 && throw(ArgumentError("Wavelength must be positive"))
+    any(d_spacings .<= 0) && throw(ArgumentError("d-spacings must be positive"))
 
     sinθ = wavelength ./ (2 * d_spacings)
+    valid_idx = findall(x -> abs(x) <= 1, sinθ)
+    angles = asin.(sinθ[valid_idx])
     sinθ_cleaned = [item for item in sinθ if abs(item) <= 1]  # removing values outside (-1,1)
-    return asin.(sinθ_cleaned)   
+    return angles, valid_idx  
 end
 
 
 
 "Returnes the inter-layers distances as a function of Miller_indices"
-function d_list(indices::Vector{Vector{Int8}},
+function d_list(indices::Vector{Vector{Int}},
                 a::Float64
                 )::Vector{Float64}
 
@@ -312,26 +341,51 @@ function sum_peaks(θ::Vector{Float64},
 end
 
 
-"Building the XRD patterns"
+"""
+   intensity_vs_angle(θ::Vector{Float64}, indices::Vector{Vector{Int}}, λ::Float64, 
+                     a::Float64, w_L::Vector{Float64}, w_G::Vector{Float64})::Vector{Float64}
+
+Calculate X-ray diffraction pattern by summing peak profiles at allowed Bragg angles.
+
+# Arguments
+- `θ::Vector{Float64}`: Scattering angles for intensity calculation (radians)
+- `indices::Vector{Vector{Int}}`: Miller indices of crystal planes
+- `λ::Float64`: X-ray wavelength (Å)
+- `a::Float64`: Lattice parameter (Å)
+- `w_L::Vector{Float64}`: Lorentzian width parameters
+- `w_G::Vector{Float64}`: Gaussian width parameters
+
+# Returns
+- `Vector{Float64}`: XRD intensities at each θ angle
+
+# Throws
+- `ArgumentError`: If λ ≤ 0, a ≤ 0, any width ≤ 0, or w_L and w_G have different lengths
+"""
 function intensity_vs_angle(θ::Vector{Float64},
-                            indices::Vector{Vector{Int8}},
-                            λ::Float64,
-                            a::Float64,
-                            w_L::Vector{Float64},
-                            w_G::Vector{Float64},
-                            )::Vector{Float64}
-    
-    θ_list = bragg_angels(λ, d_list(indices, a))
-    y = sum_peaks(θ, θ_list, w_L, w_G)
-    return y
+                         indices::Vector{Vector{Int}},
+                         λ::Float64,
+                         a::Float64,
+                         w_L::Vector{Float64},
+                         w_G::Vector{Float64}
+                         )::Vector{Float64}
+   
+   λ <= 0 && throw(ArgumentError("Wavelength must be positive"))
+   a <= 0 && throw(ArgumentError("Lattice parameter must be positive"))
+   length(w_L) != length(w_G) && throw(ArgumentError("Width parameter vectors must have same length"))
+   any(w_L .<= 0) && throw(ArgumentError("Lorentzian widths must be positive"))
+   any(w_G .<= 0) && throw(ArgumentError("Gaussian widths must be positive"))
+
+   θ_list, _ = bragg_angles(λ, d_list(indices, a))
+   y = sum_peaks(θ, θ_list, w_L, w_G)
+   return y
 end
 
 
 "Returns a list of Miller indices for each one of the cubic symmetries"
 function Miller_indices(cell_type::String,
-                        min::Int8,
-                        max::Int8
-                        )::Vector{Vector{Int8}}
+                        min::Int,
+                        max::Int
+                        )::Vector{Vector{Int}}
     
     if !(cell_type in ["SC", "BCC", "FCC"])
         error("Invalid cell_type: $cell_type. Expected 'SC', 'BCC', or 'FCC'.")
@@ -339,7 +393,7 @@ function Miller_indices(cell_type::String,
     if min > max
         error("Minimum value cannot be greater than maximum value.")
     end
-    if !(isa(min, Int8) && isa(max, Int8))
+    if !(isa(min, Int) && isa(max, Int))
         error("Minimum and maximum values must be integers.")
     end
 
@@ -454,10 +508,12 @@ function do_it(file_name::String,
     K, ϵ, D = instrument_data["K"], instrument_data["ϵ"], instrument_data["D"]
     a = lattice_params[lattice_type]
 
-    index_min::Int8 = -5
-    index_max::Int8 = 5
+    index_min::Int = -5
+    index_max::Int = 5
     indices = Miller_indices(lattice_type, index_min, index_max)
 
+    w_L = Lorentzian_peaks_width(θ, K, ϵ, λ, D)
+    w_G = Gaussian_peaks_width(θ, U, V, W)
     y = (background(θ) +
          intensity_vs_angle(θ, indices, λ, a, w_L, w_G)) .*
         0.1 .* rand(Normal(1, 0.1), N)

@@ -5,6 +5,7 @@ April 2023
 Julia 1.8.5
 """
 
+
 using Plots; gr()
 using SpecialFunctions
 #using Random
@@ -12,6 +13,7 @@ using Distributions
 #using DataFrames
 #using CSV
 using TOML
+
 
 
 """ 
@@ -56,6 +58,53 @@ Notes:
 - Implements bounds checking to improve performance for large datasets
 - The cutoff region is based on both Gaussian and Lorentzian widths
 """
+# Scaler w's version
+function Voigt_peak(θ::Vector{Float64},
+                    θ₀::Float64,
+                    A::Float64,
+                    w_L::Float64,
+                    w_G::Float64;
+                    cutoff_sigma::Float64=5.0,
+                    normalize::Bool=false
+                    )::Vector{Float64}
+
+    # Validate parameters
+    A > 0 || throw(ArgumentError("Amplitude A must be positive"))
+    w_L .> 0 || throw(ArgumentError("Lorentzian width w_L must be positive"))
+    w_G .> 0 || throw(ArgumentError("Gaussian width w_G must be positive"))
+    cutoff_sigma > 0 || throw(ArgumentError("cutoff_sigma must be positive"))    
+    
+    # Initialize output array
+    result = zeros(Float64, length(θ))                   
+
+    # Calculate width parameters
+    γ = w_L / 2                                    # Lorentzian HWHM    
+    σ = w_G / (2√(2log(2)))                        # Gaussian standard deviation
+
+    # Calculate effective width 
+    w_eff = peak_fwhm(w_L, w_G)    
+    
+    # Calculate profile only for points within the cutoff region
+    for i in eachindex(θ)
+        # Check if point is within cutoff region
+        if abs(θ[i] - θ₀) ≤ cutoff_sigma * w_eff
+            z = -im * (θ[i] - θ₀ + im * γ) / (√2 * σ)    # Complex argument for erfcx
+            result[i] = A * real(erfcx(z)) / (√(2π) * σ)
+        end
+    end
+
+    # Normalize if needed
+    if normalize
+        maxval = maximum(result)
+        if maxval > 0
+            result ./= maxval
+        end
+    end
+    
+    return result
+end
+
+# Vector w's version
 function Voigt_peak(θ::Vector{Float64},
                     θ₀::Float64,
                     A::Float64,
@@ -115,6 +164,58 @@ Notes:
 - Mixing factor is computed using the Humps2 approximation
 - Implements bounds checking to improve performance for large datasets
 """
+# Scaler w's version
+function pseudo_Voigt_peak(θ::Vector{Float64},
+                         θ₀::Float64,
+                         A::Float64,
+                         w_L::Float64,
+                         w_G::Float64;
+                         cutoff_sigma::Float64=5.0,
+                         normalize::Bool=false
+                         )::Vector{Float64}
+    
+    # Validate parameters
+    A > 0 || throw(ArgumentError("Amplitude A must be positive"))
+    w_L .> 0 || throw(ArgumentError("Lorentzian width w_L must be positive"))
+    w_G .> 0 || throw(ArgumentError("Gaussian width w_G must be positive"))
+    cutoff_sigma > 0 || throw(ArgumentError("cutoff_sigma must be positive"))
+    
+    # Calculate width parameters
+    γ = w_L / 2
+    σ = w_G / (2√(2log(2)))
+    
+    # Calculate effective width 
+    w_eff = peak_fwhm(w_L, w_G)    
+    
+    # Calculate mixing factor using Humps2 approximation
+    η = 1.36603 * (w_L/w_eff) - 0.47719 * (w_L/w_eff)^2 + 0.11116 * (w_L/w_eff)^3
+    
+    # Initialize output array
+    result = zeros(Float64, length(θ))
+ 
+        # Calculate profile only for points within the cutoff region
+    for i in eachindex(θ)
+        if abs(θ[i] - θ₀) ≤ cutoff_sigma * w_eff
+            # Lorentzian component
+            L = γ[i] / (π * ((θ[i] - θ₀)^2 + γ^2))
+            # Gaussian component
+            G = exp(-(θ[i] - θ₀)^2 / (2σ^2)) / (σ * √(2π))
+            # Combined profile
+            result[i] = A * (η * L + (1 - η) * G)
+        end
+    end
+    
+    if normalize
+        maxval = maximum(result)
+        if maxval > 0
+            result ./= maxval
+        end
+    end
+    
+    return result
+end
+
+# Vector w's version
 function pseudo_Voigt_peak(θ::Vector{Float64},
                          θ₀::Float64,
                          A::Float64,
@@ -167,8 +268,7 @@ function pseudo_Voigt_peak(θ::Vector{Float64},
 end
 
 
-
-# Utility functions that work with both peak types
+# Utility functions that work with both Voigt and pseudo Voigt
 
 
 """
@@ -178,8 +278,11 @@ end
 Estimates the distance from peak center where profile falls below a given tolerance.
 Works for both Voigt and pseudo-Voigt profiles. Returns maximum bound for vector inputs.
 """
-# Scalar version
-function estimate_peak_bounds(w_L::Float64, w_G::Float64, tol::Float64=1e-6)::Float64
+# Scalar w's version
+function estimate_peak_bounds(w_L::Float64,
+                              w_G::Float64;
+                              tol::Float64=1e-6
+                              )::Float64
     γ = w_L / 2
     σ = w_G / (2√(2log(2)))
     
@@ -189,10 +292,10 @@ function estimate_peak_bounds(w_L::Float64, w_G::Float64, tol::Float64=1e-6)::Fl
     return max(gaussian_cutoff, lorentzian_cutoff)
 end
 
-# Vector version
+# Vector w's version
 function estimate_peak_bounds(w_L::Vector{Float64},
                               w_G::Vector{Float64};
-                              tol::Float64=1e-5
+                              tol::Float64=1e-6
                               )::Float64
     length(w_L) == length(w_G) || throw(DimensionMismatch("w_L and w_G must have same length"))
     
@@ -316,12 +419,44 @@ end
 
 
 
-"Returnes the inter-layers distances as a function of Miller_indices"
-function d_list(indices::Vector{Vector{Int}},
-                a::Float64
-                )::Vector{Float64}
+"""
+    d_list(indices::Vector{Vector{Int}}, a::Float64)::Vector{Float64}
 
-    return a ./ [√(i^2 + j^2 + k^2) for (i, j, k) in indices]
+Calculate the interplanar distances (d-spacing) for a cubic crystal structure given Miller indices
+and lattice parameter.
+
+# Arguments
+- `indices::Vector{Vector{Int}}`: Array of Miller indices, where each index is a vector of three 
+   integers [h,k,l] representing crystallographic planes
+- `a::Float64`: Lattice parameter (unit cell edge length) in appropriate units
+
+# Returns
+- `Vector{Float64}`: Array of interplanar distances corresponding to each set of Miller indices
+
+# Throws
+- `DimensionMismatch`: If any Miller index vector doesn't contain exactly 3 components
+- `DomainError`: If lattice parameter is not positive
+"""
+function d_list(indices::Vector{Vector{Int}}, a::Float64)::Vector{Float64}
+    # Validate lattice parameter
+    a > 0 || throw(DomainError(a, "Lattice parameter must be positive"))
+    
+    # Validate indices structure and dimensions
+    for (idx, hkl) in enumerate(indices)
+        length(hkl) == 3 || throw(DimensionMismatch(
+            "Miller index at position $idx must have exactly 3 components"))
+    end
+    
+    # Pre-allocate output array for better performance
+    result = Vector{Float64}(undef, length(indices))
+    
+    # Calculate d-spacings using direct iteration instead of array comprehension
+    # This avoids creating temporary arrays and is more memory efficient
+    @inbounds for (i, (h, k, l)) in enumerate(indices)
+        result[i] = a / sqrt(h^2 + k^2 + l^2)
+    end
+    
+    return result
 end
 
 
@@ -423,11 +558,40 @@ function Miller_indices(cell_type::String,
 end
 
 
-"background function for the XRD pattern"
-function background(θ::Vector{Float64}
-                    )::Vector{Float64}
+"""
+    background(θ::Vector{Float64}; noise_level::Float64=0.0)::Vector{Float64}
 
-    return @. 2 + 0.5 * θ * (π - θ)       
+Generate a simplified XRD background for educational simulation purposes.
+Includes common physical effects seen in XRD patterns:
+- Air scattering (exponential decay at low angles)
+- Fluorescence (constant background)
+- Optional random noise
+
+# Arguments
+- `θ::Vector{Float64}`: Scattering angles in radians
+- `noise_level::Float64=0.0`: Amount of random noise to add (0.0 to 1.0)
+
+# Returns
+- `Vector{Float64}`: Background intensity at each angle
+"""
+function background(θ::Vector{Float64}; 
+                   noise_level::Float64=0.0)::Vector{Float64}
+    
+    # Validate inputs
+    0 ≤ noise_level ≤ 1 || throw(DomainError(noise_level, "noise_level must be between 0 and 1"))
+    
+    # Basic background components
+    air_scatter = @. 50 * exp(-5θ)        # Strong at low angles
+    fluorescence = 10.0                    # Constant background
+    base = air_scatter .+ fluorescence
+    
+    # Add optional noise
+    if noise_level > 0
+        noise = noise_level * randn(length(θ))
+        return max.(base .+ noise, 0)  # Ensure non-negative intensity
+    else
+        return base
+    end
 end
 
 

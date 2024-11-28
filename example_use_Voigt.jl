@@ -1,6 +1,6 @@
 using Plots
 
-include("functions.jl")
+include("voigt_new_with_docstrings.jl")
 
 θ = collect(range(2.0, 160.0, 1000))
 

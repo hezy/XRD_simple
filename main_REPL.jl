@@ -10,6 +10,7 @@ using Random
 #using Distributions
 using DataFrames
 using CSV
+using SixelTerm
 
 
 """
@@ -29,9 +30,9 @@ for lattice_type in ("SC", "BCC", "FCC")
     df[:, "θ"], df[:, lattice_type], the_title, the_plot = do_it("simple_XRD.txt", lattice_type, :dark)
 
     display(the_plot) 
-    sleep(1)
-    println("$lattice_type. Press Enter to continue...")
-    readline()  # Wait for user input to continue    
+    # sleep(1)
+    # println("$lattice_type. Press Enter to continue...")
+    # readline()  # Wait for user input to continue    
     savefig(the_plot, "./results/$the_title")
 end
 

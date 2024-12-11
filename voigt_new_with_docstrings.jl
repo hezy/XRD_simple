@@ -1,3 +1,5 @@
+using SpecialFunctions
+
 """
     peak_fwhm(w_L, w_G)
 

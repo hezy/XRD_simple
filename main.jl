@@ -10,6 +10,7 @@ using Random
 #using Distributions
 using DataFrames
 using CSV
+using SixelTerm
 
 
 """

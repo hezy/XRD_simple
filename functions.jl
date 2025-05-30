@@ -63,7 +63,7 @@ function peaks_width(two_θ_deg::Vector{Float64},
 end
 
 
-"Calculating the Bragg angles coresponding to each d-spacing"
+"Calculating the Bragg angles corresponding to each d-spacing"
 function bragg_angels(wavelength::Float64,
                       d_spacings::Vector{Float64}
                       )::Vector{Float64}
@@ -75,7 +75,7 @@ end
 
 
 
-"Returnes the inter-layers distances as a function of Miller_indices"
+"Returns the inter-layers distances as a function of Miller_indices"
 function d_list(indices::Vector{Vector{Int8}},
                 a::Float64
                 )::Vector{Float64}
@@ -211,7 +211,7 @@ function read_file(filename::String
 end
 
 
-"colecting input data, building the XRD pattern with background and noise, plotting it"
+"collecting input data, building the XRD pattern with background and noise, plotting it"
 function do_it_zero(file_name::String
                     )::Vector{Float64}
     
@@ -221,7 +221,7 @@ function do_it_zero(file_name::String
 end
 
 
-"colecting input data, building the XRD pattern with background and noise, plotting it"
+"collecting input data, building the XRD pattern with background and noise, plotting it"
 function do_it(file_name::String,
                lattice_type::String,
                plot_theme::Symbol

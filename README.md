@@ -162,8 +162,10 @@ For detailed equations and derivations, see [`xrd-peak-broadening.md`](xrd-peak-
 
 ```
 XRD_simple/
-├── main.jl                      # Primary entry point
+├── main.jl                      # Primary entry point (interactive)
+├── main_VScode.jl               # VS Code entry point (non-interactive)
 ├── functions.jl                 # Core physics engine (695 lines)
+├── functions_simple.jl          # Simplified reference version (256 lines)
 ├── data.toml                    # Configuration file
 ├── example_peaks_width.jl       # Peak width demonstration
 ├── example_use_Voigt.jl         # Voigt profile comparison
@@ -172,6 +174,8 @@ XRD_simple/
 ├── xrd-broadening-references.md # Academic references
 └── results/                     # Output directory
 ```
+
+**Note:** `functions_simple.jl` is a simplified legacy version kept for educational reference. All current scripts use `functions.jl`.
 
 ## Documentation
 

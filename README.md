@@ -59,6 +59,10 @@ include("main.jl")
 
 This will generate XRD patterns for all three cubic lattice types (SC, BCC, FCC) and save results to the `results/` directory.
 
+**Note:**
+- `main.jl` - Interactive version (pauses between plots, press Enter to continue) - recommended for REPL
+- `main_VScode.jl` - Non-interactive version (no pauses) - recommended for VS Code or Jupyter
+
 ## Configuration
 
 Edit `data.toml` to customize simulation parameters:
@@ -181,9 +185,7 @@ XRD_simple/
 
 ## Alternative Entry Points
 
-- `main_simple.jl` - Simplified version
-- `main_REPL.jl` - REPL-compatible version
-- `main_VScode.jl` - VS Code integration version
+- `main_VScode.jl` - Non-interactive version for VS Code (displays all plots without pausing)
 
 ## Contributing
 

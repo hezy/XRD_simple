@@ -205,5 +205,4 @@ Key foundational papers:
 See [`xrd-broadening-references.md`](xrd-broadening-references.md) for the complete reference list.
 
 ## License
-
-[Add your license information here]
+**[GPL-3.0](LICENSE)**

@@ -648,7 +648,7 @@ end
 function do_it_zero(file_name::String
                     )::Vector{Float64}
     
-    instrument_data, peak_width, lattice_params = read_xrd_config(file_name)
+    instrument, peak_width, lattice_params = read_xrd_config(file_name)
     θ = collect(LinRange((instrument["two_theta_min"]/2),
                          (instrument["two_theta_max"]/2),
                          instrument["N"]))
@@ -681,14 +681,21 @@ function do_it(file_name::String,
     w_L = Lorentzian_peaks_width(θ, K, ϵ, λ, D)
     w_G = Gaussian_peaks_width(θ, U, V, W)
     y = (background(θ) +
-         intensity_vs_angle(θ, indices, λ, a, w_L, w_G)) # .* 0.01 .* rand(Normal(1, 0.1), N)
+         intensity_vs_angle(θ, indices, λ, a, w_L, w_G))
+
+    # Add noise if specified
+    noise_level = get(instrument, "noise_level", 0.0)
+    if noise_level > 0
+        y = y .* rand(Normal(1, noise_level), N)
+        y = max.(y, 0)  # Ensure non-negative intensity
+    end
 
     the_title = "XRD - " * lattice_type
 
     theme(plot_theme)
 
     twoθ_deg = 2 * rad2deg.(θ)
-    the_plot = plot(twoθ_deg, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)")
+    the_plot = plot(twoθ_deg, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)", show=false)
 
     return twoθ_deg, y, the_title, the_plot
 end

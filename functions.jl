@@ -583,7 +583,8 @@ function background(θ::Vector{Float64};
     # Basic background components
     air_scatter = @. 50 * exp(-5θ)        # Strong at low angles
     fluorescence = 10.0                    # Constant background
-    base = air_scatter .+ fluorescence
+    amorphous = @. 25 * exp(-((θ - 0.18)^2) / (2 * 0.08^2))  # Broad hump ~20° 2θ (glass holder)
+    base = air_scatter .+ fluorescence .+ amorphous
     
     # Add optional noise
     if noise_level > 0

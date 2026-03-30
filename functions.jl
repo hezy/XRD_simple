@@ -291,46 +291,6 @@ end
 
 
 """
-    estimate_peak_bounds(w_L::Float64, w_G::Float64, tol::Float64=1e-6)
-    estimate_peak_bounds(w_L::Vector{Float64}, w_G::Vector{Float64}, tol::Float64=1e-6)
-
-Estimates the distance from peak center where profile falls below a given tolerance.
-Works for both Voigt and pseudo-Voigt profiles. Returns maximum bound for vector inputs.
-"""
-# Scalar w's version
-function estimate_peak_bounds(w_L::Float64,
-                              w_G::Float64;
-                              tol::Float64=1e-6
-                              )::Float64
-    γ = w_L / 2
-    σ = w_G / (2√(2log(2)))
-    
-    gaussian_cutoff = √(-2 * log(tol))
-    lorentzian_cutoff = γ * √(1/tol - 1) / σ
-    
-    return max(gaussian_cutoff, lorentzian_cutoff)
-end
-
-# Vector w's version
-function estimate_peak_bounds(w_L::Vector{Float64},
-                              w_G::Vector{Float64};
-                              tol::Float64=1e-6
-                              )::Float64
-    length(w_L) == length(w_G) || throw(DimensionMismatch("w_L and w_G must have same length"))
-    
-    γ = w_L ./ 2
-    σ = w_G ./ (2√(2log(2)))
-    
-    gaussian_cutoffs = fill(√(-2 * log(tol)), length(w_L))
-    lorentzian_cutoffs = @. γ * √(1/tol - 1) / σ
-    
-    # Return the maximum bound to ensure coverage of entire peak
-    return maximum(max.(gaussian_cutoffs, lorentzian_cutoffs))
-end
-
-
-
-"""
     peak_fwhm(w_L::Float64, w_G::Float64)
     peak_fwhm(w_L::Vector{Float64}, w_G::Vector{Float64})
 

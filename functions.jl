@@ -667,34 +667,6 @@ end
 
 
 """
-    make_noisy(θ, y)
-
-Add background and random noise to an XRD intensity pattern.
-
-Applies air scattering background, fluorescence, and multiplicative
-Gaussian noise to simulate realistic experimental conditions.
-
-# Arguments
-- `θ::Vector{Float64}`: Scattering angles in radians
-- `y::Vector{Float64}`: Clean intensity values
-
-# Returns
-- `Vector{Float64}`: Noisy intensity values with background added
-
-# Note
-This function is currently unused by the main workflow. The `do_it()`
-function implements its own noise model.
-"""
-function make_noisy(θ::Vector{Float64},
-                    y::Vector{Float64}
-                    )::Vector{Float64}
-    
-    return (background(θ) + y) .* 0.5 * rand(Normal(1, 0.1), size(θ))
-end
-
-
-
-"""
         read_xrd_config(filename::String) -> 
         (Dict{String,Any}, Dict{String,Float64}, Dict{String,Tuple{String,Float64}})
 

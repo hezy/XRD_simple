@@ -26,7 +26,8 @@ _, _, lattice = read_xrd_config("data.toml")
 lattice_types = sort(collect(keys(lattice)))
 
 θ₀ = do_it_zero("data.toml")
-df = DataFrame(Dict("θ" => θ₀, lt => θ₀ for lt in lattice_types))
+df = DataFrame(Dict(lt => θ₀ for lt in lattice_types))
+df[!, "θ"] = θ₀
 
 for lattice_type in lattice_types
     local twoθ, intensities, the_title, the_plot = do_it("data.toml", lattice_type, :dark)

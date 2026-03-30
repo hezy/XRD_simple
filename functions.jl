@@ -762,6 +762,77 @@ end
 
 
 """
+    compute_peak_widths(θ, peak_width, instrument)
+
+Calculate Lorentzian and Gaussian peak widths from configuration parameters.
+
+Combines Scherrer size + Stokes-Wilson strain broadening for the Lorentzian
+component, and Caglioti instrumental resolution for the Gaussian component.
+
+# Arguments
+- `θ::Vector{Float64}`: Scattering angles in radians
+- `peak_width::Dict{String,Float64}`: Peak width parameters (U, V, W, K, Epsilon, D)
+- `instrument::Dict{String,Any}`: Instrument parameters (lambda)
+
+# Returns
+- `Tuple{Vector{Float64}, Vector{Float64}}`: (w_L, w_G) peak widths at each angle
+"""
+function compute_peak_widths(θ::Vector{Float64},
+                             peak_width::Dict{String,Float64},
+                             instrument::Dict{String,Any}
+                             )::Tuple{Vector{Float64}, Vector{Float64}}
+    K, ϵ, D = peak_width["K"], peak_width["Epsilon"], peak_width["D"]
+    U, V, W = peak_width["U"], peak_width["V"], peak_width["W"]
+    λ = instrument["lambda"]
+
+    w_L = Lorentzian_peaks_width(θ, K, ϵ, λ, D)
+    w_G = Gaussian_peaks_width(θ, U, V, W)
+    return w_L, w_G
+end
+
+
+"""
+    compute_xrd_pattern(θ, indices, λ, a, w_L, w_G; noise_level=0.0)
+
+Compute XRD intensity pattern from peak parameters.
+
+Sums pseudo-Voigt peak profiles at Bragg angles, adds background,
+and optionally applies multiplicative noise.
+
+# Arguments
+- `θ::Vector{Float64}`: Scattering angles in radians
+- `indices::Vector{Vector{Int}}`: Miller indices of crystal planes
+- `λ::Float64`: X-ray wavelength in Angstroms
+- `a::Float64`: Lattice parameter in Angstroms
+- `w_L::Vector{Float64}`: Lorentzian FWHM at each angle
+- `w_G::Vector{Float64}`: Gaussian FWHM at each angle
+
+# Keyword Arguments
+- `noise_level::Float64=0.0`: Multiplicative noise standard deviation
+
+# Returns
+- `Vector{Float64}`: XRD intensities at each angle
+"""
+function compute_xrd_pattern(θ::Vector{Float64},
+                             indices::Vector{Vector{Int}},
+                             λ::Float64,
+                             a::Float64,
+                             w_L::Vector{Float64},
+                             w_G::Vector{Float64};
+                             noise_level::Float64=0.0
+                             )::Vector{Float64}
+    y = background(θ) .+ intensity_vs_angle(θ, indices, λ, a, w_L, w_G)
+
+    if noise_level > 0
+        y .*= rand(Normal(1, noise_level), length(θ))
+        y = max.(y, 0)
+    end
+
+    return y
+end
+
+
+"""
     do_it(file_name, lattice_type, plot_theme)
 
 Generate a complete XRD diffraction pattern for a given crystal structure.
@@ -786,30 +857,20 @@ function do_it(file_name::String,
                lattice_type::String,
                plot_theme::Symbol
                )::Tuple{Vector{Float64}, Vector{Float64}, String, Plots.Plot}
-    
+
     instrument, peak_width, lattice = read_xrd_config(file_name)
 
-    N = instrument["N"]
-    θ = collect(LinRange((instrument["two_theta_min"]/2),
-                         (instrument["two_theta_max"]/2),
+    θ = collect(LinRange(instrument["two_theta_min"]/2,
+                         instrument["two_theta_max"]/2,
                          instrument["N"]))
     λ = instrument["lambda"]
-    U, V, W = peak_width["U"], peak_width["V"], peak_width["W"]
-    K, ϵ, D = peak_width["K"], peak_width["Epsilon"], peak_width["D"]
     a = lattice[lattice_type][2]
 
     indices = Miller_indices(lattice_type, MILLER_INDEX_MIN, MILLER_INDEX_MAX)
+    w_L, w_G = compute_peak_widths(θ, peak_width, instrument)
 
-    w_L = Lorentzian_peaks_width(θ, K, ϵ, λ, D)
-    w_G = Gaussian_peaks_width(θ, U, V, W)
-    y = background(θ) .+ intensity_vs_angle(θ, indices, λ, a, w_L, w_G)
-
-    # Add noise if specified
     noise_level = get(instrument, "noise_level", 0.0)
-    if noise_level > 0
-        y .*= rand(Normal(1, noise_level), N)
-        y = max.(y, 0)  # Ensure non-negative intensity
-    end
+    y = compute_xrd_pattern(θ, indices, λ, a, w_L, w_G; noise_level=noise_level)
 
     the_title = "XRD - " * lattice_type
 

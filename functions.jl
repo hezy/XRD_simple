@@ -521,15 +521,8 @@ function Miller_indices(cell_type::String,
                         max::Int
                         )::Vector{Vector{Int}}
     
-    if !(cell_type in ["SC", "BCC", "FCC"])
-        error("Invalid cell_type: $cell_type. Expected 'SC', 'BCC', or 'FCC'.")
-    end
-    if min > max
-        error("Minimum value cannot be greater than maximum value.")
-    end
-    if !(isa(min, Int) && isa(max, Int))
-        error("Minimum and maximum values must be integers.")
-    end
+    cell_type in ("SC", "BCC", "FCC") || throw(ArgumentError("cell_type must be 'SC', 'BCC', or 'FCC', got '$cell_type'"))
+    min <= max || throw(ArgumentError("min must be less than or equal to max, got min=$min, max=$max"))
 
     if cell_type == "SC"
         # In simple cubic lattice, all Miller indices are allowed

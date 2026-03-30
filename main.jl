@@ -22,10 +22,13 @@ Random.seed!(347) # Setting the seed for random noise
 
 isdir("results") || mkdir("results")
 
-θ₀ = do_it_zero("data.toml")
-df = DataFrame(θ=θ₀, SC=θ₀, BCC=θ₀, FCC=θ₀)
+_, _, lattice = read_xrd_config("data.toml")
+lattice_types = sort(collect(keys(lattice)))
 
-for lattice_type in ("SC", "BCC", "FCC")
+θ₀ = do_it_zero("data.toml")
+df = DataFrame(Dict("θ" => θ₀, lt => θ₀ for lt in lattice_types))
+
+for lattice_type in lattice_types
     local twoθ, intensities, the_title, the_plot = do_it("data.toml", lattice_type, :dark)
     df[:, "θ"] = twoθ
     df[:, lattice_type] = intensities

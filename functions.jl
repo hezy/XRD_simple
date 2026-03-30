@@ -723,8 +723,10 @@ function read_xrd_config(filename::String)
     
     lattice = Dict{String,Tuple{String,Float64}}()
     for (structure, elements) in config["lattice"]
-        for (element, value) in elements
-            lattice[structure] = (element, value)
+        if !isempty(elements)
+            for (element, value) in elements
+                lattice[structure] = (element, value)
+            end
         end
     end
     

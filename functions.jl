@@ -357,8 +357,21 @@ end
 
 
 """
-Calculates the width of the Gaussian as a function θ with U, V, W parameters -
-Caglioti formula
+    Gaussian_peaks_width(θ, U, V, W)
+
+Calculate Gaussian peak widths using the Caglioti formula.
+
+The Caglioti formula models instrumental resolution as a function of
+scattering angle: HWHM² = U·tan²(θ) + V·tan(θ) + W
+
+# Arguments
+- `θ::Vector{Float64}`: Scattering angles in radians
+- `U::Float64`: Caglioti parameter (typically positive)
+- `V::Float64`: Caglioti parameter (typically negative)
+- `W::Float64`: Caglioti parameter (typically positive)
+
+# Returns
+- `Vector{Float64}`: Gaussian FWHM at each angle
 """
 function Gaussian_peaks_width(θ::Vector{Float64},
                               U::Float64,
@@ -371,8 +384,22 @@ end
 
 
 """
-Calculates the width of the Lorntzian as a function θ with K, E, λ, D parameters -
-Strain (Stokes-Wilson) and size (Scherrer) broadening
+    Lorentzian_peaks_width(θ, K, E, λ, D)
+
+Calculate Lorentzian peak widths from sample broadening effects.
+
+Combines crystallite size broadening (Scherrer equation) and
+microstrain broadening (Stokes-Wilson equation).
+
+# Arguments
+- `θ::Vector{Float64}`: Scattering angles in radians
+- `K::Float64`: Scherrer constant (typically ≈ 0.9)
+- `E::Float64`: Microstrain (dimensionless)
+- `λ::Float64`: X-ray wavelength in Angstroms
+- `D::Float64`: Crystallite size in nanometers
+
+# Returns
+- `Vector{Float64}`: Lorentzian FWHM at each angle
 """
 function Lorentzian_peaks_width(θ::Vector{Float64},
                                 K::Float64,
@@ -479,7 +506,23 @@ function d_list(indices::Vector{Vector{Int}}, a::Float64)::Vector{Float64}
 end
 
 
-"sums peak functions to return intensity vs angle"
+"""
+    sum_peaks(θ, θ_list, w_L, w_G)
+
+Sum pseudo-Voigt peak profiles at given Bragg angles.
+
+Evaluates a pseudo-Voigt peak at each position in `θ_list` and
+accumulates the results to produce a composite diffraction pattern.
+
+# Arguments
+- `θ::Vector{Float64}`: Scattering angles in radians
+- `θ_list::Vector{Float64}`: Peak center positions (Bragg angles) in radians
+- `w_L::Vector{Float64}`: Lorentzian FWHM parameters
+- `w_G::Vector{Float64}`: Gaussian FWHM parameters
+
+# Returns
+- `Vector{Float64}`: Combined peak intensities at each θ
+"""
 function sum_peaks(θ::Vector{Float64},
                    θ_list::Vector{Float64},
                    w_L::Vector{Float64},
@@ -534,7 +577,24 @@ function intensity_vs_angle(θ::Vector{Float64},
 end
 
 
-"Returns a list of Miller indices for each one of the cubic symmetries"
+"""
+    Miller_indices(cell_type, min, max)
+
+Generate Miller indices for cubic crystal structures with systematic absences.
+
+# Arguments
+- `cell_type::String`: Crystal structure type ("SC", "BCC", or "FCC")
+- `min::Int`: Minimum Miller index value
+- `max::Int`: Maximum Miller index value
+
+# Returns
+- `Vector{Vector{Int}}`: Array of [h,k,l] indices satisfying the systematic
+  absence rules for the given crystal structure
+
+# Throws
+- `ArgumentError`: If `cell_type` is not "SC", "BCC", or "FCC"
+- `ArgumentError`: If `min > max`
+"""
 function Miller_indices(cell_type::String,
                         min::Int, 
                         max::Int
@@ -606,7 +666,25 @@ function background(θ::Vector{Float64};
 end
 
 
-"Adding some noise to the data"
+"""
+    make_noisy(θ, y)
+
+Add background and random noise to an XRD intensity pattern.
+
+Applies air scattering background, fluorescence, and multiplicative
+Gaussian noise to simulate realistic experimental conditions.
+
+# Arguments
+- `θ::Vector{Float64}`: Scattering angles in radians
+- `y::Vector{Float64}`: Clean intensity values
+
+# Returns
+- `Vector{Float64}`: Noisy intensity values with background added
+
+# Note
+This function is currently unused by the main workflow. The `do_it()`
+function implements its own noise model.
+"""
 function make_noisy(θ::Vector{Float64},
                     y::Vector{Float64}
                     )::Vector{Float64}
@@ -655,7 +733,21 @@ end
 
 
 
-"colecting input data, building the XRD pattern with background and noise, plotting it"
+"""
+    do_it_zero(file_name)
+
+Read XRD configuration and return the scattering angle array.
+
+A helper function that extracts instrument parameters from the TOML
+config file and constructs the 2θ angle grid. Used to initialize
+a DataFrame in the main workflow.
+
+# Arguments
+- `file_name::String`: Path to TOML configuration file
+
+# Returns
+- `Vector{Float64}`: Scattering angles in radians (half of 2θ range)
+"""
 function do_it_zero(file_name::String
                     )::Vector{Float64}
     
@@ -667,7 +759,27 @@ function do_it_zero(file_name::String
 end
 
 
-"colecting input data, building the XRD pattern with background and noise, plotting it"
+"""
+    do_it(file_name, lattice_type, plot_theme)
+
+Generate a complete XRD diffraction pattern for a given crystal structure.
+
+Reads instrument and sample parameters from a TOML config file, computes
+peak positions and widths for the specified lattice type, adds background
+and optional noise, and produces a plot.
+
+# Arguments
+- `file_name::String`: Path to TOML configuration file
+- `lattice_type::String`: Crystal structure ("SC", "BCC", or "FCC")
+- `plot_theme::Symbol`: Plots.jl theme (e.g., `:dark`, `:light`)
+
+# Returns
+- `Tuple{Vector{Float64}, Vector{Float64}, String, Plots.Plot}`:
+  - 2θ angles in degrees
+  - Intensity values
+  - Plot title string
+  - Plots.jl figure object
+"""
 function do_it(file_name::String,
                lattice_type::String,
                plot_theme::Symbol

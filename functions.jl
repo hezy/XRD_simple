@@ -667,7 +667,6 @@ function do_it(file_name::String,
     θ = collect(LinRange((instrument["two_theta_min"]/2),
                          (instrument["two_theta_max"]/2),
                          instrument["N"]))
-    y = zeros(instrument["N"])
     λ = instrument["lambda"]
     U, V, W = peak_width["U"], peak_width["V"], peak_width["W"]
     K, ϵ, D = peak_width["K"], peak_width["Epsilon"], peak_width["D"]
@@ -679,13 +678,12 @@ function do_it(file_name::String,
 
     w_L = Lorentzian_peaks_width(θ, K, ϵ, λ, D)
     w_G = Gaussian_peaks_width(θ, U, V, W)
-    y = (background(θ) +
-         intensity_vs_angle(θ, indices, λ, a, w_L, w_G))
+    y = background(θ) .+ intensity_vs_angle(θ, indices, λ, a, w_L, w_G)
 
     # Add noise if specified
     noise_level = get(instrument, "noise_level", 0.0)
     if noise_level > 0
-        y = y .* rand(Normal(1, noise_level), N)
+        y .*= rand(Normal(1, noise_level), N)
         y = max.(y, 0)  # Ensure non-negative intensity
     end
 

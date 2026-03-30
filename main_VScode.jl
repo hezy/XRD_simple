@@ -26,10 +26,10 @@ Random.seed!(347) # Setting the seed for random noise
 df = DataFrame(θ=θ₀, SC=θ₀, BCC=θ₀, FCC=θ₀)
 
 for lattice_type in ("SC", "BCC", "FCC")
-    df[:, "θ"], df[:, lattice_type], the_title, the_plot = do_it("data.toml", lattice_type, :dark)
+    df[:, "θ"], df[:, lattice_type], title, the_plot = do_it("data.toml", lattice_type, :dark)
 
     display(the_plot) 
-    savefig(the_plot, "./results/$the_title")
+    savefig(the_plot, "./results/$title")
 end
 
 CSV.write("./results/XRD_results.csv", df)

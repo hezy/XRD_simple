@@ -71,7 +71,7 @@ function main()
     df[!, "θ"] = θ₀
 
     for lattice_type in lattice_types
-        local twoθ, intensities, the_title, the_plot = do_it(config_file, lattice_type, plot_theme)
+        local twoθ, intensities, title, the_plot = do_it(config_file, lattice_type, plot_theme)
         df[:, "θ"] = twoθ
         df[:, lattice_type] = intensities
 
@@ -82,7 +82,7 @@ function main()
         end
 
         if save_plots
-            savefig(the_plot, "./results/$the_title")
+            savefig(the_plot, "./results/$title")
         end
     end
 

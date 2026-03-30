@@ -1,7 +1,5 @@
 using Test
 
-include(joinpath(@__DIR__, "..", "functions.jl"))
-
 @testset "background" begin
     θ = collect(LinRange(deg2rad(5.0), deg2rad(60.0), 1000))
 

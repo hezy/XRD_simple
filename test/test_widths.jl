@@ -1,7 +1,5 @@
 using Test
 
-include(joinpath(@__DIR__, "..", "functions.jl"))
-
 @testset "Gaussian_peaks_width" begin
     θ = collect(LinRange(deg2rad(5.0), deg2rad(60.0), 100))
     U, V, W = 0.0001, -0.00005, 0.00001

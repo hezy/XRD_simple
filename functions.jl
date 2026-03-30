@@ -1,7 +1,7 @@
 """
-simple_XRD_new.jl
+XRD sim
 by Hezy Amiel
-2023-2024
+2023--2026
 Julia > 1.8
 """
 

@@ -20,6 +20,8 @@ include("functions.jl")
 
 Random.seed!(347) # Setting the seed for random noise
 
+isdir("results") || mkdir("results")
+
 θ₀ = do_it_zero("data.toml")
 df = DataFrame(θ=θ₀, SC=θ₀, BCC=θ₀, FCC=θ₀)
 

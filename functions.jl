@@ -18,6 +18,25 @@ using TOML
 
 """ 
 =========
+Constants
+=========
+"""
+
+# Background model parameters
+const AIR_SCATTER_AMPLITUDE = 50.0
+const AIR_SCATTER_DECAY = 5.0
+const FLUORESCENCE_LEVEL = 10.0
+const AMORPHOUS_AMPLITUDE = 25.0
+const AMORPHOUS_CENTER = 0.18
+const AMORPHOUS_WIDTH = 0.08
+
+# Miller index generation range
+const MILLER_INDEX_MIN = -5
+const MILLER_INDEX_MAX = 5
+
+
+""" 
+=========
 Functions
 =========
 """
@@ -572,9 +591,9 @@ function background(θ::Vector{Float64};
     0 ≤ noise_level ≤ 1 || throw(DomainError(noise_level, "noise_level must be between 0 and 1"))
     
     # Basic background components
-    air_scatter = @. 50 * exp(-5θ)        # Strong at low angles
-    fluorescence = 10.0                    # Constant background
-    amorphous = @. 25 * exp(-((θ - 0.18)^2) / (2 * 0.08^2))  # Broad hump ~20° 2θ (glass holder)
+    air_scatter = @. AIR_SCATTER_AMPLITUDE * exp(-AIR_SCATTER_DECAY * θ)
+    fluorescence = FLUORESCENCE_LEVEL
+    amorphous = @. AMORPHOUS_AMPLITUDE * exp(-((θ - AMORPHOUS_CENTER)^2) / (2 * AMORPHOUS_WIDTH^2))
     base = air_scatter .+ fluorescence .+ amorphous
     
     # Add optional noise
@@ -665,9 +684,7 @@ function do_it(file_name::String,
     K, ϵ, D = peak_width["K"], peak_width["Epsilon"], peak_width["D"]
     a = lattice[lattice_type][2]
 
-    index_min::Int = -5
-    index_max::Int = 5
-    indices = Miller_indices(lattice_type, index_min, index_max)
+    indices = Miller_indices(lattice_type, MILLER_INDEX_MIN, MILLER_INDEX_MAX)
 
     w_L = Lorentzian_peaks_width(θ, K, ϵ, λ, D)
     w_G = Gaussian_peaks_width(θ, U, V, W)

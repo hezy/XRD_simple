@@ -1,7 +1,5 @@
 using Test
 
-include(joinpath(@__DIR__, "..", "functions.jl"))
-
 @testset "Miller_indices" begin
     sc = Miller_indices("SC", -1, 1)
     @test length(sc) == 26

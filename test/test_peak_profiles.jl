@@ -1,7 +1,5 @@
 using Test
 
-include(joinpath(@__DIR__, "..", "functions.jl"))
-
 @testset "pseudo_Voigt_peak" begin
     θ = collect(LinRange(0.0, 2.0, 1000))
     θ₀ = 1.0

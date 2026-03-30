@@ -1,5 +1,7 @@
 using Test
 
+include(joinpath(@__DIR__, "..", "functions.jl"))
+
 @testset "XRD_simple" begin
     include("test_crystal.jl")
     include("test_peak_profiles.jl")

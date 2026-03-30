@@ -1,7 +1,5 @@
 using Test
 
-include(joinpath(@__DIR__, "..", "functions.jl"))
-
 @testset "Miller_indices errors" begin
     @test_throws ArgumentError Miller_indices("HCP", -1, 1)
     @test_throws ArgumentError Miller_indices("SC", 5, 2)

@@ -1,9 +1,9 @@
 using Test
 
-include(joinpath(@__DIR__, "..", "functions.jl"))
+const DATA_TOML = joinpath(@__DIR__, "..", "data.toml")
 
 @testset "read_xrd_config" begin
-    instrument, peak_width, lattice = read_xrd_config("data.toml")
+    instrument, peak_width, lattice = read_xrd_config(DATA_TOML)
 
     @test haskey(instrument, "two_theta_min")
     @test haskey(instrument, "two_theta_max")
@@ -19,7 +19,7 @@ include(joinpath(@__DIR__, "..", "functions.jl"))
     @test instrument["two_theta_min"] < 1.0
     @test instrument["two_theta_max"] < 3.0
 
-    @test haskey(lattice, "SC") || !haskey(lattice, "SC")
-    @test haskey(lattice, "BCC") || !haskey(lattice, "BCC")
-    @test haskey(lattice, "FCC") || !haskey(lattice, "FCC")
+    @test haskey(lattice, "SC")
+    @test haskey(lattice, "BCC")
+    @test haskey(lattice, "FCC")
 end

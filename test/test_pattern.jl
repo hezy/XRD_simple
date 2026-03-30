@@ -1,7 +1,7 @@
 using Test
 using Random
 
-include(joinpath(@__DIR__, "..", "functions.jl"))
+const DATA_TOML = joinpath(@__DIR__, "..", "data.toml")
 
 @testset "sum_peaks" begin
     θ = collect(LinRange(deg2rad(5.0), deg2rad(60.0), 1000))
@@ -19,7 +19,7 @@ include(joinpath(@__DIR__, "..", "functions.jl"))
 end
 
 @testset "compute_peak_widths" begin
-    instrument, peak_width, lattice = read_xrd_config("data.toml")
+    instrument, peak_width, lattice = read_xrd_config(DATA_TOML)
     θ = collect(LinRange(instrument["two_theta_min"]/2, instrument["two_theta_max"]/2, 100))
 
     w_L, w_G = compute_peak_widths(θ, peak_width, instrument)
@@ -30,7 +30,7 @@ end
 end
 
 @testset "compute_xrd_pattern" begin
-    instrument, peak_width, lattice = read_xrd_config("data.toml")
+    instrument, peak_width, lattice = read_xrd_config(DATA_TOML)
     θ = collect(LinRange(instrument["two_theta_min"]/2, instrument["two_theta_max"]/2, 100))
     indices = Miller_indices("SC", -2, 2)
     λ = instrument["lambda"]

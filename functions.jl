@@ -804,13 +804,13 @@ function do_it(file_name::String,
     noise_level = get(instrument, "noise_level", 0.0)
     y = compute_xrd_pattern(θ, indices, λ, a, w_L, w_G; noise_level=noise_level)
 
-    the_title = "XRD - " * lattice_type
+    title = "XRD - " * lattice_type
 
     theme(plot_theme)
 
     twoθ_deg = 2 * rad2deg.(θ)
-    the_plot = plot(twoθ_deg, y, title=the_title, xlabel="2θ (deg)", ylabel="Intensity (arb.)", show=false)
+    the_plot = plot(twoθ_deg, y, title=title, xlabel="2θ (deg)", ylabel="Intensity (arb.)", show=false)
 
-    return twoθ_deg, y, the_title, the_plot
+    return twoθ_deg, y, title, the_plot
 end
 

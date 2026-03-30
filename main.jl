@@ -4,10 +4,8 @@ by Hezy Amiel
 2023 - 2024
 """
 
-#using Plots; gr()
-#using SpecialFunctions
+using Plots
 using Random
-#using Distributions
 using DataFrames
 using CSV
 

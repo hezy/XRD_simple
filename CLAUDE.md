@@ -26,14 +26,14 @@ This file provides context for AI assistants working on the XRD_simple project.
   overwrites each plot and needs a pause to view them.
 
 ### Function Library Evolution
-- **functions_simple.jl** (256 lines, April 2023) - Legacy educational version
+- **archive/functions_simple.jl** (April 2023) - Legacy educational version
   - Uses text file parsing
   - Fixed mixing factors
   - Works in degrees
   - Basic error handling
   - **STATUS:** Kept as simplified reference, NOT used by active scripts
 
-- **functions.jl** (695 lines, 2023-2024) - **CURRENT PRODUCTION VERSION**
+- **functions.jl** (2023–2026) - **CURRENT PRODUCTION VERSION**
   - Uses TOML parsing
   - Advanced physics (Scherrer, Caglioti, Voigt profiles)
   - Works in radians internally
@@ -87,42 +87,52 @@ Both support:
 - **Effective FWHM:** `peak_fwhm()` combines both
 
 ### Miller Index Generation
-`Miller_indices(cell_type, min, max)` implements systematic absences:
+`Miller_indices(cell_type::String, max_hkl_sq::Int)` enumerates the canonical
+`h ≥ k ≥ l ≥ 0` wedge and returns `(indices, multiplicities)`. Systematic
+absences:
 - **SC:** All indices allowed (except [0,0,0])
 - **BCC:** Only h+k+l = even
 - **FCC:** All odd or all even
+
+The cutoff `max_hkl_sq` is derived from Bragg physics via `bragg_max_hkl_sq(a, λ)`,
+not a hard-coded range. Per-reflection multiplicity comes from `cubic_multiplicity`.
 
 ## Configuration Schema (data.toml)
 
 ```toml
 [instrument]
-two_theta_min = 2.0          # degrees (auto-converted to radians)
-two_theta_max = 170.0        # degrees (auto-converted to radians)
-N = 8000                     # number of points
+two_theta_min = 10.0         # degrees (auto-converted to radians)
+two_theta_max = 120.0        # degrees (auto-converted to radians)
+N = 1000                     # number of points
 lambda = 1.5418              # wavelength in Angstroms (Cu Kα)
+noise_level = 0.15           # multiplicative noise 0–1 (optional)
 
 [peak_width]
-U = 0.01                     # Caglioti parameter (instrumental)
-V = -0.02                    # Caglioti parameter (instrumental)
-W = 0.01                     # Caglioti parameter (instrumental)
+U = 0.0001                   # Caglioti parameter (instrumental)
+V = 0.00005                  # Caglioti parameter (instrumental)
+W = 0.00001                  # Caglioti parameter (instrumental)
 K = 0.9                      # Scherrer constant
 Epsilon = 0.001              # Microstrain
-D = 100.0                    # Crystallite size (nm)
+D = 500.0                    # Crystallite size (nm)
 
+# Each [lattice.*] block holds one or more element = a (Å) entries.
+# Every uncommented line becomes one simulated pattern.
 [lattice.SC]
-element = "Generic"          # Material name
-a = 3.0                      # Lattice parameter (Angstroms)
+Po = 3.352
 
 [lattice.BCC]
-element = "Generic"
-a = 3.0
+V  = 3.0399
+# Fe = 2.866
 
 [lattice.FCC]
-element = "Generic"
-a = 3.0
+Ag = 4.079
+# Cu = 3.594
 ```
 
-**Important:** Angular parameters in config are in degrees and automatically converted to radians by `read_xrd_config()`.
+**Important:** Angular parameters in config are in degrees and automatically
+converted to radians by `read_xrd_config()`. That function returns a flat
+vector of `(structure, element, a)` triples — one per uncommented lattice
+entry, any N (including 0) supported.
 
 ## Known Issues
 
@@ -138,26 +148,34 @@ a = 3.0
 ## Common Tasks
 
 ### Adding a New Crystal Structure
-1. Update `Miller_indices()` function in functions.jl (line 520-558)
-2. Add systematic absence rules
-3. Add lattice parameters to data.toml
-4. Update main loop to include new structure
+1. Extend `Miller_indices()` with the new `cell_type` branch and its systematic
+   absence rule.
+2. If its point group differs from cubic, add a new multiplicity helper
+   alongside `cubic_multiplicity` and call it from `Miller_indices`.
+3. Add a `[lattice.NEWTYPE]` block to `data.toml` with one or more
+   `element = a` entries. The main loop picks it up automatically — no
+   changes needed in `main.jl`.
 
 ### Modifying Peak Profiles
-- Primary location: `Voigt_peak()` and `pseudo_Voigt_peak()` (lines 62-268)
-- Remember to update both scalar and vector versions
-- Maintain cutoff optimization for performance
+- Primary functions: `Voigt_peak()` and `pseudo_Voigt_peak()`
+- Each has both a scalar and a vector method — update both when changing
+  behavior.
+- Maintain the cutoff optimization (`cutoff_sigma * w_eff`) for performance.
 
 ### Changing Background Model
-- Function: `background()` (lines 577-595)
-- Current model: Air scattering (exponential) + fluorescence (constant)
-- Keep non-negative intensity constraint
+- Function: `background()`
+- Current model: air scattering (exponential at low angles) + fluorescence
+  (constant) + optional amorphous Gaussian hump
+- Keep the non-negative intensity constraint.
 
 ## Testing Approach
 
-No formal test suite currently. Manual testing via:
+A `test/` directory with a runtests.jl harness exists (crystal functions, peak
+profiles, widths, pattern computation, background, config, errors). Manual
+testing via:
 1. Run `main.jl` and verify plots look reasonable
-2. Check example scripts: `archive/example_peaks_width.jl`, `archive/example_use_Voigt.jl`
+2. Optionally check archived demo scripts: `archive/example_peaks_width.jl`,
+   `archive/example_use_Voigt.jl`
 3. Verify CSV output in `results/XRD_results.csv`
 
 **Visual checks:**
@@ -203,7 +221,7 @@ Peak functions only calculate values within `cutoff_sigma * w_eff` of peak cente
 **Trade-off:** Accuracy vs speed. Adjust `cutoff_sigma` parameter if needed.
 
 ### Pre-allocation
-Use pre-allocated arrays where possible (see `d_list()` implementation, line 451).
+Use pre-allocated arrays where possible (see `d_list()` for a representative pattern).
 
 ### Vectorization
 Use broadcasting (`@.` macro) for element-wise operations.
@@ -230,6 +248,7 @@ Use broadcasting (`@.` macro) for element-wise operations.
 
 ---
 
-**Last Updated:** 2024 (following cleanup of duplicate files)
+**Last Updated:** 2026-04 (after main.jl / main_VScode.jl merge, archive move,
+and multi-lattice config support)
 **Maintainer:** Hezy Amiel
 **AI Assistant Notes:** Created to provide context for future development sessions

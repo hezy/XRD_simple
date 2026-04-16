@@ -10,7 +10,7 @@ This document analyzes the differences between the two function libraries in the
 
 | Aspect | `functions_simple.jl` | `functions.jl` |
 |--------|----------------------|----------------|
-| Lines | 256 | 695 |
+| Lines | 256 | 886 |
 | Date | April 2023 | 2023-2024 |
 | Status | Legacy/educational reference | **Current production** |
 | Config format | Plain text parser | TOML |
@@ -250,7 +250,7 @@ end
 | Configurability | Low | High |
 | Maintenance status | Frozen | Active |
 
-**Bottom Line**: `functions_simple.jl` is a teaching-friendly 256-line implementation suitable for understanding the basics. `functions.jl` is a production-quality 695-line version with proper physics modeling (Scherrer crystallite size, Stokes-Wilson microstrain), performance optimizations, and robust error handling.
+**Bottom Line**: `archive/functions_simple.jl` is a teaching-friendly 256-line implementation suitable for understanding the basics. `functions.jl` is a production-quality ~900-line version with proper physics modeling (Scherrer crystallite size, Stokes-Wilson microstrain), performance optimizations, and robust error handling.
 
 ---
 

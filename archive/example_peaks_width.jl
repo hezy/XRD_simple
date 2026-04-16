@@ -1,6 +1,6 @@
 using Plots
 
-include("functions.jl")
+include("../functions.jl")
 
 θ_min = 1.0
 θ_max = 80.0

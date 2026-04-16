@@ -1,6 +1,6 @@
 using Plots
 
-include("functions.jl")
+include("../functions.jl")
 
 # Set up angle range and parameters
 θ_deg = range(10, 80, length=1000)  # degrees

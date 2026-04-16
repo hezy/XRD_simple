@@ -2,6 +2,10 @@
 
 This document analyzes the differences between the two function libraries in the XRD_simple project.
 
+> Note: `functions_simple.jl` has since been moved to `archive/functions_simple.jl`.
+> Inline `functions_simple.jl:LINE` references below refer to that file at its
+> archived location; line numbers are preserved by the move.
+
 ## Overview
 
 | Aspect | `functions_simple.jl` | `functions.jl` |

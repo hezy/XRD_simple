@@ -49,8 +49,8 @@ This file provides context for AI assistants working on the XRD_simple project.
 - `data.toml` - Configuration file - **THE STANDARD CONFIG FORMAT**
 
 ### Reference/Legacy (Do Not Modify)
-- `functions_simple.jl` - Simplified educational reference
-- `simple_XRD.txt` - Legacy config (no longer used but kept)
+- `archive/functions_simple.jl` - Simplified educational reference
+- `archive/simple_XRD.txt` - Legacy config (no longer used but kept)
 
 ### Documentation
 - `README.md` - User-facing documentation
@@ -58,10 +58,10 @@ This file provides context for AI assistants working on the XRD_simple project.
 - `xrd-broadening-references.md` - Academic citations
 - `problems.md` - Known issues
 
-### Examples
-- `example_peaks_width.jl` - Demonstrates peak width calculations
-- `example_use_Voigt.jl` - Compares Voigt vs pseudo-Voigt
-- `width.jl` - Peak width analysis utility
+### Examples (archived)
+- `archive/example_peaks_width.jl` - Demonstrates peak width calculations
+- `archive/example_use_Voigt.jl` - Compares Voigt vs pseudo-Voigt
+- `archive/width.jl` - Peak width analysis utility
 
 ## Key Architecture Patterns
 
@@ -157,7 +157,7 @@ a = 3.0
 
 No formal test suite currently. Manual testing via:
 1. Run `main.jl` and verify plots look reasonable
-2. Check example scripts: `example_peaks_width.jl`, `example_use_Voigt.jl`
+2. Check example scripts: `archive/example_peaks_width.jl`, `archive/example_use_Voigt.jl`
 3. Verify CSV output in `results/XRD_results.csv`
 
 **Visual checks:**
@@ -210,8 +210,8 @@ Use broadcasting (`@.` macro) for element-wise operations.
 
 ## Important Notes for AI Assistants
 
-1. **Always use functions.jl, never functions_simple.jl** for modifications
-2. **data.toml is the standard config** - simple_XRD.txt is legacy
+1. **Always use functions.jl, never archive/functions_simple.jl** for modifications
+2. **data.toml is the standard config** - archive/simple_XRD.txt is legacy
 3. **Angles:** Internally radians, externally degrees
 4. **Multiple dispatch:** Maintain both scalar and vector versions of width functions
 5. **Error handling:** Validate inputs with descriptive ArgumentError messages

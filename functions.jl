@@ -574,24 +574,25 @@ end
 
 
 """
-    bragg_max_hkl_sq(a::Float64, λ::Float64, two_theta_max::Float64)::Int
+    bragg_max_hkl_sq(a::Float64, λ::Float64)::Int
 
-Largest h²+k²+l² for a cubic lattice whose reflection lies within the scan.
+Largest h²+k²+l² for a cubic lattice that admits a real Bragg angle.
 
-Derived from Bragg's law: sin(θ) = λ/(2d) ≤ sin(θ_max), combined with the
-cubic d-spacing 1/d² = (h²+k²+l²)/a². Any reflection above this bound has no
-Bragg angle in the scan range.
+Derived from Bragg's law: sin(θ) = λ/(2d) ≤ 1, combined with the cubic
+d-spacing 1/d² = (h²+k²+l²)/a². Reflections above this bound have no real
+Bragg angle and cannot appear in any scan.
+
+Note: peaks whose *centers* lie outside the scan window can still contribute
+through their wings, so the cutoff deliberately does not depend on
+`two_theta_max`.
 """
 function bragg_max_hkl_sq(a::Float64,
-                          λ::Float64,
-                          two_theta_max::Float64
+                          λ::Float64
                           )::Int
     a > 0 || throw(ArgumentError("Lattice parameter must be positive"))
     λ > 0 || throw(ArgumentError("Wavelength must be positive"))
-    0 < two_theta_max ≤ π || throw(ArgumentError("two_theta_max must be in (0, π] radians"))
 
-    sin_θ_max = sin(two_theta_max / 2)
-    return floor(Int, (2 * a * sin_θ_max / λ)^2)
+    return floor(Int, (2 * a / λ)^2)
 end
 
 
@@ -862,7 +863,7 @@ function do_it(file_name::String,
     λ = instrument["lambda"]
     a = lattice[lattice_type][2]
 
-    max_hkl_sq = bragg_max_hkl_sq(a, λ, instrument["two_theta_max"])
+    max_hkl_sq = bragg_max_hkl_sq(a, λ)
     indices, multiplicities = Miller_indices(lattice_type, max_hkl_sq)
     w_L, w_G = compute_peak_widths(θ, peak_width, instrument)
 

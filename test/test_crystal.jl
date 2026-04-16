@@ -13,15 +13,14 @@ using Test
 end
 
 @testset "bragg_max_hkl_sq" begin
-    # Cu Kα on a=3Å, 2θ_max=170° → h²+k²+l² ≤ 15
-    @test bragg_max_hkl_sq(3.0, 1.5418, deg2rad(170.0)) == 15
+    # Cu Kα on a=3Å → h²+k²+l² ≤ floor((2·3/1.5418)²) = 15
+    @test bragg_max_hkl_sq(3.0, 1.5418) == 15
 
     # Doubling the lattice parameter quadruples the reachable range
-    @test bragg_max_hkl_sq(6.0, 1.5418, deg2rad(170.0)) == 60
+    @test bragg_max_hkl_sq(6.0, 1.5418) == 60
 
-    @test_throws ArgumentError bragg_max_hkl_sq(-1.0, 1.5, deg2rad(170.0))
-    @test_throws ArgumentError bragg_max_hkl_sq(3.0, -1.0, deg2rad(170.0))
-    @test_throws ArgumentError bragg_max_hkl_sq(3.0, 1.5, 0.0)
+    @test_throws ArgumentError bragg_max_hkl_sq(-1.0, 1.5)
+    @test_throws ArgumentError bragg_max_hkl_sq(3.0, -1.0)
 end
 
 @testset "Miller_indices" begin

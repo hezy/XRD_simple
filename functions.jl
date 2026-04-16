@@ -51,8 +51,8 @@ Arguments:
 - `θ::Vector{Float64}`: Position values where to evaluate the peak
 - `θ₀::Float64`: Center position of the peak
 - `A::Float64`: Peak amplitude (must be positive)
-- `w_L::Vector{Float64}`: Lorentzian full width at half maximum (FWHM) (must be positive)
-- `w_G::Vector{Float64}`: Gaussian full width at half maximum (FWHM) (must be positive)
+- `w_L::Union{Float64, Vector{Float64}}`: Lorentzian full width at half maximum (FWHM) (must be positive)
+- `w_G::Union{Float64, Vector{Float64}}`: Gaussian full width at half maximum (FWHM) (must be positive)
 
 Keyword Arguments:
 - `cutoff_sigma::Float64=5.0`: Number of standard deviations beyond which to set peak to zero
@@ -77,7 +77,7 @@ Notes:
 - Implements bounds checking to improve performance for large datasets
 - The cutoff region is based on both Gaussian and Lorentzian widths
 """
-# Scaler w's version
+# Scalar w's version
 function Voigt_peak(θ::Vector{Float64},
                     θ₀::Float64,
                     A::Float64,
@@ -89,20 +89,20 @@ function Voigt_peak(θ::Vector{Float64},
 
     # Validate parameters
     A > 0 || throw(ArgumentError("Amplitude A must be positive"))
-    w_L .> 0 || throw(ArgumentError("Lorentzian width w_L must be positive"))
-    w_G .> 0 || throw(ArgumentError("Gaussian width w_G must be positive"))
-    cutoff_sigma > 0 || throw(ArgumentError("cutoff_sigma must be positive"))    
-    
+    w_L > 0 || throw(ArgumentError("Lorentzian width w_L must be positive"))
+    w_G > 0 || throw(ArgumentError("Gaussian width w_G must be positive"))
+    cutoff_sigma > 0 || throw(ArgumentError("cutoff_sigma must be positive"))
+
     # Initialize output array
-    result = zeros(Float64, length(θ))                   
+    result = zeros(Float64, length(θ))
 
     # Calculate width parameters
-    γ = w_L / 2                                    # Lorentzian HWHM    
+    γ = w_L / 2                                    # Lorentzian HWHM
     σ = w_G / (2√(2log(2)))                        # Gaussian standard deviation
 
-    # Calculate effective width 
-    w_eff = peak_fwhm(w_L, w_G)    
-    
+    # Calculate effective width
+    w_eff = peak_fwhm(w_L, w_G)
+
     # Calculate profile only for points within the cutoff region
     for i in eachindex(θ)
         # Check if point is within cutoff region
@@ -183,7 +183,7 @@ Notes:
 - Mixing factor is computed using the Humps2 approximation
 - Implements bounds checking to improve performance for large datasets
 """
-# Scaler w's version
+# Scalar w's version
 function pseudo_Voigt_peak(θ::Vector{Float64},
                            θ₀::Float64,
                            A::Float64,
@@ -192,11 +192,11 @@ function pseudo_Voigt_peak(θ::Vector{Float64},
                            cutoff_sigma::Float64=5.0,
                            normalize::Bool=false
                            )::Vector{Float64}
-    
+
     # Validate parameters
     A > 0 || throw(ArgumentError("Amplitude A must be positive"))
-    w_L .> 0 || throw(ArgumentError("Lorentzian width w_L must be positive"))
-    w_G .> 0 || throw(ArgumentError("Gaussian width w_G must be positive"))
+    w_L > 0 || throw(ArgumentError("Lorentzian width w_L must be positive"))
+    w_G > 0 || throw(ArgumentError("Gaussian width w_G must be positive"))
     cutoff_sigma > 0 || throw(ArgumentError("cutoff_sigma must be positive"))
     
     # Calculate width parameters
@@ -419,8 +419,7 @@ function bragg_angles(wavelength::Float64,
     sinθ = wavelength ./ (2 * d_spacings)
     valid_idx = findall(x -> abs(x) <= 1, sinθ)
     angles = asin.(sinθ[valid_idx])
-    sinθ_cleaned = [item for item in sinθ if abs(item) <= 1]  # removing values outside (-1,1)
-    return angles, valid_idx  
+    return angles, valid_idx
 end
 
 

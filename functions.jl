@@ -690,10 +690,11 @@ end
 
 
 """
-        read_xrd_config(filename::String) -> 
-        (Dict{String,Any}, Dict{String,Float64}, Dict{String,Tuple{String,Float64}})
+        read_xrd_config(filename::String) ->
+        (Dict{String,Any}, Dict{String,Float64}, Vector{Tuple{String,String,Float64}})
 
-Read XRD configuration from TOML file, returning instrument, peak width, and lattice parameters.
+Read XRD configuration from TOML file, returning instrument, peak width, and a
+flat list of samples to simulate.
 
 # Arguments
 - `filename`: Path to TOML configuration file
@@ -702,30 +703,30 @@ Read XRD configuration from TOML file, returning instrument, peak width, and lat
 Tuple with:
 - "instrument": Dict of instrument parameters (two_theta_min, two_theta_max, N, lambda)
 - "peak_width": Dict of peak width parameters (U, V, W, K, Epsilon, D)
-- "lattice": Dict of lattice parameters by structure type
+- "samples": Vector of `(structure, element, a)` triples, one per uncommented
+  lattice entry. Empty blocks contribute nothing; zero samples is a valid result.
 
 Note: Angular parameters (two_theta_min, two_theta_max) are automatically converted to radians.
 """
 function read_xrd_config(filename::String)
     config = TOML.parsefile(filename)
-    
+
     instrument = Dict{String,Any}(
         k => (k in ["two_theta_min", "two_theta_max"] ? deg2rad(v) : v)
         for (k,v) in config["instrument"]
     )
-    
+
     peak_width = Dict{String,Float64}(config["peak_width"])
-    
-    lattice = Dict{String,Tuple{String,Float64}}()
+
+    samples = Tuple{String,String,Float64}[]
     for (structure, elements) in config["lattice"]
-        if !isempty(elements)
-            for (element, value) in elements
-                lattice[structure] = (element, value)
-            end
+        for (element, a) in elements
+            push!(samples, (structure, element, Float64(a)))
         end
     end
-    
-    return instrument, peak_width, lattice
+    sort!(samples)
+
+    return instrument, peak_width, samples
 end
 
 
@@ -748,7 +749,7 @@ a DataFrame in the main workflow.
 function do_it_zero(file_name::String
                     )::Vector{Float64}
     
-    instrument, peak_width, lattice_params = read_xrd_config(file_name)
+    instrument, _, _ = read_xrd_config(file_name)
     θ = collect(LinRange((instrument["two_theta_min"]/2),
                          (instrument["two_theta_max"]/2),
                          instrument["N"]))
@@ -830,47 +831,50 @@ end
 
 
 """
-    do_it(file_name, lattice_type, plot_theme)
+    do_it(file_name, structure, element, a, plot_theme)
 
-Generate a complete XRD diffraction pattern for a given crystal structure.
+Generate a complete XRD diffraction pattern for one (structure, element) sample.
 
-Reads instrument and sample parameters from a TOML config file, computes
-peak positions and widths for the specified lattice type, adds background
-and optional noise, and produces a plot.
+Reads instrument parameters from a TOML config file, computes peak positions
+and widths for the given structure and lattice parameter, adds background and
+optional noise, and produces a plot.
 
 # Arguments
 - `file_name::String`: Path to TOML configuration file
-- `lattice_type::String`: Crystal structure ("SC", "BCC", or "FCC")
+- `structure::String`: Crystal structure ("SC", "BCC", or "FCC")
+- `element::String`: Element label (used in plot title and filename)
+- `a::Float64`: Lattice parameter in Angstroms
 - `plot_theme::Symbol`: Plots.jl theme (e.g., `:dark`, `:light`)
 
 # Returns
 - `Tuple{Vector{Float64}, Vector{Float64}, String, Plots.Plot}`:
   - 2θ angles in degrees
   - Intensity values
-  - Plot title string
+  - Plot/file title string (`"{element}-{structure}"`)
   - Plots.jl figure object
 """
 function do_it(file_name::String,
-               lattice_type::String,
+               structure::String,
+               element::String,
+               a::Float64,
                plot_theme::Symbol
                )::Tuple{Vector{Float64}, Vector{Float64}, String, Plots.Plot}
 
-    instrument, peak_width, lattice = read_xrd_config(file_name)
+    instrument, peak_width, _ = read_xrd_config(file_name)
 
     θ = collect(LinRange(instrument["two_theta_min"]/2,
                          instrument["two_theta_max"]/2,
                          instrument["N"]))
     λ = instrument["lambda"]
-    a = lattice[lattice_type][2]
 
     max_hkl_sq = bragg_max_hkl_sq(a, λ)
-    indices, multiplicities = Miller_indices(lattice_type, max_hkl_sq)
+    indices, multiplicities = Miller_indices(structure, max_hkl_sq)
     w_L, w_G = compute_peak_widths(θ, peak_width, instrument)
 
     noise_level = get(instrument, "noise_level", 0.0)
     y = compute_xrd_pattern(θ, indices, multiplicities, λ, a, w_L, w_G; noise_level=noise_level)
 
-    title = "XRD - " * lattice_type
+    title = "$element-$structure"
 
     theme(plot_theme)
 

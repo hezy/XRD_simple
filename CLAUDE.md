@@ -19,10 +19,11 @@ This file provides context for AI assistants working on the XRD_simple project.
 
 ### File Structure Evolution
 - **Original:** Multiple main*.jl files for different environments
-- **Current (cleaned up):** Two main entry points
-  - `main.jl` - Interactive version (REPL-friendly, pauses between plots)
-  - `main_VScode.jl` - Non-interactive (VS Code-friendly, no pauses)
-- **Rationale:** VS Code can display multiple plots in plot pane; REPL overwrites plots, requiring user interaction
+- **Current:** One unified entry point — `main.jl` — that auto-detects VS Code
+  (via `isdefined(Main, :VSCodeServer)`) and skips the between-plots pause +
+  `closeall()` when running there. Terminal REPL still pauses for each plot.
+- **Rationale:** VS Code's plot pane retains all figures; a terminal REPL
+  overwrites each plot and needs a pause to view them.
 
 ### Function Library Evolution
 - **functions_simple.jl** (256 lines, April 2023) - Legacy educational version
@@ -43,9 +44,8 @@ This file provides context for AI assistants working on the XRD_simple project.
 ## Critical Files
 
 ### Active Scripts (Use These)
-- `main.jl` - Primary entry point, interactive
-- `main_VScode.jl` - VS Code entry point, non-interactive
-- `functions.jl` - Core physics engine (695 lines) - **THE AUTHORITATIVE VERSION**
+- `main.jl` - Unified entry point (auto-detects VS Code vs terminal REPL)
+- `functions.jl` - Core physics engine - **THE AUTHORITATIVE VERSION**
 - `data.toml` - Configuration file - **THE STANDARD CONFIG FORMAT**
 
 ### Reference/Legacy (Do Not Modify)

@@ -13,6 +13,12 @@ using ArgParse
 include("functions.jl")
 
 
+# VS Code's Julia extension loads VSCodeServer into Main and routes plots to a
+# persistent plot pane. In that context we skip the between-plots pause and
+# don't close plot windows on exit.
+const IN_VSCODE = isdefined(Main, :VSCodeServer)
+
+
 """
     setup_argparse() -> ArgParseSettings
 
@@ -35,7 +41,7 @@ function setup_argparse()
             arg_type = Int
             default = 347
         "--no-interactive"
-            help = "Skip interactive pauses between plots"
+            help = "Skip interactive pauses between plots (automatic in VS Code)"
             action = :store_true
         "--no-plots"
             help = "Skip saving plots (CSV output only)"
@@ -52,32 +58,28 @@ function main()
     config_file = args["config"]
     plot_theme = Symbol(args["theme"])
     seed = args["seed"]
-    interactive = !args["no-interactive"]
+    interactive = !args["no-interactive"] && !IN_VSCODE
     save_plots = !args["no-plots"]
 
     Random.seed!(seed)
 
     isdir("results") || mkdir("results")
 
-    _, _, lattice = read_xrd_config(config_file)
-    lattice_types = sort(collect(keys(lattice)))
-
-    if isempty(lattice_types)
-        error("No active lattice types found in $config_file")
-    end
+    _, _, samples = read_xrd_config(config_file)
 
     θ₀ = do_it_zero(config_file)
-    df = DataFrame(Dict(lt => θ₀ for lt in lattice_types))
-    df[!, "θ"] = θ₀
+    df = DataFrame("θ" => θ₀)
 
-    for lattice_type in lattice_types
-        local twoθ, intensities, title, the_plot = do_it(config_file, lattice_type, plot_theme)
+    for (structure, element, a) in samples
+        local twoθ, intensities, title, the_plot = do_it(config_file, structure, element, a, plot_theme)
         df[:, "θ"] = twoθ
-        df[:, lattice_type] = intensities
+        df[!, title] = intensities
 
-        if interactive
+        if interactive || IN_VSCODE
             display(the_plot)
-            println("$lattice_type. Press Enter to continue...")
+        end
+        if interactive
+            println("$title. Press Enter to continue...")
             readline()
         end
 
@@ -86,9 +88,9 @@ function main()
         end
     end
 
-    closeall()
+    IN_VSCODE || closeall()
     CSV.write("./results/XRD_results.csv", df)
-    println("Done. Results saved to ./results/")
+    println("Produced $(length(samples)) samples. Results saved to ./results/")
 end
 
 

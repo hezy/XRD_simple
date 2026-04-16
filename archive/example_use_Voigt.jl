@@ -1,6 +1,6 @@
 using Plots
 
-include("functions.jl")
+include("../functions.jl")
 
 θ = collect(range(2.0, 160.0, 1000))
 

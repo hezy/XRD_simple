@@ -108,7 +108,7 @@ do_it(lattice_type, config)
 Explore how peak widths vary with angle:
 
 ```julia
-include("example_peaks_width.jl")
+include("archive/example_peaks_width.jl")
 ```
 
 ### Voigt vs Pseudo-Voigt Comparison
@@ -116,7 +116,7 @@ include("example_peaks_width.jl")
 Compare different peak profile models:
 
 ```julia
-include("example_use_Voigt.jl")
+include("archive/example_use_Voigt.jl")
 ```
 
 ## Output
@@ -162,20 +162,21 @@ For detailed equations and derivations, see [`xrd-peak-broadening.md`](xrd-peak-
 
 ```
 XRD_simple/
-├── main.jl                      # Primary entry point (interactive)
-├── main_VScode.jl               # VS Code entry point (non-interactive)
-├── functions.jl                 # Core physics engine (695 lines)
-├── functions_simple.jl          # Simplified reference version (256 lines)
+├── main.jl                      # Unified entry point (auto-detects VS Code)
+├── functions.jl                 # Core physics engine
 ├── data.toml                    # Configuration file
-├── example_peaks_width.jl       # Peak width demonstration
-├── example_use_Voigt.jl         # Voigt profile comparison
-├── width.jl                     # Peak width analysis utility
+├── archive/                     # Legacy files and early-stage demo scripts
+│   ├── functions_simple.jl      # Simplified reference version (256 lines)
+│   ├── simple_XRD.txt           # Legacy text config
+│   ├── example_peaks_width.jl   # Peak width demonstration
+│   ├── example_use_Voigt.jl     # Voigt profile comparison
+│   └── width.jl                 # Peak width analysis utility
 ├── xrd-peak-broadening.md       # Detailed physics documentation
 ├── xrd-broadening-references.md # Academic references
 └── results/                     # Output directory
 ```
 
-**Note:** `functions_simple.jl` is a simplified legacy version kept for educational reference. All current scripts use `functions.jl`.
+**Note:** `archive/functions_simple.jl` is a simplified legacy version kept for educational reference. All current scripts use `functions.jl`.
 
 ## Documentation
 

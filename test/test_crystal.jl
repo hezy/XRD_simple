@@ -1,18 +1,56 @@
 using Test
 
+@testset "cubic_multiplicity" begin
+    # Canonical h ≥ k ≥ l ≥ 0, standard cubic multiplicities
+    @test cubic_multiplicity(1, 0, 0) == 6    # {100}
+    @test cubic_multiplicity(1, 1, 0) == 12   # {110}
+    @test cubic_multiplicity(1, 1, 1) == 8    # {111}
+    @test cubic_multiplicity(2, 1, 0) == 24   # {210}
+    @test cubic_multiplicity(2, 1, 1) == 24   # {211}
+    @test cubic_multiplicity(2, 2, 1) == 24   # {221}
+    @test cubic_multiplicity(3, 2, 1) == 48   # {321} — all distinct, all nonzero
+    @test cubic_multiplicity(2, 2, 2) == 8    # {222}
+end
+
+@testset "bragg_max_hkl_sq" begin
+    # Cu Kα on a=3Å, 2θ_max=170° → h²+k²+l² ≤ 15
+    @test bragg_max_hkl_sq(3.0, 1.5418, deg2rad(170.0)) == 15
+
+    # Doubling the lattice parameter quadruples the reachable range
+    @test bragg_max_hkl_sq(6.0, 1.5418, deg2rad(170.0)) == 60
+
+    @test_throws ArgumentError bragg_max_hkl_sq(-1.0, 1.5, deg2rad(170.0))
+    @test_throws ArgumentError bragg_max_hkl_sq(3.0, -1.0, deg2rad(170.0))
+    @test_throws ArgumentError bragg_max_hkl_sq(3.0, 1.5, 0.0)
+end
+
 @testset "Miller_indices" begin
-    sc = Miller_indices("SC", -1, 1)
-    @test length(sc) == 26
+    # SC up to h²+k²+l² ≤ 3 yields {100}, {110}, {111}
+    sc_idx, sc_mult = Miller_indices("SC", 3)
+    @test sc_idx == [[1,0,0], [1,1,0], [1,1,1]]
+    @test sc_mult == [6, 12, 8]
 
-    bcc = Miller_indices("BCC", -1, 1)
-    @test all(h -> iseven(sum(h)), bcc)
+    # BCC up to 4: only h+k+l even — {110}, {200}
+    bcc_idx, bcc_mult = Miller_indices("BCC", 4)
+    @test bcc_idx == [[1,1,0], [2,0,0]]
+    @test bcc_mult == [12, 6]
+    @test all(h -> iseven(sum(h)), bcc_idx)
 
-    fcc = Miller_indices("FCC", -1, 1)
-    @test all(h -> (all(isodd, h) || all(iseven, h)), fcc)
+    # FCC up to 4: all-parity — {111}, {200}
+    fcc_idx, fcc_mult = Miller_indices("FCC", 4)
+    @test fcc_idx == [[1,1,1], [2,0,0]]
+    @test fcc_mult == [8, 6]
+    @test all(h -> (all(isodd, h) || all(iseven, h)), fcc_idx)
 
-    @test [0,0,0] ∉ sc
-    @test [0,0,0] ∉ bcc
-    @test [0,0,0] ∉ fcc
+    # Canonical order: h ≥ k ≥ l ≥ 0; no [0,0,0]
+    sc_big, _ = Miller_indices("SC", 15)
+    @test all(hkl -> hkl[1] ≥ hkl[2] ≥ hkl[3] ≥ 0, sc_big)
+    @test [0,0,0] ∉ sc_big
+
+    # Multiplicity sum over canonical set equals count of full [-n,n]³ enumeration
+    # (for any cutoff that includes all variants of every family it contains).
+    # For SC with max_hkl_sq=3, all variants of {100},{110},{111} fit in [-1,1]³.
+    @test sum(sc_mult) == 6 + 12 + 8  # == 26, matching old [-1,1]³ count
 end
 
 @testset "d_list" begin

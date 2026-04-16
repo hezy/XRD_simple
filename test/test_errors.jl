@@ -1,8 +1,8 @@
 using Test
 
 @testset "Miller_indices errors" begin
-    @test_throws ArgumentError Miller_indices("HCP", -1, 1)
-    @test_throws ArgumentError Miller_indices("SC", 5, 2)
+    @test_throws ArgumentError Miller_indices("HCP", 3)
+    @test_throws ArgumentError Miller_indices("SC", 0)
 end
 
 @testset "bragg_angles errors" begin

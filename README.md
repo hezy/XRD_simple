@@ -59,48 +59,65 @@ include("main.jl")
 
 This will generate XRD patterns for all three cubic lattice types (SC, BCC, FCC) and save results to the `results/` directory.
 
-**Note:**
-- `main.jl` - Interactive version (pauses between plots, press Enter to continue) - recommended for REPL
-- `main_VScode.jl` - Non-interactive version (no pauses) - recommended for VS Code or Jupyter
+**Note:** `main.jl` auto-detects VS Code (via the `VSCodeServer` module) and
+skips interactive pauses there so every figure stays in the plot pane. In a
+terminal REPL it pauses between plots so each can be viewed before the next
+overwrites it. Use `--no-interactive` for batch or CI runs.
 
 ## Configuration
 
 Edit `data.toml` to customize simulation parameters:
 
 ```toml
-[parameters]
-two_theta_min = 2.0          # Minimum 2θ angle (degrees)
-two_theta_max = 170.0        # Maximum 2θ angle (degrees)
-n_points = 8000              # Number of data points
-wavelength = 1.5418          # X-ray wavelength (Å) - Cu Kα
+[instrument]
+two_theta_min = 10.0         # Minimum 2θ angle (degrees)
+two_theta_max = 120.0        # Maximum 2θ angle (degrees)
+N = 1000                     # Number of data points
+lambda = 1.5418              # X-ray wavelength (Å) — Cu Kα
+noise_level = 0.15           # Multiplicative noise level (0–1)
 
-[peak_widths]
-U = 0.01                     # Instrumental broadening coefficient
-V = -0.02                    # Instrumental broadening coefficient
-W = 0.01                     # Instrumental broadening coefficient
+[peak_width]
+U = 0.0001                   # Caglioti instrumental parameter
+V = 0.00005                  # Caglioti instrumental parameter
+W = 0.00001                  # Caglioti instrumental parameter
 K = 0.9                      # Scherrer constant
-epsilon = 0.001              # Microstrain
-D = 100.0                    # Crystallite size (nm)
+Epsilon = 0.001              # Microstrain
+D = 500.0                    # Crystallite size (nm)
 
-[lattice_constants]
-SC = 3.0                     # Simple cubic lattice parameter (Å)
-BCC = 3.0                    # BCC lattice parameter (Å)
-FCC = 3.0                    # FCC lattice parameter (Å)
+[lattice.SC]
+Po = 3.352                   # Element = lattice parameter (Å)
+
+[lattice.BCC]
+# Fe = 2.866
+V  = 3.0399
+# W  = 3.155
+
+[lattice.FCC]
+Ag = 4.079
+# Cu = 3.594
+# Au = 4.065
 ```
+
+Each uncommented entry under a `[lattice.*]` block produces one XRD pattern.
+Leave entries commented out to skip them; add more to run several at once.
 
 ## Usage Examples
 
 ### Basic Simulation
 
+From a shell:
+
+```bash
+julia --project=. main.jl
+```
+
+Flags: `--config PATH` (default `data.toml`), `--theme NAME`, `--seed N`,
+`--no-interactive`, `--no-plots`.
+
+Or from the REPL / VS Code:
+
 ```julia
-include("functions.jl")
-
-# Read configuration
-config = read_xrd_config("data.toml")
-
-# Generate pattern for BCC structure
-lattice_type = "BCC"
-do_it(lattice_type, config)
+include("main.jl")
 ```
 
 ### Peak Width Analysis
@@ -123,9 +140,12 @@ include("archive/example_use_Voigt.jl")
 
 Running the simulation generates:
 
-- **PNG files**: `results/XRD - SC.png`, `results/XRD - BCC.png`, `results/XRD - FCC.png`
-- **CSV file**: `results/XRD_results.csv` (tabular data with θ and intensity values)
-- **Excel file**: `results/XRD_results.xlsx` (optional, same data)
+- **PNG files**: `results/{element}-{structure}.png` — one per uncommented
+  lattice entry (e.g. `V-BCC.png`, `Ag-FCC.png`).
+- **CSV file**: `results/XRD_results.csv` — a `θ` column plus one intensity
+  column per sample, named `{element}-{structure}`.
+
+The final line printed on every run reports how many samples were produced.
 
 ## Physics Background
 
@@ -187,10 +207,6 @@ XRD_simple/
 ## Known Issues
 
 - Voigt peak widths are approximately 2× broader than pseudo-Voigt profiles with identical input parameters (under investigation)
-
-## Alternative Entry Points
-
-- `main_VScode.jl` - Non-interactive version for VS Code (displays all plots without pausing)
 
 ## Contributing
 

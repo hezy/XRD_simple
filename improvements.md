@@ -19,6 +19,15 @@ Listed for context; no further action needed.
 - Added `bragg_max_hkl_sq(a, λ)` — physics-driven cutoff from `sin(θ) ≤ 1`
 - Removed hardcoded `MILLER_INDEX_MIN/MAX = ±5` constants
 - Output matches pre-refactor to floating-point epsilon
+- `read_xrd_config` now returns every uncommented `[lattice.*]` entry as a
+  `(structure, element, a)` triple — no more silent overwrite when multiple
+  elements are uncommented in one block. Any N samples, including 0, is valid.
+- Merged `main_VScode.jl` into `main.jl`; VS Code is auto-detected via
+  `isdefined(Main, :VSCodeServer)` and the between-plot pause / `closeall()`
+  are skipped there.
+- Archived five early-stage / legacy files (`functions_simple.jl`,
+  `simple_XRD.txt`, `example_peaks_width.jl`, `example_use_Voigt.jl`,
+  `width.jl`) into `archive/`.
 
 ---
 
@@ -30,22 +39,6 @@ Listed for context; no further action needed.
 | 2 | `peak_fwhm` on mixed scalar+vector args gives a bare MethodError | trivial | low (diagnostic only) |
 | 3 | Redundant λ/a validation in `intensity_vs_angle` (callees re-validate) | trivial | low (code clarity) |
 | 4 | `do_it_zero` reads full config just to grab instrument params | trivial | low (minor waste) |
-| 5 | `read_xrd_config` silently keeps only the last uncommented element per lattice block | small | **medium** — silent data loss if user forgets to comment one out |
-
-**5** is the one with real bite. Current code (functions.jl:657-663):
-
-```julia
-for (structure, elements) in config["lattice"]
-    if !isempty(elements)
-        for (element, value) in elements
-            lattice[structure] = (element, value)  # overwrites silently
-        end
-    end
-end
-```
-
-Fix options: error on duplicates, document the single-element invariant, or
-accept a list and let the caller choose.
 
 ---
 
@@ -141,8 +134,7 @@ Worth a separate investigation session — not a quick fix.
 
 ## Suggested order
 
-1. **Quick cleanup commit:** items 1, 3, and 5 (the silent-overwrite) together.
-   Small surface, meaningful safety improvement.
+1. **Quick cleanup commit:** items 1 and 3. Trivial surface, small clarity win.
 2. **Lorentz–polarization:** biggest realism gain for ~5 lines of code.
 3. **Debye–Waller:** natural follow-on; shares the per-family weight hook with LP.
 4. **Atomic form factor + full structure factor:** larger project, best done together —

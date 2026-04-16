@@ -41,7 +41,7 @@ end
     θ = collect(LinRange(instrument["two_theta_min"]/2, instrument["two_theta_max"]/2, 100))
     λ = instrument["lambda"]
     a = lattice["SC"][2]
-    max_hkl_sq = bragg_max_hkl_sq(a, λ, instrument["two_theta_max"])
+    max_hkl_sq = bragg_max_hkl_sq(a, λ)
     indices, multiplicities = Miller_indices("SC", max_hkl_sq)
 
     w_L, w_G = compute_peak_widths(θ, peak_width, instrument)

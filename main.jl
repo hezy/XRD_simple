@@ -65,14 +65,17 @@ function main()
 
     isdir("results") || mkdir("results")
 
-    _, _, samples = read_xrd_config(config_file)
+    instrument, _, samples = read_xrd_config(config_file)
 
-    θ₀ = do_it_zero(config_file)
-    df = DataFrame("θ" => θ₀)
+    # Electron diffraction is plotted vs scattering vector g (1/Å); X-ray vs 2θ.
+    xcol = get(instrument, "radiation", "xray") == "electron" ? "g (1/Å)" : "2θ (deg)"
+
+    x₀ = do_it_zero(config_file)
+    df = DataFrame(xcol => x₀)
 
     for (structure, element, a) in samples
-        local twoθ, intensities, title, the_plot = do_it(config_file, structure, element, a, plot_theme)
-        df[:, "θ"] = twoθ
+        local x, intensities, title, the_plot = do_it(config_file, structure, element, a, plot_theme)
+        df[:, xcol] = x
         df[!, title] = intensities
 
         if interactive || IN_VSCODE

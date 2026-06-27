@@ -4,9 +4,11 @@ This file provides context for AI assistants working on the XRD_simple project.
 
 ## Project Overview
 
-**XRD_simple** is a Julia-based powder X-ray diffraction (XRD) simulation tool for cubic crystal structures (SC, BCC, FCC). It generates realistic diffraction patterns with physics-based modeling of instrumental broadening, crystallite size effects, and microstrain.
+**XRD_simple** is a Julia-based powder diffraction simulation tool for cubic crystal structures (SC, BCC, FCC). It generates realistic diffraction patterns with physics-based modeling of instrumental broadening, crystallite size effects, and microstrain. It runs in two radiation modes, selected by `radiation` in `data.toml`:
+- **X-ray** (default) — intensity vs 2θ (degrees), Bragg geometry.
+- **Electron** — 1D powder profile, intensity vs scattering vector g = 1/d (1/Å), reciprocal-space geometry (kinematical approximation).
 
-**Primary Use Case:** Educational and research tool for understanding how crystal structure affects XRD patterns.
+**Primary Use Case:** Educational and research tool for understanding how crystal structure affects diffraction patterns.
 
 **Technology:** Julia ≥ 1.8, uses Plots.jl, TOML.jl, SpecialFunctions.jl, Distributions.jl
 
@@ -45,7 +47,7 @@ This file provides context for AI assistants working on the XRD_simple project.
 
 ### Active Scripts (Use These)
 - `main.jl` - Unified entry point (auto-detects VS Code vs terminal REPL)
-- `functions.jl` - Core physics engine - **THE AUTHORITATIVE VERSION**
+- `functions.jl` - Core physics engine (both X-ray and electron paths) - **THE AUTHORITATIVE VERSION**
 - `data.toml` - Configuration file - **THE STANDARD CONFIG FORMAT**
 
 ### Reference/Legacy (Do Not Modify)
@@ -65,7 +67,21 @@ This file provides context for AI assistants working on the XRD_simple project.
 
 ## Key Architecture Patterns
 
-### Angle Convention
+### Radiation Modes
+- `read_xrd_config` returns `instrument["radiation"]` = `"xray"` (default) or
+  `"electron"`. `do_it` and `do_it_zero` branch on it; `do_it_electron` is the
+  g-space counterpart of the X-ray `do_it` body.
+- **X-ray path:** Bragg geometry, x-axis 2θ (degrees). Uses `lambda`,
+  `two_theta_min/max`, Caglioti U/V/W.
+- **Electron path:** reciprocal-space geometry, x-axis g = 1/d (1/Å). Positions
+  are `g = √(h²+k²+l²)/a` (no Bragg's law); reflection cutoff is `ed_max_hkl_sq`
+  (g ≤ `g_max`), not `bragg_max_hkl_sq`. Uses `voltage_kV`, `g_min`/`g_max`,
+  `G_inst`. Heights are multiplicity-only (no f_e(s) yet).
+- The crystallography (`Miller_indices`, `cubic_multiplicity`, absences) and the
+  peak profiles (`Voigt_peak`, `pseudo_Voigt_peak`, `peak_fwhm`, `sum_peaks`) are
+  shared by both paths.
+
+### Angle Convention (X-ray path)
 - **Internal calculations:** Work in **radians** (θ, not 2θ)
 - **User input/output:** Degrees (2θ)
 - **Conversion:** Done at I/O boundaries (`deg2rad`, `rad2deg`)
@@ -85,6 +101,9 @@ Both support:
 - **Gaussian component** (instrumental): `Gaussian_peaks_width()` - Caglioti formula
 - **Lorentzian component** (sample): `Lorentzian_peaks_width()` - Scherrer + Stokes-Wilson
 - **Effective FWHM:** `peak_fwhm()` combines both
+- **Electron (g-space):** `compute_peak_widths_g()` — Lorentzian via
+  `Lorentzian_peaks_width_g()` (constant Scherrer K/D + strain 2εg), Gaussian a
+  constant `G_inst`. `peak_fwhm()` and the profiles are reused unchanged.
 
 ### Miller Index Generation
 `Miller_indices(cell_type::String, max_hkl_sq::Int)` enumerates the canonical
@@ -101,19 +120,24 @@ not a hard-coded range. Per-reflection multiplicity comes from `cubic_multiplici
 
 ```toml
 [instrument]
-two_theta_min = 10.0         # degrees (auto-converted to radians)
-two_theta_max = 120.0        # degrees (auto-converted to radians)
+radiation = "xray"           # "xray" | "electron" (selects the physics path)
+two_theta_min = 10.0         # X-ray: degrees (auto-converted to radians)
+two_theta_max = 120.0        # X-ray: degrees (auto-converted to radians)
+lambda = 1.5418              # X-ray: wavelength in Angstroms (Cu Kα)
+voltage_kV = 200.0           # electron: accelerating voltage (sets λ ≈ 0.025 Å)
+g_min = 0.0                  # electron: min scattering vector (1/Å)
+g_max = 1.2                  # electron: max scattering vector (1/Å)
 N = 1000                     # number of points
-lambda = 1.5418              # wavelength in Angstroms (Cu Kα)
 noise_level = 0.15           # multiplicative noise 0–1 (optional)
 
 [peak_width]
-U = 0.0001                   # Caglioti parameter (instrumental)
-V = 0.00005                  # Caglioti parameter (instrumental)
-W = 0.00001                  # Caglioti parameter (instrumental)
-K = 0.9                      # Scherrer constant
-Epsilon = 0.001              # Microstrain
-D = 500.0                    # Crystallite size (nm)
+U = 0.0001                   # X-ray: Caglioti parameter (instrumental)
+V = 0.00005                  # X-ray: Caglioti parameter (instrumental)
+W = 0.00001                  # X-ray: Caglioti parameter (instrumental)
+G_inst = 0.005               # electron: instrumental Gaussian FWHM (1/Å)
+K = 0.9                      # Scherrer constant (both)
+Epsilon = 0.001              # Microstrain (both)
+D = 500.0                    # Crystallite size (nm, both)
 
 # Each [lattice.*] block holds one or more element = a (Å) entries.
 # Every uncommented line becomes one simulated pattern.
@@ -132,7 +156,9 @@ Ag = 4.079
 **Important:** Angular parameters in config are in degrees and automatically
 converted to radians by `read_xrd_config()`. That function returns a flat
 vector of `(structure, element, a)` triples — one per uncommented lattice
-entry, any N (including 0) supported.
+entry, any N (including 0) supported. Keys for the unused radiation mode are
+ignored, so both X-ray and electron parameters can coexist in one file — flip
+`radiation` to switch.
 
 ## Known Issues
 
@@ -140,6 +166,13 @@ entry, any N (including 0) supported.
 - Voigt peaks are ~2× broader than pseudo-Voigt with identical parameters
 - Under investigation
 - May be related to FWHM calculation vs parameter interpretation
+
+### Electron Intensities (multiplicity-only)
+- Electron-mode peak heights are weighted by multiplicity only; the electron
+  scattering factor f_e(s) is not modelled, so relative intensities are
+  geometric, not quantitative. Adding f_e(s) (Doyle–Turner/Kirkland, or
+  Mott–Bethe on X-ray f_x) would make low-g reflections correctly dominant —
+  and would also upgrade the X-ray heights, which are likewise multiplicity-only.
 
 ### Compatibility
 - JSON.jl v1.3.0 had compatibility issues with LanguageServer (documented in JSON_compatibility_fix.md)
@@ -163,10 +196,21 @@ entry, any N (including 0) supported.
 - Maintain the cutoff optimization (`cutoff_sigma * w_eff`) for performance.
 
 ### Changing Background Model
-- Function: `background()`
-- Current model: air scattering (exponential at low angles) + fluorescence
-  (constant) + optional amorphous Gaussian hump
-- Keep the non-negative intensity constraint.
+- Function: `background()` (X-ray) — air scattering (exponential at low angles)
+  + fluorescence (constant) + optional amorphous Gaussian hump.
+- Function: `background_electron()` (electron) — exponential central-beam tail +
+  constant inelastic floor, over the g axis.
+- Keep the non-negative intensity constraint in both.
+
+### Switching / Tuning Radiation Mode
+- Set `radiation` in `data.toml` to `"xray"` or `"electron"`.
+- Electron path entry point: `do_it_electron()`; helpers `electron_wavelength()`,
+  `g_list()`, `ed_max_hkl_sq()`, `Lorentzian_peaks_width_g()`,
+  `compute_peak_widths_g()`, `intensity_vs_g()`, `compute_ed_pattern()`.
+- Electron knobs: `voltage_kV`, `g_min`/`g_max` (detector range), `G_inst`
+  (instrumental Gaussian FWHM), plus the shared `K`, `Epsilon`, `D`.
+- To add the electron scattering factor f_e(s), weight each reflection in
+  `intensity_vs_g`/`sum_peaks` by m·|F|² instead of m (see Known Issues).
 
 ## Testing Approach
 
@@ -248,7 +292,8 @@ Use broadcasting (`@.` macro) for element-wise operations.
 
 ---
 
-**Last Updated:** 2026-04 (after main.jl / main_VScode.jl merge, archive move,
-and multi-lattice config support)
+**Last Updated:** 2026-06 (added electron-diffraction mode — 1D powder profile
+in g-space, selected by `radiation` in data.toml; earlier: main.jl /
+main_VScode.jl merge, archive move, multi-lattice config support)
 **Maintainer:** Hezy Amiel
 **AI Assistant Notes:** Created to provide context for future development sessions

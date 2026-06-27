@@ -22,13 +22,19 @@ Constants
 =========
 """
 
-# Background model parameters
+# Background model parameters (X-ray)
 const AIR_SCATTER_AMPLITUDE = 50.0
 const AIR_SCATTER_DECAY = 5.0
 const FLUORESCENCE_LEVEL = 10.0
 const AMORPHOUS_AMPLITUDE = 25.0
 const AMORPHOUS_CENTER = 0.18
 const AMORPHOUS_WIDTH = 0.08
+
+# Background model parameters (electron) — central-beam tail + inelastic floor,
+# expressed over the scattering-vector axis g = 1/d (1/Å)
+const CENTRAL_BEAM_AMPLITUDE = 80.0
+const CENTRAL_BEAM_DECAY = 8.0
+const INELASTIC_LEVEL = 5.0
 
 
 """ 
@@ -748,8 +754,15 @@ a DataFrame in the main workflow.
 """
 function do_it_zero(file_name::String
                     )::Vector{Float64}
-    
+
     instrument, _, _ = read_xrd_config(file_name)
+
+    if get(instrument, "radiation", "xray") == "electron"
+        return collect(LinRange(get(instrument, "g_min", 0.0),
+                                instrument["g_max"],
+                                instrument["N"]))
+    end
+
     θ = collect(LinRange((instrument["two_theta_min"]/2),
                          (instrument["two_theta_max"]/2),
                          instrument["N"]))
@@ -831,6 +844,229 @@ end
 
 
 """
+=========================
+Electron diffraction (1D)
+=========================
+
+Powder electron diffraction expressed over the scattering vector g = 1/d (1/Å).
+At electron wavelengths (~0.025 Å) every Bragg angle is a fraction of a degree,
+so a 2θ axis is useless; reflections map linearly to g = √(h²+k²+l²)/a and
+Bragg's law drops out. The crystallography (Miller indices, multiplicities) and
+peak profiles are shared with the X-ray path; only the geometry, the reflection
+cutoff, the broadening and the background differ.
+
+Kinematical approximation only — valid for thin specimens; real SAED is dynamical.
+"""
+
+
+"""
+    electron_wavelength(V::Float64)::Float64
+
+Relativistic de Broglie wavelength (Å) of an electron accelerated through `V`
+volts. E.g. 200 kV → 0.0251 Å. Not needed to place the g-axis peaks (which are
+purely geometric); used for labelling and as a hook for future camera-length /
+ring-radius extensions.
+"""
+function electron_wavelength(V::Float64)::Float64
+    V > 0 || throw(ArgumentError("Accelerating voltage must be positive"))
+    return 12.2643 / sqrt(V * (1 + 0.978476e-6 * V))
+end
+
+
+"""
+    g_list(indices::Vector{Vector{Int}}, a::Float64)::Vector{Float64}
+
+Scattering-vector magnitudes g = |G| = √(h²+k²+l²)/a (1/Å) for cubic Miller
+indices. The reciprocal-space analogue of `d_list` (g = 1/d).
+"""
+function g_list(indices::Vector{Vector{Int}}, a::Float64)::Vector{Float64}
+    a > 0 || throw(DomainError(a, "Lattice parameter must be positive"))
+
+    result = Vector{Float64}(undef, length(indices))
+    @inbounds for (i, hkl) in enumerate(indices)
+        length(hkl) == 3 || throw(DimensionMismatch(
+            "Miller index at position $i must have exactly 3 components"))
+        h, k, l = hkl
+        result[i] = sqrt(h^2 + k^2 + l^2) / a
+    end
+    return result
+end
+
+
+"""
+    ed_max_hkl_sq(a::Float64, g_max::Float64)::Int
+
+Largest h²+k²+l² with g = √(h²+k²+l²)/a ≤ g_max — i.e. reflections that fall
+within the plotted detector range. The electron analogue of `bragg_max_hkl_sq`;
+at electron wavelengths the Bragg `sinθ ≤ 1` bound is never binding, so the
+detector range sets the cutoff instead.
+"""
+function ed_max_hkl_sq(a::Float64,
+                       g_max::Float64
+                       )::Int
+    a > 0 || throw(ArgumentError("Lattice parameter must be positive"))
+    g_max > 0 || throw(ArgumentError("g_max must be positive"))
+
+    return max(1, floor(Int, (g_max * a)^2))
+end
+
+
+"""
+    Lorentzian_peaks_width_g(g, K, E, D)
+
+Lorentzian FWHM in g-space (1/Å). Size broadening is the Scherrer width in
+reciprocal units — constant K/D — and strain broadening is Δg/g = 2E (from
+Δd/d = E). Replaces the angle-space `Lorentzian_peaks_width` for electrons.
+
+# Arguments
+- `g::Vector{Float64}`: Scattering vector grid (1/Å)
+- `K::Float64`: Scherrer constant (≈ 0.9)
+- `E::Float64`: Microstrain (dimensionless)
+- `D::Float64`: Crystallite size in nanometres (converted to Å internally)
+"""
+function Lorentzian_peaks_width_g(g::Vector{Float64},
+                                  K::Float64,
+                                  E::Float64,
+                                  D::Float64
+                                  )::Vector{Float64}
+    D > 0 || throw(ArgumentError("Crystallite size D must be positive"))
+    D_Å = D * 10.0                      # nm → Å
+    return @. K / D_Å + 2 * E * g
+end
+
+
+"""
+    compute_peak_widths_g(g, peak_width)
+
+Lorentzian and Gaussian FWHM (1/Å) on the g grid for the electron path.
+Lorentzian = Scherrer size + strain (`Lorentzian_peaks_width_g`); Gaussian =
+a constant instrumental point-spread `G_inst` (1/Å), replacing the Caglioti
+U/V/W terms which are degenerate at θ ≈ 0. `G_inst` defaults to 0.005 1/Å.
+"""
+function compute_peak_widths_g(g::Vector{Float64},
+                               peak_width::Dict{String,Float64}
+                               )::Tuple{Vector{Float64}, Vector{Float64}}
+    K, ϵ, D = peak_width["K"], peak_width["Epsilon"], peak_width["D"]
+    g_inst = get(peak_width, "G_inst", 0.005)
+
+    w_L = Lorentzian_peaks_width_g(g, K, ϵ, D)
+    w_G = fill(Float64(g_inst), length(g))
+    return w_L, w_G
+end
+
+
+"""
+    intensity_vs_g(g, indices, multiplicities, a, w_L, w_G)
+
+Electron-diffraction intensity over the g grid: sum one multiplicity-weighted
+pseudo-Voigt per reflection family at its g = √(h²+k²+l²)/a centre. The
+g-space counterpart of `intensity_vs_angle`; heights are multiplicity-only,
+matching the X-ray path's fidelity.
+"""
+function intensity_vs_g(g::Vector{Float64},
+                        indices::Vector{Vector{Int}},
+                        multiplicities::Vector{Int},
+                        a::Float64,
+                        w_L::Vector{Float64},
+                        w_G::Vector{Float64}
+                        )::Vector{Float64}
+    a <= 0 && throw(ArgumentError("Lattice parameter must be positive"))
+    length(indices) == length(multiplicities) || throw(DimensionMismatch(
+        "indices and multiplicities must have same length"))
+    length(w_L) != length(w_G) && throw(ArgumentError("Width parameter vectors must have same length"))
+
+    g_centers = g_list(indices, a)
+    return sum_peaks(g, g_centers, multiplicities, w_L, w_G)
+end
+
+
+"""
+    background_electron(g; noise_level=0.0)
+
+Simplified powder-ED background over g: an exponential central-beam tail plus a
+constant inelastic (plasmon) floor, with optional additive noise. Non-negative.
+"""
+function background_electron(g::Vector{Float64};
+                             noise_level::Float64=0.0)::Vector{Float64}
+    0 ≤ noise_level ≤ 1 || throw(DomainError(noise_level, "noise_level must be between 0 and 1"))
+
+    base = @. CENTRAL_BEAM_AMPLITUDE * exp(-CENTRAL_BEAM_DECAY * g) + INELASTIC_LEVEL
+
+    if noise_level > 0
+        noise = noise_level * randn(length(g))
+        return max.(base .+ noise, 0)
+    else
+        return base
+    end
+end
+
+
+"""
+    compute_ed_pattern(g, indices, multiplicities, a, w_L, w_G; noise_level=0.0)
+
+Full electron-diffraction pattern: background_electron + intensity_vs_g, with
+optional multiplicative noise. The g-space analogue of `compute_xrd_pattern`.
+"""
+function compute_ed_pattern(g::Vector{Float64},
+                            indices::Vector{Vector{Int}},
+                            multiplicities::Vector{Int},
+                            a::Float64,
+                            w_L::Vector{Float64},
+                            w_G::Vector{Float64};
+                            noise_level::Float64=0.0
+                            )::Vector{Float64}
+    y = background_electron(g) .+ intensity_vs_g(g, indices, multiplicities, a, w_L, w_G)
+
+    if noise_level > 0
+        y .*= rand(Normal(1, noise_level), length(g))
+        y = max.(y, 0)
+    end
+
+    return y
+end
+
+
+"""
+    do_it_electron(instrument, peak_width, structure, element, a, plot_theme)
+
+Generate a 1D powder electron-diffraction pattern (intensity vs g = 1/d) for one
+sample. Mirrors `do_it`'s X-ray path but in g-space. Returns `(g, intensity,
+title, plot)` where `g` is in 1/Å and `title` is `"{element}-{structure}"`.
+"""
+function do_it_electron(instrument::Dict{String,Any},
+                        peak_width::Dict{String,Float64},
+                        structure::String,
+                        element::String,
+                        a::Float64,
+                        plot_theme::Symbol
+                        )::Tuple{Vector{Float64}, Vector{Float64}, String, Plots.Plot}
+
+    g_min = get(instrument, "g_min", 0.0)
+    g_max = instrument["g_max"]
+    g = collect(LinRange(g_min, g_max, instrument["N"]))
+
+    max_hkl_sq = ed_max_hkl_sq(a, g_max)
+    indices, multiplicities = Miller_indices(structure, max_hkl_sq)
+    w_L, w_G = compute_peak_widths_g(g, peak_width)
+
+    noise_level = get(instrument, "noise_level", 0.0)
+    y = compute_ed_pattern(g, indices, multiplicities, a, w_L, w_G; noise_level=noise_level)
+
+    title = "$element-$structure"
+
+    V = get(instrument, "voltage_kV", 200.0) * 1000.0
+    λe = electron_wavelength(V)
+    plot_title = "$title  (e⁻, λ=$(round(λe, digits=4)) Å)"
+
+    theme(plot_theme)
+    the_plot = plot(g, y, title=plot_title, xlabel="g = 1/d (1/Å)",
+                    ylabel="Intensity (arb.)", show=false)
+
+    return g, y, title, the_plot
+end
+
+
+"""
     do_it(file_name, structure, element, a, plot_theme)
 
 Generate a complete XRD diffraction pattern for one (structure, element) sample.
@@ -861,6 +1097,10 @@ function do_it(file_name::String,
                )::Tuple{Vector{Float64}, Vector{Float64}, String, Plots.Plot}
 
     instrument, peak_width, _ = read_xrd_config(file_name)
+
+    if get(instrument, "radiation", "xray") == "electron"
+        return do_it_electron(instrument, peak_width, structure, element, a, plot_theme)
+    end
 
     θ = collect(LinRange(instrument["two_theta_min"]/2,
                          instrument["two_theta_max"]/2,

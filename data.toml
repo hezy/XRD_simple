@@ -1,17 +1,22 @@
 [instrument]
-two_theta_min = 10.0
-two_theta_max = 120.0
+radiation = "xray"           # "xray" | "electron"
+two_theta_min = 10.0         # X-ray: degrees
+two_theta_max = 120.0        # X-ray: degrees
+lambda = 1.5418              # X-ray: wavelength (Å, Cu Kα)
+voltage_kV = 200.0           # electron: accelerating voltage (sets λ ≈ 0.025 Å)
+g_min = 0.0                  # electron: min scattering vector (1/Å)
+g_max = 1.2                  # electron: max scattering vector (1/Å); d_min ≈ 0.83 Å
 N = 1000
-lambda = 1.5418
 noise_level = 0.15
 
 [peak_width]
-U = 0.0001
-V = 0.00005
-W = 0.00001
-K = 0.9
-Epsilon = 0.001
-D = 500.0
+U = 0.0001                   # X-ray: Caglioti (instrumental)
+V = 0.00005                  # X-ray: Caglioti (instrumental)
+W = 0.00001                  # X-ray: Caglioti (instrumental)
+G_inst = 0.005               # electron: instrumental Gaussian FWHM (1/Å)
+K = 0.9                      # Scherrer constant (both)
+Epsilon = 0.001              # microstrain (both)
+D = 500.0                    # crystallite size, nm (both)
 
 [lattice]
 # Lattice parameters in Angstroms (Å)

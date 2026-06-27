@@ -1,6 +1,6 @@
 # XRD_simple
 
-A Julia-based simulation tool for powder X-ray diffraction (XRD) patterns of cubic crystal structures. This project generates realistic diffraction patterns for Simple Cubic (SC), Body-Centered Cubic (BCC), and Face-Centered Cubic (FCC) lattices with physics-based modeling of instrumental broadening, crystallite size effects, and microstrain.
+A Julia-based simulation tool for powder diffraction patterns of cubic crystal structures. This project generates realistic diffraction patterns for Simple Cubic (SC), Body-Centered Cubic (BCC), and Face-Centered Cubic (FCC) lattices with physics-based modeling of instrumental broadening, crystallite size effects, and microstrain. It supports two radiation modes: **X-ray** (intensity vs 2θ) and **electron** (1D powder profile, intensity vs scattering vector g = 1/d).
 
 ## Features
 
@@ -10,6 +10,12 @@ A Julia-based simulation tool for powder X-ray diffraction (XRD) patterns of cub
   - Caglioti formula for instrumental broadening
   - Voigt and pseudo-Voigt peak profiles
   - Systematic absences for BCC and FCC structures
+
+- **Two Radiation Modes**
+  - **X-ray** — intensity vs 2θ (degrees), Cu Kα by default
+  - **Electron** — 1D powder profile vs scattering vector g = 1/d (1/Å),
+    relativistic wavelength from accelerating voltage, broadening in
+    reciprocal-space units (kinematical approximation)
 
 - **Realistic Simulations**
   - Angle-dependent peak broadening
@@ -70,19 +76,24 @@ Edit `data.toml` to customize simulation parameters:
 
 ```toml
 [instrument]
-two_theta_min = 10.0         # Minimum 2θ angle (degrees)
-two_theta_max = 120.0        # Maximum 2θ angle (degrees)
+radiation = "xray"           # "xray" | "electron"
+two_theta_min = 10.0         # X-ray: minimum 2θ angle (degrees)
+two_theta_max = 120.0        # X-ray: maximum 2θ angle (degrees)
+lambda = 1.5418              # X-ray: wavelength (Å) — Cu Kα
+voltage_kV = 200.0           # electron: accelerating voltage (sets λ ≈ 0.025 Å)
+g_min = 0.0                  # electron: min scattering vector (1/Å)
+g_max = 1.2                  # electron: max scattering vector (1/Å); d_min ≈ 0.83 Å
 N = 1000                     # Number of data points
-lambda = 1.5418              # X-ray wavelength (Å) — Cu Kα
 noise_level = 0.15           # Multiplicative noise level (0–1)
 
 [peak_width]
-U = 0.0001                   # Caglioti instrumental parameter
-V = 0.00005                  # Caglioti instrumental parameter
-W = 0.00001                  # Caglioti instrumental parameter
-K = 0.9                      # Scherrer constant
-Epsilon = 0.001              # Microstrain
-D = 500.0                    # Crystallite size (nm)
+U = 0.0001                   # X-ray: Caglioti instrumental parameter
+V = 0.00005                  # X-ray: Caglioti instrumental parameter
+W = 0.00001                  # X-ray: Caglioti instrumental parameter
+G_inst = 0.005               # electron: instrumental Gaussian FWHM (1/Å)
+K = 0.9                      # Scherrer constant (both)
+Epsilon = 0.001              # Microstrain (both)
+D = 500.0                    # Crystallite size (nm, both)
 
 [lattice.SC]
 Po = 3.352                   # Element = lattice parameter (Å)
@@ -98,8 +109,14 @@ Ag = 4.079
 # Au = 4.065
 ```
 
-Each uncommented entry under a `[lattice.*]` block produces one XRD pattern.
+Each uncommented entry under a `[lattice.*]` block produces one pattern.
 Leave entries commented out to skip them; add more to run several at once.
+
+**Radiation mode.** `radiation` selects the physics path. With `"xray"` the
+X-ray-only keys are used (2θ window, `lambda`, Caglioti U/V/W); with
+`"electron"` the electron keys are used (`voltage_kV`, `g_min`/`g_max`,
+`G_inst`). The unused keys for the other mode are simply ignored, so both sets
+can coexist in one file — flip `radiation` to switch.
 
 ## Usage Examples
 
@@ -142,8 +159,9 @@ Running the simulation generates:
 
 - **PNG files**: `results/{element}-{structure}.png` — one per uncommented
   lattice entry (e.g. `V-BCC.png`, `Ag-FCC.png`).
-- **CSV file**: `results/XRD_results.csv` — a `θ` column plus one intensity
-  column per sample, named `{element}-{structure}`.
+- **CSV file**: `results/XRD_results.csv` — an x-axis column plus one intensity
+  column per sample, named `{element}-{structure}`. The x column is
+  `2θ (deg)` in X-ray mode and `g (1/Å)` in electron mode.
 
 The final line printed on every run reports how many samples were produced.
 
@@ -178,6 +196,30 @@ where ε is the microstrain.
 
 For detailed equations and derivations, see [`xrd-peak-broadening.md`](xrd-peak-broadening.md).
 
+### Electron Diffraction (1D powder)
+
+At electron wavelengths (≈ 0.025 Å at 200 kV, from the relativistic de Broglie
+relation) every Bragg angle is a fraction of a degree, so a 2θ axis is not
+useful. The electron path instead works in **scattering vector** g = 1/d (1/Å),
+where reflections sit at purely geometric positions and Bragg's law drops out:
+```
+g = |G| = √(h² + k² + l²) / a
+```
+The reflection set is capped by the plotted range (g ≤ `g_max`) rather than the
+Bragg `sin θ ≤ 1` bound, which is never binding at electron wavelengths.
+Broadening is expressed in reciprocal-space units — size broadening is the
+constant Scherrer width Δg = K/D, and strain broadening is Δg = 2ε·g — while the
+instrumental term is a single constant Gaussian FWHM `G_inst` (the Caglioti
+U/V/W terms are degenerate at θ ≈ 0). The crystallography (Miller indices,
+multiplicities, systematic absences) and the Voigt / pseudo-Voigt peak profiles
+are shared with the X-ray path.
+
+Peak **heights** are multiplicity-weighted only (the same fidelity as the X-ray
+path); the electron atomic scattering factor f_e(s) is not yet modelled, so the
+relative intensities are geometric rather than quantitative. The model is
+kinematical — valid for thin specimens; real selected-area electron diffraction
+is dynamical.
+
 ## Project Structure
 
 ```
@@ -207,6 +249,7 @@ XRD_simple/
 ## Known Issues
 
 - Voigt peak widths are approximately 2× broader than pseudo-Voigt profiles with identical input parameters (under investigation)
+- Electron mode: peak heights are multiplicity-only — the electron scattering factor f_e(s) is not yet modelled, so relative intensities are geometric rather than quantitative
 
 ## Contributing
 

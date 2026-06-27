@@ -94,3 +94,48 @@ where:
 where:
 - ⟨D⟩v is the volume-weighted crystallite size
 - ε is the upper limit of strain distribution
+
+## 7. Electron Diffraction (reciprocal-space form)
+
+For 1D powder electron diffraction the natural coordinate is the scattering
+vector g = 1/d (1/Å) rather than 2θ, because at electron wavelengths
+(λ ≈ 0.025 Å) all Bragg angles are sub-degree. The broadening above is then
+re-expressed in reciprocal-space units.
+
+### Electron wavelength (relativistic de Broglie)
+```
+λ = h / √(2 m₀ eV (1 + eV / 2 m₀c²))   ≈   12.2643 / √(V (1 + 0.978476×10⁻⁶ V))   [Å, V in volts]
+```
+e.g. 200 kV → λ ≈ 0.0251 Å.
+
+### Peak positions
+```
+g = |G| = √(h² + k² + l²) / a
+```
+Bragg's law is not needed; positions are purely geometric.
+
+### Size broadening (Lorentzian, in g)
+The Scherrer width in reciprocal units is constant in g:
+```
+Δg_size = K / D
+```
+(the angle-space β_L = Kλ/(D cosθ) maps to a constant Δ(1/d) under
+g = 2 sinθ/λ).
+
+### Strain broadening (Lorentzian, in g)
+From Δd/d = ε:
+```
+Δg_strain = 2 ε g
+```
+
+### Instrumental broadening (Gaussian, in g)
+A single constant FWHM `G_inst` replaces the Caglioti U tan²θ + V tanθ + W,
+whose tanθ terms are degenerate near θ = 0:
+```
+β_inst = G_inst   (constant)
+```
+
+The peak-shape functions (Gaussian, Lorentzian, pseudo-Voigt) and the
+size/strain separation are otherwise identical to the X-ray case. Heights are
+multiplicity-weighted; the electron atomic scattering factor f_e(s) — obtainable
+from the X-ray factor via the Mott–Bethe relation — is not yet included.

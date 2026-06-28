@@ -2,12 +2,6 @@
 
 A Julia-based simulation tool for powder diffraction patterns of cubic crystal structures. This project generates realistic diffraction patterns for Simple Cubic (SC), Body-Centered Cubic (BCC), and Face-Centered Cubic (FCC) lattices with physics-based modeling of instrumental broadening, crystallite size effects, and microstrain. It supports two radiation modes: **X-ray** (intensity vs 2θ) and **electron** (1D powder profile, intensity vs scattering vector g = 1/d).
 
-It also ships a companion **analysis** tool (`analysis/analyze_results.jl`) that
-works the simulation in reverse: it fits the peaks of a generated pattern, indexes
-them, and recovers the crystal structure, lattice parameter, and element — a blind
-check that the forward model is self-consistent and a worked example of powder
-indexing.
-
 ## Features
 
 - **Accurate Physics Modeling**
@@ -34,12 +28,6 @@ indexing.
   - CSV data export
   - Excel spreadsheet export
 
-- **Pattern Analysis (inverse problem)**
-  - Peak detection and fitting (pseudo-Voigt + linear background)
-  - Blind indexing of cubic patterns against SC/BCC/FCC allowed reflections
-  - Structure discrimination via multiplicity-weighted intensities
-  - Lattice-parameter refinement and element identification
-
 ## Requirements
 
 - Julia version ≥ 1.8
@@ -51,8 +39,6 @@ indexing.
   - TOML.jl
   - Distributions.jl
   - SpecialFunctions.jl
-  - LsqFit.jl — peak fitting (analysis tool)
-  - Peaks.jl — peak detection (analysis tool)
 
 ## Installation
 
@@ -179,45 +165,9 @@ Running the simulation generates:
 
 The final line printed on every run reports how many samples were produced.
 
-**Note:** the `results/` directory and the analysis artifacts are regenerable and
-are gitignored, so they don't show up in `git status`. Regenerate them any time by
-re-running the scripts; force-add a file (`git add -f <path>`) only if you want to
-snapshot a specific result.
-
-## Analysis: indexing & identification
-
-`analysis/analyze_results.jl` reads `results/XRD_results.csv` (X-ray mode) and, for
-each sample column, blindly recovers the crystal structure and element — without
-looking at the column name except to validate the result at the end:
-
-```bash
-julia --project=. analysis/analyze_results.jl
-```
-
-What it does:
-
-1. **Detect & fit peaks** — finds significant maxima (Peaks.jl) and fits each with
-   a pseudo-Voigt on a local linear background (LsqFit.jl) to get refined centers.
-2. **Index** — converts centers to sin²θ via Bragg's law and matches the sequence
-   to the allowed reflections Q = h²+k²+l² of SC, BCC, and FCC.
-3. **Discriminate** — peak positions alone cannot separate SC from a centered
-   lattice (a BCC pattern also indexes as SC with a smaller cell), so the structure
-   is chosen by which one's expected multiplicities best match the fitted peak
-   heights (the simulator sets each height equal to its multiplicity).
-4. **Refine & identify** — refines the lattice parameter a (regression of sin²θ vs
-   Q through the origin) and identifies the element from a reference table of cubic
-   lattice constants.
-
-Outputs (gitignored, written to `analysis/`):
-
-- `analysis_report.md` — per-sample tables (2θ, d, sin²θ, ratio, (hkl), Q,
-  multiplicity, intensity, per-peak a), the structure-discrimination table, the
-  refined a, the identified element, and a validation line vs the CSV header.
-- `fit_{sample}.png` — the pattern with fitted peak centers and (hkl) labels.
-- `indexing_{sample}.png` — sin²θ vs Q, a straight line through the origin whose
-  slope gives a.
-
-The approach is documented in `analysis/PLAN.md`.
+**Note:** the `results/` directory is regenerable and is gitignored, so it doesn't
+show up in `git status`. Regenerate it any time by re-running the scripts; force-add
+a file (`git add -f <path>`) only if you want to snapshot a specific result.
 
 ## Physics Background
 
@@ -281,9 +231,6 @@ XRD_simple/
 ├── main.jl                      # Unified entry point (auto-detects VS Code)
 ├── functions.jl                 # Core physics engine
 ├── data.toml                    # Configuration file
-├── analysis/                    # Inverse problem: indexing & identification
-│   ├── analyze_results.jl       # Peak fitting, indexing, element ID
-│   └── PLAN.md                  # Analysis approach / design notes
 ├── archive/                     # Legacy files and early-stage demo scripts
 │   ├── functions_simple.jl      # Simplified reference version (256 lines)
 │   ├── simple_XRD.txt           # Legacy text config

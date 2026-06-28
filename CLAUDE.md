@@ -50,6 +50,16 @@ This file provides context for AI assistants working on the XRD_simple project.
 - `functions.jl` - Core physics engine (both X-ray and electron paths) - **THE AUTHORITATIVE VERSION**
 - `data.toml` - Configuration file - **THE STANDARD CONFIG FORMAT**
 
+### Analysis / Answer Key (separate private repo)
+- The blind indexing & identification tool (`analysis/analyze_results.jl` plus
+  `PLAN.md`) was moved **out of this public repo** into a separate **private**
+  repo (`git@github.com:hezy/XRD-analysis.git`) so students don't receive the
+  answer key. Its history was purged from this repo.
+- The `analysis/` directory is **gitignored here** and is its own git repo (the
+  private one). It physically stays at `analysis/` so it still reads
+  `../results/XRD_results.csv` and `../data.toml` and runs in place. Don't
+  re-add it to this repo's tracking.
+
 ### Reference/Legacy (Do Not Modify)
 - `archive/functions_simple.jl` - Simplified educational reference
 - `archive/simple_XRD.txt` - Legacy config (no longer used but kept)
@@ -292,8 +302,9 @@ Use broadcasting (`@.` macro) for element-wise operations.
 
 ---
 
-**Last Updated:** 2026-06 (added electron-diffraction mode — 1D powder profile
-in g-space, selected by `radiation` in data.toml; earlier: main.jl /
+**Last Updated:** 2026-06 (moved the analysis answer key to a separate private
+repo and gitignored `analysis/` here; earlier: added electron-diffraction mode —
+1D powder profile in g-space, selected by `radiation` in data.toml; main.jl /
 main_VScode.jl merge, archive move, multi-lattice config support)
 **Maintainer:** Hezy Amiel
 **AI Assistant Notes:** Created to provide context for future development sessions

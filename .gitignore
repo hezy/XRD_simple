@@ -52,7 +52,11 @@ Manifest.toml
 # Ignore the output files in the results dir
 results/
 
-# To have the results files updated once, use: 
-# git add -f results/*
-# git commit -m "reults update"
+# Ignore generated analysis artifacts (analyze_results.jl + PLAN.md stay tracked)
+analysis/*.png
+analysis/analysis_report.md
+
+# To snapshot an output file once, force-add it, e.g.:
+# git add -f results/XRD_results.csv
+# git commit -m "results update"
 # git push

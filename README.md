@@ -163,6 +163,18 @@ Running the simulation generates:
   column per sample, named `{element}-{structure}`. The x column is
   `2θ (deg)` in X-ray mode and `g (1/Å)` in electron mode.
 
+In **electron mode** each sample additionally produces a 2D Debye–Scherrer ring
+image (`results/rings/{element}-{structure}.png`) and a reflection answer-key CSV
+(`results/rings/{element}-{structure}_reflections.csv`). The ring image is a pure
+radial map of the 1D profile: a pixel at radius `r` (mm) takes the intensity at
+`g = r / camera_constant`, so ring radius `r = camera_constant · g` and `r² ∝ N`
+(`N = h²+k²+l²`). The answer key lists every allowed reflection — `h k l`, `N`,
+`g`, ring radius (mm), multiplicity — sorted by `g`; it is the hidden key for the
+lab's ring-identification exercise (measure radii → `r²` ratios → `N`-sequence →
+SC/BCC/FCC selection rule → lattice constant `a`). Ring cosmetics are tunable in
+`[instrument]`: `camera_constant` (λL, mm·Å), `image_px`, `beam_stop_mm`,
+`ring_phosphor` (phosphor-green vs grayscale), `ring_gamma`, `ring_noise`.
+
 The final line printed on every run reports how many samples were produced.
 
 **Note:** the `results/` directory is regenerable and is gitignored, so it doesn't

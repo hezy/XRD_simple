@@ -1067,6 +1067,137 @@ end
 
 
 """
+    reflection_table(structure, a, g_max)
+
+Discrete answer key for the ring pattern. Returns every allowed reflection family
+with g = √(h²+k²+l²)/a ≤ g_max, as a NamedTuple of equal-length vectors sorted by
+g:
+
+- `indices`      : canonical `[h,k,l]` representatives
+- `N`            : N = h²+k²+l² (the ring's squared-index; ring r² ∝ N)
+- `g`            : scattering vector g = √N/a (1/Å) — ring radius is `camera_constant·g`
+- `multiplicity` : reflection multiplicity (relative ring brightness, geometric)
+
+This is the hidden key students reconstruct from measured ring radii (r² ratios →
+N-sequence → SC/BCC/FCC selection rule → lattice constant a).
+"""
+function reflection_table(structure::String,
+                          a::Float64,
+                          g_max::Float64
+                          )::NamedTuple
+    a > 0 || throw(ArgumentError("Lattice parameter must be positive"))
+    g_max > 0 || throw(ArgumentError("g_max must be positive"))
+
+    max_hkl_sq = ed_max_hkl_sq(a, g_max)
+    indices, multiplicities = Miller_indices(structure, max_hkl_sq)
+    g = g_list(indices, a)
+    N = [h^2 + k^2 + l^2 for (h, k, l) in indices]
+
+    perm = sortperm(g)
+    return (indices = indices[perm],
+            N = N[perm],
+            g = g[perm],
+            multiplicity = multiplicities[perm])
+end
+
+
+# Phosphor-green colour ramp (black → dark green → bright green → highlight),
+# the look of a fluorescent ED viewing screen. `gamma` < 1 lifts faint outer rings.
+const PHOSPHOR_RAMP = ["#000000", "#022b06", "#1f9b3a", "#5dff7a", "#e6ffe9"]
+
+
+"""
+    radial_profile_value(y, g_min, g_max, gg)
+
+Linear interpolation of the uniform g-grid profile `y` (over `[g_min, g_max]`) at
+scattering vector `gg`. Clamps to the end samples outside the grid. Internal
+helper for `render_ring_image`.
+"""
+@inline function radial_profile_value(y::Vector{Float64},
+                                      g_min::Float64,
+                                      g_max::Float64,
+                                      gg::Float64)::Float64
+    n = length(y)
+    gg ≤ g_min && return @inbounds y[1]
+    gg ≥ g_max && return @inbounds y[n]
+    t = (gg - g_min) / (g_max - g_min) * (n - 1)   # 0-based fractional index
+    i = floor(Int, t)
+    f = t - i
+    @inbounds return (1 - f) * y[i + 1] + f * y[i + 2]
+end
+
+
+"""
+    render_ring_image(g, y, camera_constant; kwargs...) -> Plots.Plot
+
+Render the 1D powder electron-diffraction profile `y(g)` as a 2D Debye–Scherrer
+ring pattern. A powder pattern is rotationally symmetric, so the image is a pure
+radial lookup: a pixel at distance r (mm) from the centre maps to g = r /
+`camera_constant` (1/Å) and takes intensity `y(g)`. This is the SAED-style ring
+image students measure — ring radius r = `camera_constant`·g, so r² ∝ N.
+
+# Arguments
+- `g::Vector{Float64}`     : profile g-grid (1/Å), uniform, from `do_it_electron`
+- `y::Vector{Float64}`     : profile intensity at each g
+- `camera_constant::Float64`: λL (mm·Å); ring radius r = camera_constant·g (mm)
+
+# Keywords
+- `image_px::Int=700`       : output image side length (pixels)
+- `beam_stop_mm::Float64=2.5`: central beam-stop radius (mm); blanked to floor
+- `phosphor::Bool=true`     : phosphor-green colormap (false → grayscale)
+- `gamma::Float64=0.5`      : display gamma (<1 lifts faint outer rings)
+- `noise_level::Float64=0.0`: per-pixel multiplicative noise (0–1), seeded upstream
+
+Returns a square `Plots.Plot` heatmap (no axes/frame) ready to `savefig`.
+"""
+function render_ring_image(g::Vector{Float64},
+                           y::Vector{Float64},
+                           camera_constant::Float64;
+                           image_px::Int = 700,
+                           beam_stop_mm::Float64 = 2.5,
+                           phosphor::Bool = true,
+                           gamma::Float64 = 0.5,
+                           noise_level::Float64 = 0.0
+                           )::Plots.Plot
+    length(g) == length(y) || throw(DimensionMismatch("g and y must have equal length"))
+    camera_constant > 0 || throw(ArgumentError("camera_constant must be positive"))
+    image_px ≥ 2 || throw(ArgumentError("image_px must be ≥ 2"))
+    0 ≤ noise_level ≤ 1 || throw(DomainError(noise_level, "noise_level must be between 0 and 1"))
+
+    g_min, g_max = first(g), last(g)
+    floor_val = last(y)                      # dark background outside the ring field
+    r_max = camera_constant * g_max          # mm, half-frame (image edge midpoint)
+    coords = collect(LinRange(-r_max, r_max, image_px))   # mm, both axes
+
+    img = Matrix{Float64}(undef, image_px, image_px)
+    @inbounds for j in 1:image_px
+        yj = coords[j]
+        for i in 1:image_px
+            r = hypot(coords[i], yj)         # mm from centre
+            img[i, j] = r < beam_stop_mm ? floor_val :
+                        radial_profile_value(y, g_min, g_max, r / camera_constant)
+        end
+    end
+
+    if noise_level > 0
+        img .*= rand(Normal(1, noise_level), size(img))
+    end
+
+    # Normalise to [0,1] then gamma-compress so faint high-g rings stay visible.
+    lo, hi = extrema(img)
+    disp = hi > lo ? @.(((img - lo) / (hi - lo))^gamma) : zero(img)
+
+    cmap = phosphor ? cgrad(PHOSPHOR_RAMP) : cgrad(:grays)
+    return heatmap(coords, coords, disp;
+                   c = cmap, aspect_ratio = :equal, colorbar = false,
+                   axis = false, ticks = false, framestyle = :none,
+                   legend = false, grid = false, widen = false,
+                   background_color = :black, margin = 0 * Plots.mm,
+                   size = (image_px, image_px), clims = (0, 1), show = false)
+end
+
+
+"""
     do_it(file_name, structure, element, a, plot_theme)
 
 Generate a complete XRD diffraction pattern for one (structure, element) sample.

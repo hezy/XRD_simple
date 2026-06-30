@@ -52,6 +52,42 @@ function setup_argparse()
 end
 
 
+"""
+    write_ring_outputs(instrument, structure, element, a, g, intensities, title)
+
+Render the electron-mode g-profile as a 2D ring image and write the matching
+reflection answer key. Outputs to `results/rings/`:
+- `{title}.png`              — the Debye–Scherrer ring image (student-facing)
+- `{title}_reflections.csv`  — hidden key: hkl, N, g, ring radius (mm), multiplicity
+"""
+function write_ring_outputs(instrument, structure, element, a, g, intensities, title)
+    isdir("results/rings") || mkpath("results/rings")
+
+    camera_constant = Float64(get(instrument, "camera_constant", 50.0))
+
+    ring_plot = render_ring_image(g, intensities, camera_constant;
+        image_px    = Int(get(instrument, "image_px", 800)),
+        beam_stop_mm = Float64(get(instrument, "beam_stop_mm", 2.5)),
+        phosphor    = Bool(get(instrument, "ring_phosphor", true)),
+        gamma       = Float64(get(instrument, "ring_gamma", 0.5)),
+        noise_level = Float64(get(instrument, "ring_noise", 0.0)))
+    savefig(ring_plot, "./results/rings/$title.png")
+
+    rt = reflection_table(structure, a, instrument["g_max"])
+    key = DataFrame(
+        h = [hkl[1] for hkl in rt.indices],
+        k = [hkl[2] for hkl in rt.indices],
+        l = [hkl[3] for hkl in rt.indices],
+        N = rt.N,
+        g_per_A = rt.g,
+        r_mm = camera_constant .* rt.g,
+        multiplicity = rt.multiplicity,
+    )
+    CSV.write("./results/rings/$(title)_reflections.csv", key)
+    return ring_plot
+end
+
+
 function main()
     args = ArgParse.parse_args(ARGS, setup_argparse())
 
@@ -68,7 +104,8 @@ function main()
     instrument, _, samples = read_xrd_config(config_file)
 
     # Electron diffraction is plotted vs scattering vector g (1/Å); X-ray vs 2θ.
-    xcol = get(instrument, "radiation", "xray") == "electron" ? "g (1/Å)" : "2θ (deg)"
+    is_electron = get(instrument, "radiation", "xray") == "electron"
+    xcol = is_electron ? "g (1/Å)" : "2θ (deg)"
 
     x₀ = do_it_zero(config_file)
     df = DataFrame(xcol => x₀)
@@ -88,6 +125,9 @@ function main()
 
         if save_plots
             savefig(the_plot, "./results/$title")
+            if is_electron
+                write_ring_outputs(instrument, structure, element, a, x, intensities, title)
+            end
         end
     end
 

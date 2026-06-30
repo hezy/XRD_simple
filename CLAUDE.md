@@ -139,6 +139,12 @@ g_min = 0.0                  # electron: min scattering vector (1/Å)
 g_max = 1.2                  # electron: max scattering vector (1/Å)
 N = 1000                     # number of points
 noise_level = 0.15           # multiplicative noise 0–1 (optional)
+camera_constant = 50.0       # electron rings: λL (mm·Å); ring radius r = camera_constant·g
+image_px = 800               # electron rings: ring image side length (px)
+beam_stop_mm = 2.5           # electron rings: central beam-stop radius (mm)
+ring_phosphor = true         # electron rings: phosphor-green colormap (false = grayscale)
+ring_gamma = 0.5             # electron rings: display gamma (<1 lifts faint outer rings)
+ring_noise = 0.0             # electron rings: per-pixel multiplicative noise (0–1)
 
 [peak_width]
 U = 0.0001                   # X-ray: Caglioti parameter (instrumental)
@@ -217,6 +223,14 @@ ignored, so both X-ray and electron parameters can coexist in one file — flip
 - Electron path entry point: `do_it_electron()`; helpers `electron_wavelength()`,
   `g_list()`, `ed_max_hkl_sq()`, `Lorentzian_peaks_width_g()`,
   `compute_peak_widths_g()`, `intensity_vs_g()`, `compute_ed_pattern()`.
+- **Ring output (electron only):** `render_ring_image(g, y, camera_constant; …)`
+  maps the 1D g-profile to a 2D Debye–Scherrer ring image by radial lookup
+  (r = camera_constant·g, so r² ∝ N); `reflection_table(structure, a, g_max)`
+  returns the discrete answer key (hkl, N, g, multiplicity). `main.jl` calls
+  `write_ring_outputs(…)` per electron sample → `results/rings/{title}.png` +
+  `{title}_reflections.csv`. Sanity check: `test/ring_sanity.jl` (ring radii vs
+  analytic g=√N/a). Knobs: `camera_constant`, `image_px`, `beam_stop_mm`,
+  `ring_phosphor`, `ring_gamma`, `ring_noise`.
 - Electron knobs: `voltage_kV`, `g_min`/`g_max` (detector range), `G_inst`
   (instrumental Gaussian FWHM), plus the shared `K`, `Epsilon`, `D`.
 - To add the electron scattering factor f_e(s), weight each reflection in

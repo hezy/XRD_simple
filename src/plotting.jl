@@ -3,7 +3,7 @@ XRD sim: plotting
 by Hezy Amiel
 2023--2026
 
-All Plots.jl calls of the simulation. Include after `functions.jl`.
+All Plots.jl calls of the simulation. Include after `XRDSim.jl`.
 """
 
 

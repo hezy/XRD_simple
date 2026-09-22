@@ -7,7 +7,7 @@ through the phases in order. Each phase ends with passing tests and one commit
 Physics *extensions* (Lorentz–polarization factor, structure factors, f_e(s))
 are not part of this plan; they stay in `improvements.md`.
 
-**Status:** Phases 1–5 done. Phase 6 not started.
+**Status:** Phases 1–6 done. Phase 7 not started.
 
 ---
 
@@ -174,17 +174,31 @@ Now: `functions.jl` loads Plots and calls `theme()`, so the tests load Plots.
 
 ## Phase 6: Split `functions.jl` into files
 
-- [ ] **6.1** Split by subject, included in this order by one entry file:
+- [x] **6.1** Split by subject, included in this order by one entry file:
   - `config.jl`: config struct, `read_xrd_config`
   - `crystal.jl`: `Miller_indices`, `cubic_multiplicity`, `d_list`, `g_list`
   - `profiles.jl`: `Voigt_peak`, `pseudo_Voigt_peak`, `peak_fwhm`, `sum_peaks`
   - `xray.jl`: `XRay` methods, Bragg angles, Caglioti, Scherrer
   - `electron.jl`: `Electron` methods, `electron_wavelength`, ring image matrix
   - `plotting.jl`: pattern plot, ring plot
-- [ ] **6.2** Decision to take at this point: plain `include` files in `src/`,
+- [x] **6.2** Decision to take at this point: plain `include` files in `src/`,
   or a module `XRDSim` (then the tests use `using XRDSim`). A module is
   cleaner for the tests; plain includes are simpler for students. Choose
   before starting 6.1.
+
+  Result: plain includes. `src/XRDSim.jl` is the entry file: it loads
+  SpecialFunctions, Distributions and TOML and includes `config.jl`,
+  `crystal.jl`, `profiles.jl`, `xray.jl`, `electron.jl` and, in addition,
+  `simulate.jl` (the generic `simulate`). It does not include `plotting.jl`;
+  `main.jl` includes `src/XRDSim.jl`, then `src/plotting.jl`, so the tests
+  still do not load Plots. `bragg_angles` and `bragg_max_hkl_sq` are in
+  `xray.jl`; `ed_max_hkl_sq`, `reflection_table` and the background constants
+  of each mode are in the file of that mode. The banner strings "Constants"
+  and "Functions" were removed, and the electron banner is now a comment at
+  the top of `electron.jl`; the `abstract_peak` docstring is unchanged (7.1).
+  The scripts in `archive/` still include `../functions.jl` and were not
+  changed. The outputs of `main.jl` for both reference configs are
+  byte-identical to the Phase 5 output.
 
 **Done when:** `main.jl` and all tests run unchanged in behaviour.
 

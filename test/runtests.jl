@@ -1,6 +1,6 @@
 using Test
 
-include(joinpath(@__DIR__, "..", "functions.jl"))
+include(joinpath(@__DIR__, "..", "src", "XRDSim.jl"))
 
 @testset "XRD_simple" begin
     include("test_crystal.jl")

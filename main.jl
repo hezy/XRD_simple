@@ -10,8 +10,8 @@ using DataFrames
 using CSV
 using ArgParse
 
-include("functions.jl")
-include("plotting.jl")
+include("src/XRDSim.jl")
+include("src/plotting.jl")
 
 
 # VS Code's Julia extension loads VSCodeServer into Main and routes plots to a

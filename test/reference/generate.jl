@@ -5,7 +5,7 @@
 using CSV
 using DataFrames
 
-include(joinpath(@__DIR__, "..", "..", "functions.jl"))
+include(joinpath(@__DIR__, "..", "..", "src", "XRDSim.jl"))
 include(joinpath(@__DIR__, "reference.jl"))
 
 for mode in REFERENCE_MODES

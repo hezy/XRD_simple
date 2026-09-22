@@ -7,7 +7,7 @@
 #
 # Run:  julia --project=. test/ring_sanity.jl [config.toml]
 
-include("../functions.jl")
+include(joinpath(@__DIR__, "..", "src", "XRDSim.jl"))
 
 cfg = length(ARGS) ≥ 1 ? ARGS[1] : "data.toml"
 config = read_xrd_config(cfg)

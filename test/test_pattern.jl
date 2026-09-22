@@ -1,7 +1,11 @@
 using Test
 using Random
 
-const DATA_TOML = joinpath(@__DIR__, "..", "data.toml")
+using TOML
+
+# The fixed reference configurations, independent of the user's data.toml
+const XRAY_TOML = joinpath(@__DIR__, "reference", "xray.toml")
+const ELECTRON_TOML = joinpath(@__DIR__, "reference", "electron.toml")
 
 @testset "sum_peaks" begin
     x = collect(LinRange(deg2rad(10.0), deg2rad(120.0), 1000))
@@ -30,42 +34,50 @@ const DATA_TOML = joinpath(@__DIR__, "..", "data.toml")
     @test_throws DimensionMismatch sum_peaks(x, x_list, mult, [0.01], w_G)
 end
 
-@testset "compute_peak_widths" begin
-    cfg = read_xrd_config(DATA_TOML)
-    θ_B = deg2rad.([10.0, 30.0, 50.0])
+@testset "peak_widths" begin
+    cfg = read_xrd_config(XRAY_TOML)
+    for two_θ_B in deg2rad.([20.0, 60.0, 100.0])
+        w_L, w_G = peak_widths(cfg.mode, two_θ_B, cfg)
+        @test w_L > 0 && w_G > 0
+        @test w_G == Gaussian_peaks_width(two_θ_B / 2, cfg.mode.U, cfg.mode.V, cfg.mode.W)
+    end
 
-    w_L, w_G = compute_peak_widths(θ_B, cfg)
-    @test length(w_L) == length(θ_B)
-    @test length(w_G) == length(θ_B)
-    @test all(w_L .> 0)
-    @test all(w_G .> 0)
+    cfg = read_xrd_config(ELECTRON_TOML)
+    w_L, w_G = peak_widths(cfg.mode, 0.5, cfg)
+    @test w_L == Lorentzian_peaks_width_g(0.5, cfg.K, cfg.Epsilon, cfg.D)
+    @test w_G == cfg.mode.G_inst
 end
 
-@testset "compute_xrd_pattern" begin
-    cfg = read_xrd_config(DATA_TOML)
-    two_θ = collect(LinRange(cfg.two_theta_min, cfg.two_theta_max, 2000))
-    λ = cfg.lambda
+@testset "simulate" begin
     a = 3.352
-    max_hkl_sq = bragg_max_hkl_sq(a, λ)
-    indices, multiplicities = Miller_indices("SC", max_hkl_sq)
+    for (file, label) in ((XRAY_TOML, "2θ (deg)"), (ELECTRON_TOML, "g (1/Å)"))
+        cfg = read_xrd_config(file)
+        x, y = simulate(cfg, "SC", a)
+        @test length(x) == length(y) == cfg.N
+        @test all(y .>= 0)
+        @test axis_label(cfg.mode) == label
+    end
 
-    y = compute_xrd_pattern(two_θ, indices, multiplicities, a, cfg)
-    @test length(y) == length(two_θ)
-    @test all(y .>= 0)
-    @test sum(y) > 0
+    # X-ray: x is 2θ in degrees, and the (100) peak lies at 2θ_B
+    cfg = read_xrd_config(XRAY_TOML)
+    x, y = simulate(cfg, "SC", a)
+    @test x[1] ≈ 10.0 && x[end] ≈ 120.0
+    i = argmin(abs.(x .- rad2deg(2asin(cfg.mode.lambda / (2a)))))
+    @test y[i] ≈ maximum(y[max(1, i-5):i+5])
 
-    # The strongest point of the peaks lies at 2θ_B of (100)
-    y_peaks = intensity_vs_angle(two_θ, indices, multiplicities, a, cfg)
-    i = argmin(abs.(two_θ .- 2asin(λ / (2a))))
-    @test y_peaks[i] ≈ maximum(y_peaks[max(1, i-20):i+20])
+    # Electron: the (100) peak lies at g = 1/a
+    cfg = read_xrd_config(ELECTRON_TOML)
+    x, y = simulate(cfg, "SC", a)
+    i = argmin(abs.(x .- 1 / a))
+    @test y[i] ≈ maximum(y[max(1, i-5):i+5])
 
-    Random.seed!(42)
-    y1 = compute_xrd_pattern(two_θ, indices, multiplicities, a, cfg; noise_level=0.1)
-    Random.seed!(43)
-    y2 = compute_xrd_pattern(two_θ, indices, multiplicities, a, cfg; noise_level=0.1)
+    # Noise: reproducible with the same seed, different with another
+    toml = TOML.parsefile(XRAY_TOML)
+    toml["instrument"]["noise_level"] = 0.1
+    cfg = read_xrd_config(toml)
+    Random.seed!(42); _, y1 = simulate(cfg, "SC", a)
+    Random.seed!(43); _, y2 = simulate(cfg, "SC", a)
+    Random.seed!(42); _, y3 = simulate(cfg, "SC", a)
     @test y1 != y2
-
-    Random.seed!(42)
-    y3 = compute_xrd_pattern(two_θ, indices, multiplicities, a, cfg; noise_level=0.1)
     @test y1 == y3
 end

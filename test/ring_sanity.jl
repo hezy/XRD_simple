@@ -11,11 +11,11 @@ include("../functions.jl")
 
 cfg = length(ARGS) ≥ 1 ? ARGS[1] : "data.toml"
 config = read_xrd_config(cfg)
-@assert config.radiation == "electron" "config must be electron mode"
+@assert config.mode isa Electron "config must be electron mode"
 
-camera_constant = config.camera_constant
-g_max = config.g_max
-tol_g = 2 * (g_max - config.g_min) / config.N  # ~2 grid steps
+camera_constant = config.mode.camera_constant
+g_max = config.mode.g_max
+tol_g = 2 * (g_max - config.mode.g_min) / config.N  # ~2 grid steps
 
 # Find local maxima of v above a floor; returns the x-locations (parabolic-refined).
 function peak_locations(x, v; rel_height = 0.02)
@@ -40,7 +40,7 @@ println("="^70)
 function run_checks(config, camera_constant, g_max, tol_g)
 all_ok = true
 for (structure, element, a) in config.samples
-    g, y, _, _ = do_it_electron(config, structure, element, a, :dark)
+    g, y = simulate(config, structure, a)
     rt = reflection_table(structure, a, g_max)
 
     # (1) profile peaks vs analytic g

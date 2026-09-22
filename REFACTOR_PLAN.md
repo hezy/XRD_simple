@@ -7,7 +7,7 @@ through the phases in order. Each phase ends with passing tests and one commit
 Physics *extensions* (Lorentz–polarization factor, structure factors, f_e(s))
 are not part of this plan; they stay in `improvements.md`.
 
-**Status:** Phases 1–3 done. Phase 4 not started.
+**Status:** Phases 1–4 done. Phase 5 not started.
 
 ---
 
@@ -68,8 +68,8 @@ checkable.
 
   Result: `test/reference/{xray,electron}.toml` (fixed configs; Po-SC,
   Fe-BCC, Cu-FCC), saved patterns in `{xray,electron}.csv`,
-  `test/test_reference.jl`. The patterns are computed through `do_it`, in
-  `test/reference/reference.jl`; phases 3 and 4 change only that function.
+  `test/test_reference.jl`. The patterns are computed through `simulate`
+  (formerly `do_it`), in `test/reference/reference.jl`.
   Regenerate with `julia --project=. test/reference/generate.jl`, only when a
   change of the numbers is intended.
 
@@ -111,22 +111,36 @@ Now: the mode is checked in `main`, `do_it_zero` and `do_it`;
 `do_it`/`do_it_electron` and `compute_xrd_pattern`/`compute_ed_pattern` are
 near copies.
 
-- [ ] **4.1** Define `abstract type Radiation end` with `struct XRay` and
+- [x] **4.1** Define `abstract type Radiation end` with `struct XRay` and
   `struct Electron`. Each holds its own parameters (λ and U/V/W; voltage and
   G_inst). `read_xrd_config` constructs the right one.
-- [ ] **4.2** Give each type a small set of methods:
+- [x] **4.2** Give each type a small set of methods:
   - `grid(mode)`: x axis (2θ or g)
   - `max_hkl_sq(mode, a)`: reflection cutoff
   - `peak_centres(mode, indices, a)`: centre and multiplicity of each visible reflection
   - `peak_widths(mode, x₀, sample)`: (w_L, w_G) at one centre
   - `background(mode, x)`
   - `axis_label(mode)`
-- [ ] **4.3** Write one generic `simulate(mode, cfg, structure, a)` that
+- [x] **4.3** Write one generic `simulate(mode, cfg, structure, a)` that
   returns `(x, y)`. It replaces `do_it`, `do_it_electron`,
   `compute_xrd_pattern`, `compute_ed_pattern`, `intensity_vs_angle` and
   `intensity_vs_g`.
-- [ ] **4.4** Remove the unused `noise_level` keyword of `background` and
+- [x] **4.4** Remove the unused `noise_level` keyword of `background` and
   `background_electron`; noise is applied once, in `simulate`.
+
+  Result: `XRDConfig` holds `mode::Radiation` (`XRay` or `Electron`, with the
+  instrument parameters of that mode, including the ring settings) in place of
+  `radiation` and the per-mode fields. Keys of the unused mode are no longer
+  read or checked. `simulate(cfg, structure, a)` takes the mode from `cfg`,
+  and returns x in display units (2θ in degrees, or g). Mode methods:
+  `grid(mode, N)`, `max_hkl_sq`, `peak_centres(mode, indices, multiplicities,
+  a)`, `peak_widths(mode, x₀, cfg)`, `background`, and in addition
+  `display_axis`, `axis_label`, `plot_title`. The width functions take a
+  scalar angle or g. `plot_pattern(mode, x, y, title, theme)` holds the plot
+  code of the old `do_it` until Phase 5; `render_ring_image` takes the
+  `Electron` mode; `write_ring_outputs` in `main.jl` has an empty `XRay`
+  method. The electron plot x label is now "g (1/Å)", the same as the CSV
+  column (was "g = 1/d (1/Å)").
 
 **Done when:** no `== "electron"` test remains outside `read_xrd_config`, and
 all tests pass.

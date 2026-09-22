@@ -38,41 +38,49 @@ const INELASTIC_LEVEL = 5.0
 
 
 """
-    XRDConfig
+    Radiation
 
-Every parameter of one simulation run, read from `data.toml` by
-`read_xrd_config`. All defaults are applied and all values are validated there;
-no other function reads the TOML file or supplies a default.
+Radiation mode of a simulation: `XRay` or `Electron`. Each subtype holds the
+instrument parameters of its mode, and the mode-specific steps of `simulate`
+(`grid`, `max_hkl_sq`, `peak_centres`, `peak_widths`, `background`,
+`display_axis`, `axis_label`, `plot_title`) are methods on it.
+"""
+abstract type Radiation end
 
-Angles are in radians. Parameters of the radiation mode that is not selected
-are `NaN` when the file omits them.
+
+"""
+    XRay <: Radiation
+
+X-ray instrument: Bragg geometry, pattern over 2θ.
 
 # Fields
-- `radiation::String`: `"xray"` or `"electron"`
-- `N::Int`: number of grid points
-- `noise_level::Float64`: multiplicative noise standard deviation (0–1)
-- `two_theta_min`, `two_theta_max`: X-ray 2θ range (radians)
-- `lambda`: X-ray wavelength (Å)
-- `U`, `V`, `W`: X-ray Caglioti parameters (FWHM² in radians² of 2θ)
-- `voltage_kV`: electron accelerating voltage (kV)
-- `g_min`, `g_max`: electron scattering-vector range (1/Å)
-- `G_inst`: electron instrumental Gaussian FWHM (1/Å)
-- `camera_constant`, `image_px`, `beam_stop_mm`, `ring_phosphor`, `ring_gamma`,
-  `ring_noise`: electron ring-image settings
-- `K`: Scherrer constant; `Epsilon`: microstrain; `D`: crystallite size (nm)
-- `samples::Vector{Tuple{String,String,Float64}}`: `(structure, element, a)`
-  triples, sorted; may be empty
+- `lambda`: wavelength (Å)
+- `two_theta_min`, `two_theta_max`: 2θ range (radians)
+- `U`, `V`, `W`: Caglioti parameters (FWHM² in radians² of 2θ)
 """
-struct XRDConfig
-    radiation::String
-    N::Int
-    noise_level::Float64
+struct XRay <: Radiation
+    lambda::Float64
     two_theta_min::Float64
     two_theta_max::Float64
-    lambda::Float64
     U::Float64
     V::Float64
     W::Float64
+end
+
+
+"""
+    Electron <: Radiation
+
+Electron instrument: reciprocal-space geometry, pattern over g = 1/d.
+
+# Fields
+- `voltage_kV`: accelerating voltage (kV)
+- `g_min`, `g_max`: scattering-vector range (1/Å)
+- `G_inst`: instrumental Gaussian FWHM (1/Å)
+- `camera_constant`, `image_px`, `beam_stop_mm`, `ring_phosphor`, `ring_gamma`,
+  `ring_noise`: ring-image settings
+"""
+struct Electron <: Radiation
     voltage_kV::Float64
     g_min::Float64
     g_max::Float64
@@ -83,6 +91,28 @@ struct XRDConfig
     ring_phosphor::Bool
     ring_gamma::Float64
     ring_noise::Float64
+end
+
+
+"""
+    XRDConfig
+
+Every parameter of one simulation run, read from `data.toml` by
+`read_xrd_config`. All defaults are applied and all values are validated there;
+no other function reads the TOML file or supplies a default.
+
+# Fields
+- `mode::Radiation`: `XRay` or `Electron`, with its instrument parameters
+- `N::Int`: number of grid points
+- `noise_level::Float64`: multiplicative noise standard deviation (0–1)
+- `K`: Scherrer constant; `Epsilon`: microstrain; `D`: crystallite size (nm)
+- `samples::Vector{Tuple{String,String,Float64}}`: `(structure, element, a)`
+  triples, sorted; may be empty
+"""
+struct XRDConfig
+    mode::Radiation
+    N::Int
+    noise_level::Float64
     K::Float64
     Epsilon::Float64
     D::Float64
@@ -121,9 +151,10 @@ config_check(ok::Bool, msg::String) = ok || throw(ArgumentError(msg))
 Read the TOML configuration once, apply every default, validate every value,
 and return one `XRDConfig`. The `Dict` method takes an already parsed file.
 
-Keys of the radiation mode that is not selected are ignored: both X-ray and
-electron parameters can stay in one file. The 2θ limits are converted from
-degrees to radians. Each uncommented `element = a` entry under
+`radiation` selects the mode: `XRay` or `Electron` is constructed from the keys
+of that mode. Keys of the other mode are ignored, not read or checked: both
+X-ray and electron parameters can stay in one file. The 2θ limits are
+converted from degrees to radians. Each uncommented `element = a` entry under
 `[lattice.STRUCTURE]` becomes one sample; zero samples is valid.
 
 # Defaults
@@ -149,34 +180,12 @@ function read_xrd_config(config::Dict)
     radiation = get(inst, "radiation", "xray")
     radiation in ("xray", "electron") ||
         throw(ArgumentError("[instrument] radiation must be \"xray\" or \"electron\", got $(repr(radiation))"))
-    is_xray = radiation == "xray"
-    xray_default = is_xray ? nothing : NaN        # required only in X-ray mode
-    electron_default = is_xray ? NaN : nothing    # required only in electron mode
 
     N           = config_value(inst, "instrument", "N", Int)
     noise_level = config_value(inst, "instrument", "noise_level", Float64, 0.0)
-
-    two_theta_min = deg2rad(config_value(inst, "instrument", "two_theta_min", Float64, xray_default))
-    two_theta_max = deg2rad(config_value(inst, "instrument", "two_theta_max", Float64, xray_default))
-    lambda        = config_value(inst, "instrument", "lambda", Float64, xray_default)
-    U = config_value(pw, "peak_width", "U", Float64, xray_default)
-    V = config_value(pw, "peak_width", "V", Float64, xray_default)
-    W = config_value(pw, "peak_width", "W", Float64, xray_default)
-
-    voltage_kV      = config_value(inst, "instrument", "voltage_kV", Float64, 200.0)
-    g_min           = config_value(inst, "instrument", "g_min", Float64, 0.0)
-    g_max           = config_value(inst, "instrument", "g_max", Float64, electron_default)
-    G_inst          = config_value(pw, "peak_width", "G_inst", Float64, 0.005)
-    camera_constant = config_value(inst, "instrument", "camera_constant", Float64, 50.0)
-    image_px        = config_value(inst, "instrument", "image_px", Int, 800)
-    beam_stop_mm    = config_value(inst, "instrument", "beam_stop_mm", Float64, 2.5)
-    ring_phosphor   = config_value(inst, "instrument", "ring_phosphor", Bool, true)
-    ring_gamma      = config_value(inst, "instrument", "ring_gamma", Float64, 0.5)
-    ring_noise      = config_value(inst, "instrument", "ring_noise", Float64, 0.0)
-
-    K       = config_value(pw, "peak_width", "K", Float64)
-    Epsilon = config_value(pw, "peak_width", "Epsilon", Float64)
-    D       = config_value(pw, "peak_width", "D", Float64)
+    K           = config_value(pw, "peak_width", "K", Float64)
+    Epsilon     = config_value(pw, "peak_width", "Epsilon", Float64)
+    D           = config_value(pw, "peak_width", "D", Float64)
 
     config_check(N ≥ 2, "[instrument] N must be at least 2, got $N")
     config_check(0 ≤ noise_level ≤ 1, "[instrument] noise_level must be between 0 and 1, got $noise_level")
@@ -184,23 +193,7 @@ function read_xrd_config(config::Dict)
     config_check(Epsilon ≥ 0, "[peak_width] Epsilon must not be negative, got $Epsilon")
     config_check(D > 0, "[peak_width] D must be positive, got $D")
 
-    if is_xray
-        config_check(0 ≤ two_theta_min < two_theta_max ≤ π,
-            "[instrument] need 0 ≤ two_theta_min < two_theta_max ≤ 180 (degrees)")
-        config_check(lambda > 0, "[instrument] lambda must be positive, got $lambda")
-        # FWHM² = U tan²θ + V tanθ + W is positive for every tanθ ≥ 0 exactly when:
-        config_check(W > 0 && U ≥ 0 && (V ≥ 0 || V^2 < 4U * W),
-            "[peak_width] U, V, W give a negative or zero Caglioti FWHM² at some angle")
-    else
-        config_check(voltage_kV > 0, "[instrument] voltage_kV must be positive, got $voltage_kV")
-        config_check(0 ≤ g_min < g_max, "[instrument] need 0 ≤ g_min < g_max")
-        config_check(G_inst > 0, "[peak_width] G_inst must be positive, got $G_inst")
-        config_check(camera_constant > 0, "[instrument] camera_constant must be positive, got $camera_constant")
-        config_check(image_px ≥ 2, "[instrument] image_px must be at least 2, got $image_px")
-        config_check(beam_stop_mm ≥ 0, "[instrument] beam_stop_mm must not be negative, got $beam_stop_mm")
-        config_check(ring_gamma > 0, "[instrument] ring_gamma must be positive, got $ring_gamma")
-        config_check(0 ≤ ring_noise ≤ 1, "[instrument] ring_noise must be between 0 and 1, got $ring_noise")
-    end
+    mode = radiation == "xray" ? read_xray(inst, pw) : read_electron(inst, pw)
 
     samples = Tuple{String,String,Float64}[]
     for (structure, elements) in get(config, "lattice", Dict{String,Any}())
@@ -216,12 +209,54 @@ function read_xrd_config(config::Dict)
     end
     sort!(samples)
 
-    return XRDConfig(radiation, N, noise_level,
-                     two_theta_min, two_theta_max, lambda, U, V, W,
-                     voltage_kV, g_min, g_max, G_inst,
-                     camera_constant, image_px, beam_stop_mm, ring_phosphor,
-                     ring_gamma, ring_noise,
-                     K, Epsilon, D, samples)
+    return XRDConfig(mode, N, noise_level, K, Epsilon, D, samples)
+end
+
+
+# The X-ray keys of [instrument] and [peak_width]; all are required.
+function read_xray(inst::Dict, pw::Dict)::XRay
+    two_theta_min = deg2rad(config_value(inst, "instrument", "two_theta_min", Float64))
+    two_theta_max = deg2rad(config_value(inst, "instrument", "two_theta_max", Float64))
+    lambda        = config_value(inst, "instrument", "lambda", Float64)
+    U = config_value(pw, "peak_width", "U", Float64)
+    V = config_value(pw, "peak_width", "V", Float64)
+    W = config_value(pw, "peak_width", "W", Float64)
+
+    config_check(0 ≤ two_theta_min < two_theta_max ≤ π,
+        "[instrument] need 0 ≤ two_theta_min < two_theta_max ≤ 180 (degrees)")
+    config_check(lambda > 0, "[instrument] lambda must be positive, got $lambda")
+    # FWHM² = U tan²θ + V tanθ + W is positive for every tanθ ≥ 0 exactly when:
+    config_check(W > 0 && U ≥ 0 && (V ≥ 0 || V^2 < 4U * W),
+        "[peak_width] U, V, W give a negative or zero Caglioti FWHM² at some angle")
+
+    return XRay(lambda, two_theta_min, two_theta_max, U, V, W)
+end
+
+
+# The electron keys of [instrument] and [peak_width]; only g_max is required.
+function read_electron(inst::Dict, pw::Dict)::Electron
+    voltage_kV      = config_value(inst, "instrument", "voltage_kV", Float64, 200.0)
+    g_min           = config_value(inst, "instrument", "g_min", Float64, 0.0)
+    g_max           = config_value(inst, "instrument", "g_max", Float64)
+    G_inst          = config_value(pw, "peak_width", "G_inst", Float64, 0.005)
+    camera_constant = config_value(inst, "instrument", "camera_constant", Float64, 50.0)
+    image_px        = config_value(inst, "instrument", "image_px", Int, 800)
+    beam_stop_mm    = config_value(inst, "instrument", "beam_stop_mm", Float64, 2.5)
+    ring_phosphor   = config_value(inst, "instrument", "ring_phosphor", Bool, true)
+    ring_gamma      = config_value(inst, "instrument", "ring_gamma", Float64, 0.5)
+    ring_noise      = config_value(inst, "instrument", "ring_noise", Float64, 0.0)
+
+    config_check(voltage_kV > 0, "[instrument] voltage_kV must be positive, got $voltage_kV")
+    config_check(0 ≤ g_min < g_max, "[instrument] need 0 ≤ g_min < g_max")
+    config_check(G_inst > 0, "[peak_width] G_inst must be positive, got $G_inst")
+    config_check(camera_constant > 0, "[instrument] camera_constant must be positive, got $camera_constant")
+    config_check(image_px ≥ 2, "[instrument] image_px must be at least 2, got $image_px")
+    config_check(beam_stop_mm ≥ 0, "[instrument] beam_stop_mm must not be negative, got $beam_stop_mm")
+    config_check(ring_gamma > 0, "[instrument] ring_gamma must be positive, got $ring_gamma")
+    config_check(0 ≤ ring_noise ≤ 1, "[instrument] ring_noise must be between 0 and 1, got $ring_noise")
+
+    return Electron(voltage_kV, g_min, g_max, G_inst, camera_constant, image_px,
+                    beam_stop_mm, ring_phosphor, ring_gamma, ring_noise)
 end
 
 
@@ -397,70 +432,70 @@ end
 """
     Gaussian_peaks_width(θ, U, V, W)
 
-Calculate Gaussian peak widths using the Caglioti formula.
+Calculate the Gaussian peak width using the Caglioti formula.
 
 The Caglioti formula models instrumental resolution as a function of
 Bragg angle: FWHM² = U·tan²(θ) + V·tan(θ) + W
 
 # Arguments
-- `θ::Vector{Float64}`: Bragg angles θ (half of 2θ) in radians
+- `θ::Float64`: Bragg angle θ (half of 2θ) in radians
 - `U::Float64`: Caglioti parameter, rad² (typically positive)
 - `V::Float64`: Caglioti parameter, rad² (typically negative)
 - `W::Float64`: Caglioti parameter, rad² (typically positive)
 
 # Returns
-- `Vector{Float64}`: Gaussian FWHM at each angle, in radians of 2θ
+- `Float64`: Gaussian FWHM at θ, in radians of 2θ
 """
-function Gaussian_peaks_width(θ::Vector{Float64},
+function Gaussian_peaks_width(θ::Float64,
                               U::Float64,
                               V::Float64,
                               W::Float64
-                              )::Vector{Float64}
+                              )::Float64
 
-        return @. √(U * tan(θ)^2 + V * tan(θ) + W)
+        return √(U * tan(θ)^2 + V * tan(θ) + W)
 end
 
 
 """
     Lorentzian_peaks_width(θ, K, E, λ, D)
 
-Calculate Lorentzian peak widths from sample broadening effects.
+Calculate the Lorentzian peak width from sample broadening effects.
 
 Combines crystallite size broadening (Scherrer equation) and
 microstrain broadening (Stokes-Wilson equation).
 
 # Arguments
-- `θ::Vector{Float64}`: Bragg angles θ (half of 2θ) in radians
+- `θ::Float64`: Bragg angle θ (half of 2θ) in radians
 - `K::Float64`: Scherrer constant (typically ≈ 0.9)
 - `E::Float64`: Microstrain (dimensionless)
 - `λ::Float64`: X-ray wavelength in Angstroms
 - `D::Float64`: Crystallite size in nanometers (converted to Å internally)
 
 # Returns
-- `Vector{Float64}`: Lorentzian FWHM at each angle, in radians of 2θ
+- `Float64`: Lorentzian FWHM at θ, in radians of 2θ
 """
-function Lorentzian_peaks_width(θ::Vector{Float64},
+function Lorentzian_peaks_width(θ::Float64,
                                 K::Float64,
                                 E::Float64,
                                 λ::Float64,
                                 D::Float64,
-                                )::Vector{Float64}
+                                )::Float64
 
     D > 0 || throw(ArgumentError("Crystallite size D must be positive"))
     D_Å = D * 10.0                      # nm → Å
 
     # Strain broadening (Stokes-Wilson)
-    w_L_strain = @. 4 * E * tan(θ)
+    w_L_strain = 4 * E * tan(θ)
     # ε is microstrain
 
     # Size broadening (Scherrer)
-    w_L_size = @. K * λ / (D_Å * cos(θ))
+    w_L_size = K * λ / (D_Å * cos(θ))
     # K is the Scherrer constant (typically ≈ 0.9)
     # λ is wavelength
     # D is crystallite size
 
     # Combined broadening
-    return @. w_L_strain + w_L_size        
+    return w_L_strain + w_L_size
 end
 
 
@@ -586,49 +621,6 @@ end
 
 
 """
-   intensity_vs_angle(two_θ, indices, multiplicities, a, cfg)
-
-Calculate X-ray diffraction pattern by summing peak profiles at allowed Bragg angles.
-Each peak is centred at 2θ_B, and its widths are evaluated once, at θ_B.
-
-# Arguments
-- `two_θ::Vector{Float64}`: 2θ grid for intensity calculation (radians)
-- `indices::Vector{Vector{Int}}`: Canonical Miller indices
-- `multiplicities::Vector{Int}`: Multiplicity of each reflection family
-- `a::Float64`: Lattice parameter (Å)
-- `cfg::XRDConfig`: wavelength and peak-width parameters (lambda, U, V, W, K, Epsilon, D)
-
-# Returns
-- `Vector{Float64}`: XRD intensities at each 2θ angle
-
-# Throws
-- `ArgumentError`: If λ ≤ 0, a ≤ 0, or any width ≤ 0
-- `DimensionMismatch`: If `indices` and `multiplicities` have different lengths
-"""
-function intensity_vs_angle(two_θ::Vector{Float64},
-                         indices::Vector{Vector{Int}},
-                         multiplicities::Vector{Int},
-                         a::Float64,
-                         cfg::XRDConfig
-                         )::Vector{Float64}
-
-   λ = cfg.lambda
-   λ <= 0 && throw(ArgumentError("Wavelength must be positive"))
-   a <= 0 && throw(ArgumentError("Lattice parameter must be positive"))
-   length(indices) == length(multiplicities) || throw(DimensionMismatch(
-       "indices and multiplicities must have same length"))
-
-   θ_list, valid_idx = bragg_angles(λ, d_list(indices, a))
-   w_L, w_G = compute_peak_widths(θ_list, cfg)
-   any(w_L .<= 0) && throw(ArgumentError("Lorentzian widths must be positive"))
-   any(w_G .<= 0) && throw(ArgumentError("Gaussian widths must be positive"))
-
-   y = sum_peaks(two_θ, 2 .* θ_list, multiplicities[valid_idx], w_L, w_G)
-   return y
-end
-
-
-"""
     cubic_multiplicity(h::Int, k::Int, l::Int)::Int
 
 Compute reflection multiplicity for a cubic crystal from a canonical Miller index.
@@ -737,105 +729,52 @@ end
 
 
 """
-    background(θ::Vector{Float64}; noise_level::Float64=0.0)::Vector{Float64}
+    background(mode::XRay, two_θ::Vector{Float64})::Vector{Float64}
 
-Generate a simplified XRD background for educational simulation purposes.
-Includes common physical effects seen in XRD patterns:
+Simplified X-ray background over the 2θ grid (radians), for educational
+simulation purposes. Includes common physical effects seen in XRD patterns:
 - Air scattering (exponential decay at low angles)
 - Fluorescence (constant background)
-- Optional random noise
+- Amorphous scattering (a broad Gaussian hump)
 
-# Arguments
-- `θ::Vector{Float64}`: Scattering angles in radians
-- `noise_level::Float64=0.0`: Amount of random noise to add (0.0 to 1.0)
+The model is written in θ = 2θ/2. Noise is applied by `simulate`, not here.
 
 # Returns
-- `Vector{Float64}`: Background intensity at each angle
+- `Vector{Float64}`: Background intensity at each grid point (non-negative)
 """
-function background(θ::Vector{Float64}; 
-                   noise_level::Float64=0.0)::Vector{Float64}
-    
-    # Validate inputs
-    0 ≤ noise_level ≤ 1 || throw(DomainError(noise_level, "noise_level must be between 0 and 1"))
-    
-    # Basic background components
+function background(::XRay, two_θ::Vector{Float64})::Vector{Float64}
+    θ = two_θ ./ 2
+
     air_scatter = @. AIR_SCATTER_AMPLITUDE * exp(-AIR_SCATTER_DECAY * θ)
     fluorescence = FLUORESCENCE_LEVEL
     amorphous = @. AMORPHOUS_AMPLITUDE * exp(-((θ - AMORPHOUS_CENTER)^2) / (2 * AMORPHOUS_WIDTH^2))
-    base = air_scatter .+ fluorescence .+ amorphous
-    
-    # Add optional noise
-    if noise_level > 0
-        noise = noise_level * randn(length(θ))
-        return max.(base .+ noise, 0)  # Ensure non-negative intensity
-    else
-        return base
-    end
+    return air_scatter .+ fluorescence .+ amorphous
 end
 
 
-"""
-    compute_peak_widths(θ, cfg)
+# X-ray steps of `simulate`. The grid and the peak centres are 2θ in radians;
+# the widths are FWHM in radians of 2θ, evaluated at θ_B.
 
-Calculate Lorentzian and Gaussian peak widths from configuration parameters.
+grid(m::XRay, N::Int) = collect(LinRange(m.two_theta_min, m.two_theta_max, N))
 
-Combines Scherrer size + Stokes-Wilson strain broadening for the Lorentzian
-component, and Caglioti instrumental resolution for the Gaussian component.
+max_hkl_sq(m::XRay, a::Float64) = bragg_max_hkl_sq(a, m.lambda)
 
-# Arguments
-- `θ::Vector{Float64}`: Bragg angles θ of the reflections, in radians
-- `cfg::XRDConfig`: wavelength and peak-width parameters (lambda, U, V, W, K, Epsilon, D)
-
-# Returns
-- `Tuple{Vector{Float64}, Vector{Float64}}`: (w_L, w_G), FWHM in radians of 2θ
-"""
-function compute_peak_widths(θ::Vector{Float64},
-                             cfg::XRDConfig
-                             )::Tuple{Vector{Float64}, Vector{Float64}}
-    w_L = Lorentzian_peaks_width(θ, cfg.K, cfg.Epsilon, cfg.lambda, cfg.D)
-    w_G = Gaussian_peaks_width(θ, cfg.U, cfg.V, cfg.W)
-    return w_L, w_G
+# Reflections without a real Bragg angle are dropped with their multiplicities.
+function peak_centres(m::XRay, indices::Vector{Vector{Int}},
+                      multiplicities::Vector{Int}, a::Float64)
+    θ_B, visible = bragg_angles(m.lambda, d_list(indices, a))
+    return 2 .* θ_B, multiplicities[visible]
 end
 
-
-"""
-    compute_xrd_pattern(two_θ, indices, multiplicities, a, cfg; noise_level=0.0)
-
-Compute XRD intensity pattern from peak parameters.
-
-Sums pseudo-Voigt peak profiles at Bragg angles, adds background,
-and optionally applies multiplicative noise.
-
-# Arguments
-- `two_θ::Vector{Float64}`: 2θ grid in radians
-- `indices::Vector{Vector{Int}}`: Canonical Miller indices
-- `multiplicities::Vector{Int}`: Multiplicity of each reflection family
-- `a::Float64`: Lattice parameter in Angstroms
-- `cfg::XRDConfig`: wavelength and peak-width parameters (lambda, U, V, W, K, Epsilon, D)
-
-# Keyword Arguments
-- `noise_level::Float64=0.0`: Multiplicative noise standard deviation
-
-# Returns
-- `Vector{Float64}`: XRD intensities at each angle
-"""
-function compute_xrd_pattern(two_θ::Vector{Float64},
-                             indices::Vector{Vector{Int}},
-                             multiplicities::Vector{Int},
-                             a::Float64,
-                             cfg::XRDConfig;
-                             noise_level::Float64=0.0
-                             )::Vector{Float64}
-    y = background(two_θ ./ 2) .+
-        intensity_vs_angle(two_θ, indices, multiplicities, a, cfg)
-
-    if noise_level > 0
-        y .*= rand(Normal(1, noise_level), length(two_θ))
-        y = max.(y, 0)
-    end
-
-    return y
+function peak_widths(m::XRay, two_θ₀::Float64, cfg::XRDConfig)
+    θ_B = two_θ₀ / 2
+    return (Lorentzian_peaks_width(θ_B, cfg.K, cfg.Epsilon, m.lambda, cfg.D),
+            Gaussian_peaks_width(θ_B, m.U, m.V, m.W))
 end
+
+display_axis(::XRay, two_θ::Vector{Float64}) = rad2deg.(two_θ)
+axis_label(::XRay) = "2θ (deg)"
+plot_title(::XRay, title::String) = title
 
 
 """
@@ -914,142 +853,53 @@ reciprocal units — constant K/D — and strain broadening is Δg/g = 2E (from
 Δd/d = E). Replaces the angle-space `Lorentzian_peaks_width` for electrons.
 
 # Arguments
-- `g::Vector{Float64}`: Scattering vectors (1/Å) at which to evaluate the width
+- `g::Float64`: Scattering vector (1/Å) at which to evaluate the width
 - `K::Float64`: Scherrer constant (≈ 0.9)
 - `E::Float64`: Microstrain (dimensionless)
 - `D::Float64`: Crystallite size in nanometres (converted to Å internally)
 """
-function Lorentzian_peaks_width_g(g::Vector{Float64},
+function Lorentzian_peaks_width_g(g::Float64,
                                   K::Float64,
                                   E::Float64,
                                   D::Float64
-                                  )::Vector{Float64}
+                                  )::Float64
     D > 0 || throw(ArgumentError("Crystallite size D must be positive"))
     D_Å = D * 10.0                      # nm → Å
-    return @. K / D_Å + 2 * E * g
+    return K / D_Å + 2 * E * g
 end
 
 
 """
-    compute_peak_widths_g(g, cfg)
-
-Lorentzian and Gaussian FWHM (1/Å) at the reflection centres `g` for the
-electron path.
-Lorentzian = Scherrer size + strain (`Lorentzian_peaks_width_g`); Gaussian =
-a constant instrumental point-spread `G_inst` (1/Å), replacing the Caglioti
-U/V/W terms which are degenerate at θ ≈ 0.
-"""
-function compute_peak_widths_g(g::Vector{Float64},
-                               cfg::XRDConfig
-                               )::Tuple{Vector{Float64}, Vector{Float64}}
-    w_L = Lorentzian_peaks_width_g(g, cfg.K, cfg.Epsilon, cfg.D)
-    w_G = fill(cfg.G_inst, length(g))
-    return w_L, w_G
-end
-
-
-"""
-    intensity_vs_g(g, indices, multiplicities, a, cfg)
-
-Electron-diffraction intensity over the g grid: sum one multiplicity-weighted
-pseudo-Voigt per reflection family at its g = √(h²+k²+l²)/a centre, with the
-widths evaluated at that centre. The g-space counterpart of
-`intensity_vs_angle`; heights are multiplicity-only, matching the X-ray path's
-fidelity.
-"""
-function intensity_vs_g(g::Vector{Float64},
-                        indices::Vector{Vector{Int}},
-                        multiplicities::Vector{Int},
-                        a::Float64,
-                        cfg::XRDConfig
-                        )::Vector{Float64}
-    a <= 0 && throw(ArgumentError("Lattice parameter must be positive"))
-    length(indices) == length(multiplicities) || throw(DimensionMismatch(
-        "indices and multiplicities must have same length"))
-
-    g_centers = g_list(indices, a)
-    w_L, w_G = compute_peak_widths_g(g_centers, cfg)
-    return sum_peaks(g, g_centers, multiplicities, w_L, w_G)
-end
-
-
-"""
-    background_electron(g; noise_level=0.0)
+    background(mode::Electron, g::Vector{Float64})::Vector{Float64}
 
 Simplified powder-ED background over g: an exponential central-beam tail plus a
-constant inelastic (plasmon) floor, with optional additive noise. Non-negative.
+constant inelastic (plasmon) floor. Non-negative. Noise is applied by
+`simulate`, not here.
 """
-function background_electron(g::Vector{Float64};
-                             noise_level::Float64=0.0)::Vector{Float64}
-    0 ≤ noise_level ≤ 1 || throw(DomainError(noise_level, "noise_level must be between 0 and 1"))
-
-    base = @. CENTRAL_BEAM_AMPLITUDE * exp(-CENTRAL_BEAM_DECAY * g) + INELASTIC_LEVEL
-
-    if noise_level > 0
-        noise = noise_level * randn(length(g))
-        return max.(base .+ noise, 0)
-    else
-        return base
-    end
+function background(::Electron, g::Vector{Float64})::Vector{Float64}
+    return @. CENTRAL_BEAM_AMPLITUDE * exp(-CENTRAL_BEAM_DECAY * g) + INELASTIC_LEVEL
 end
 
 
-"""
-    compute_ed_pattern(g, indices, multiplicities, a, cfg; noise_level=0.0)
+# Electron steps of `simulate`. The grid and the peak centres are g (1/Å). The
+# Lorentzian width is Scherrer size + strain in g-space; the Gaussian width is
+# the constant instrumental point-spread G_inst, which replaces the Caglioti
+# U/V/W terms (degenerate at θ ≈ 0).
 
-Full electron-diffraction pattern: background_electron + intensity_vs_g, with
-optional multiplicative noise. The g-space analogue of `compute_xrd_pattern`.
-"""
-function compute_ed_pattern(g::Vector{Float64},
-                            indices::Vector{Vector{Int}},
-                            multiplicities::Vector{Int},
-                            a::Float64,
-                            cfg::XRDConfig;
-                            noise_level::Float64=0.0
-                            )::Vector{Float64}
-    y = background_electron(g) .+ intensity_vs_g(g, indices, multiplicities, a, cfg)
+grid(m::Electron, N::Int) = collect(LinRange(m.g_min, m.g_max, N))
 
-    if noise_level > 0
-        y .*= rand(Normal(1, noise_level), length(g))
-        y = max.(y, 0)
-    end
+max_hkl_sq(m::Electron, a::Float64) = ed_max_hkl_sq(a, m.g_max)
 
-    return y
-end
+peak_centres(::Electron, indices::Vector{Vector{Int}},
+             multiplicities::Vector{Int}, a::Float64) = g_list(indices, a), multiplicities
 
+peak_widths(m::Electron, g₀::Float64, cfg::XRDConfig) =
+    (Lorentzian_peaks_width_g(g₀, cfg.K, cfg.Epsilon, cfg.D), m.G_inst)
 
-"""
-    do_it_electron(cfg, structure, element, a, plot_theme)
-
-Generate a 1D powder electron-diffraction pattern (intensity vs g = 1/d) for one
-sample. Mirrors `do_it`'s X-ray path but in g-space. Returns `(g, intensity,
-title, plot)` where `g` is in 1/Å and `title` is `"{element}-{structure}"`.
-"""
-function do_it_electron(cfg::XRDConfig,
-                        structure::String,
-                        element::String,
-                        a::Float64,
-                        plot_theme::Symbol
-                        )::Tuple{Vector{Float64}, Vector{Float64}, String, Plots.Plot}
-
-    g = collect(LinRange(cfg.g_min, cfg.g_max, cfg.N))
-
-    max_hkl_sq = ed_max_hkl_sq(a, cfg.g_max)
-    indices, multiplicities = Miller_indices(structure, max_hkl_sq)
-
-    y = compute_ed_pattern(g, indices, multiplicities, a, cfg; noise_level=cfg.noise_level)
-
-    title = "$element-$structure"
-
-    λe = electron_wavelength(cfg.voltage_kV * 1000.0)
-    plot_title = "$title  (e⁻, λ=$(round(λe, digits=4)) Å)"
-
-    theme(plot_theme)
-    the_plot = plot(g, y, title=plot_title, xlabel="g = 1/d (1/Å)",
-                    ylabel="Intensity (arb.)", show=false)
-
-    return g, y, title, the_plot
-end
+display_axis(::Electron, g::Vector{Float64}) = g
+axis_label(::Electron) = "g (1/Å)"
+plot_title(m::Electron, title::String) =
+    "$title  (e⁻, λ=$(round(electron_wavelength(m.voltage_kV * 1000.0), digits=4)) Å)"
 
 
 """
@@ -1114,7 +964,7 @@ end
 
 
 """
-    render_ring_image(g, y, cfg) -> Plots.Plot
+    render_ring_image(g, y, mode::Electron) -> Plots.Plot
 
 Render the 1D powder electron-diffraction profile `y(g)` as a 2D Debye–Scherrer
 ring pattern. A powder pattern is rotationally symmetric, so the image is a pure
@@ -1123,9 +973,9 @@ radial lookup: a pixel at distance r (mm) from the centre maps to g = r /
 image students measure — ring radius r = `camera_constant`·g, so r² ∝ N.
 
 # Arguments
-- `g::Vector{Float64}`: profile g-grid (1/Å), uniform, from `do_it_electron`
+- `g::Vector{Float64}`: profile g-grid (1/Å), uniform, from `simulate`
 - `y::Vector{Float64}`: profile intensity at each g
-- `cfg::XRDConfig`: ring settings — `camera_constant` (λL, mm·Å), `image_px`
+- `mode::Electron`: ring settings — `camera_constant` (λL, mm·Å), `image_px`
   (side length, pixels), `beam_stop_mm` (central radius blanked to the floor),
   `ring_phosphor` (green colormap, else grayscale), `ring_gamma` (display
   gamma, <1 lifts faint outer rings), `ring_noise` (per-pixel multiplicative
@@ -1135,11 +985,11 @@ Returns a square `Plots.Plot` heatmap (no axes/frame) ready to `savefig`.
 """
 function render_ring_image(g::Vector{Float64},
                            y::Vector{Float64},
-                           cfg::XRDConfig
+                           mode::Electron
                            )::Plots.Plot
     length(g) == length(y) || throw(DimensionMismatch("g and y must have equal length"))
-    camera_constant, image_px = cfg.camera_constant, cfg.image_px
-    beam_stop_mm, gamma, noise_level = cfg.beam_stop_mm, cfg.ring_gamma, cfg.ring_noise
+    camera_constant, image_px = mode.camera_constant, mode.image_px
+    beam_stop_mm, gamma, noise_level = mode.beam_stop_mm, mode.ring_gamma, mode.ring_noise
 
     g_min, g_max = first(g), last(g)
     floor_val = last(y)                      # dark background outside the ring field
@@ -1164,7 +1014,7 @@ function render_ring_image(g::Vector{Float64},
     lo, hi = extrema(img)
     disp = hi > lo ? @.(((img - lo) / (hi - lo))^gamma) : zero(img)
 
-    cmap = cfg.ring_phosphor ? cgrad(PHOSPHOR_RAMP) : cgrad(:grays)
+    cmap = mode.ring_phosphor ? cgrad(PHOSPHOR_RAMP) : cgrad(:grays)
     return heatmap(coords, coords, disp;
                    c = cmap, aspect_ratio = :equal, colorbar = false,
                    axis = false, ticks = false, framestyle = :none,
@@ -1175,53 +1025,61 @@ end
 
 
 """
-    do_it(cfg, structure, element, a, plot_theme)
+    simulate(cfg::XRDConfig, structure::String, a::Float64)
 
-Generate a complete XRD diffraction pattern for one (structure, element) sample.
+Compute the powder pattern of one sample in the radiation mode `cfg.mode`.
 
-Takes the instrument parameters from `cfg`, computes peak positions
-and widths for the given structure and lattice parameter, adds background and
-optional noise, and produces a plot.
+The steps are the same for every mode; each step is a method on the mode type:
+grid (`grid`), reflections up to the cutoff (`max_hkl_sq`, `Miller_indices`),
+their centres and multiplicities (`peak_centres`), their widths at each centre
+(`peak_widths`), the sum of multiplicity-weighted pseudo-Voigt peaks
+(`sum_peaks`) on the `background`, and multiplicative noise of standard
+deviation `cfg.noise_level`.
 
 # Arguments
 - `cfg::XRDConfig`: Configuration from `read_xrd_config`
 - `structure::String`: Crystal structure ("SC", "BCC", or "FCC")
-- `element::String`: Element label (used in plot title and filename)
 - `a::Float64`: Lattice parameter in Angstroms
-- `plot_theme::Symbol`: Plots.jl theme (e.g., `:dark`, `:light`)
 
 # Returns
-- `Tuple{Vector{Float64}, Vector{Float64}, String, Plots.Plot}`:
-  - 2θ angles in degrees
-  - Intensity values
-  - Plot/file title string (`"{element}-{structure}"`)
-  - Plots.jl figure object
+- `(x, y)`: the x axis in display units (2θ in degrees, or g in 1/Å; see
+  `axis_label`) and the intensity at each x
 """
-function do_it(cfg::XRDConfig,
-               structure::String,
-               element::String,
-               a::Float64,
-               plot_theme::Symbol
-               )::Tuple{Vector{Float64}, Vector{Float64}, String, Plots.Plot}
+function simulate(cfg::XRDConfig,
+                  structure::String,
+                  a::Float64
+                  )::Tuple{Vector{Float64}, Vector{Float64}}
+    mode = cfg.mode
+    x = grid(mode, cfg.N)
 
-    if cfg.radiation == "electron"
-        return do_it_electron(cfg, structure, element, a, plot_theme)
+    indices, multiplicities = Miller_indices(structure, max_hkl_sq(mode, a))
+    x₀, m = peak_centres(mode, indices, multiplicities, a)
+    widths = [peak_widths(mode, xᵢ, cfg) for xᵢ in x₀]
+    w_L, w_G = first.(widths), last.(widths)
+
+    y = background(mode, x) .+ sum_peaks(x, x₀, m, w_L, w_G)
+
+    if cfg.noise_level > 0
+        y .*= rand(Normal(1, cfg.noise_level), length(x))
+        y = max.(y, 0)
     end
 
-    two_θ = collect(LinRange(cfg.two_theta_min, cfg.two_theta_max, cfg.N))
-
-    max_hkl_sq = bragg_max_hkl_sq(a, cfg.lambda)
-    indices, multiplicities = Miller_indices(structure, max_hkl_sq)
-
-    y = compute_xrd_pattern(two_θ, indices, multiplicities, a, cfg; noise_level=cfg.noise_level)
-
-    title = "$element-$structure"
-
-    theme(plot_theme)
-
-    twoθ_deg = rad2deg.(two_θ)
-    the_plot = plot(twoθ_deg, y, title=title, xlabel="2θ (deg)", ylabel="Intensity (arb.)", show=false)
-
-    return twoθ_deg, y, title, the_plot
+    return display_axis(mode, x), y
 end
 
+
+"""
+    plot_pattern(mode, x, y, title, plot_theme) -> Plots.Plot
+
+Plot one pattern from `simulate`, with the axis label and title of `mode`.
+"""
+function plot_pattern(mode::Radiation,
+                      x::Vector{Float64},
+                      y::Vector{Float64},
+                      title::String,
+                      plot_theme::Symbol
+                      )::Plots.Plot
+    theme(plot_theme)
+    return plot(x, y, title=plot_title(mode, title), xlabel=axis_label(mode),
+                ylabel="Intensity (arb.)", show=false)
+end

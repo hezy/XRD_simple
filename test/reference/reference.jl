@@ -9,14 +9,13 @@ const REFERENCE_MODES = ("xray", "electron")
 const REFERENCE_SEED = 347
 
 function reference_patterns(mode::String)
-    config = joinpath(REFERENCE_DIR, "$mode.toml")
-    _, _, samples = read_xrd_config(config)
+    cfg = read_xrd_config(joinpath(REFERENCE_DIR, "$mode.toml"))
     Random.seed!(REFERENCE_SEED)
 
     x = Float64[]
     columns = Pair{String,Vector{Float64}}[]
-    for (structure, element, a) in samples
-        x, y, title, _ = do_it(config, structure, element, a, :default)
+    for (structure, element, a) in cfg.samples
+        x, y, title, _ = do_it(cfg, structure, element, a, :default)
         push!(columns, title => y)
     end
     return x, columns

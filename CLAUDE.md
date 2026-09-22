@@ -40,7 +40,6 @@ This file provides context for AI assistants working on the XRD_simple project.
   - Advanced physics (Scherrer, Caglioti, Voigt profiles)
   - Works in radians internally
   - Comprehensive error handling
-  - Multiple dispatch (scalar/vector versions)
   - Performance optimizations (cutoff regions)
 
 ## Critical Files
@@ -92,17 +91,20 @@ This file provides context for AI assistants working on the XRD_simple project.
   shared by both paths.
 
 ### Angle Convention (X-ray path)
-- **Internal calculations:** Work in **radians** (θ, not 2θ)
+- **Grid and peak centres:** 2θ in **radians**. Widths from Scherrer,
+  Stokes–Wilson and Caglioti are FWHM in radians of 2θ, evaluated at θ_B.
 - **User input/output:** Degrees (2θ)
 - **Conversion:** Done at I/O boundaries (`deg2rad`, `rad2deg`)
 
 ### Peak Profile Functions
 Two implementations with identical interfaces:
 - `Voigt_peak()` - Accurate convolution using complex error function (erfcx)
-- `pseudo_Voigt_peak()` - Fast linear approximation
+- `pseudo_Voigt_peak()` - Thompson–Cox–Hastings approximation: Lorentzian and
+  Gaussian both with the combined FWHM `peak_fwhm(w_L, w_G)`
 
 Both support:
-- Scalar and vector width parameters (multiple dispatch)
+- Scalar widths only: `sum_peaks` evaluates w_L, w_G once per reflection, at
+  its centre, and passes them to the profile
 - Cutoff optimization (only calculate near peak center)
 - Normalization option
 - Error validation
@@ -178,11 +180,6 @@ ignored, so both X-ray and electron parameters can coexist in one file — flip
 
 ## Known Issues
 
-### Voigt Width Discrepancy (see problems.md)
-- Voigt peaks are ~2× broader than pseudo-Voigt with identical parameters
-- Under investigation
-- May be related to FWHM calculation vs parameter interpretation
-
 ### Electron Intensities (multiplicity-only)
 - Electron-mode peak heights are weighted by multiplicity only; the electron
   scattering factor f_e(s) is not modelled, so relative intensities are
@@ -207,8 +204,8 @@ ignored, so both X-ray and electron parameters can coexist in one file — flip
 
 ### Modifying Peak Profiles
 - Primary functions: `Voigt_peak()` and `pseudo_Voigt_peak()`
-- Each has both a scalar and a vector method — update both when changing
-  behavior.
+- Both take scalar widths; keep their FWHM equal to `peak_fwhm` (tested in
+  `test/test_peak_profiles.jl`).
 - Maintain the cutoff optimization (`cutoff_sigma * w_eff`) for performance.
 
 ### Changing Background Model
@@ -299,7 +296,7 @@ Use broadcasting (`@.` macro) for element-wise operations.
 1. **Always use functions.jl, never archive/functions_simple.jl** for modifications
 2. **data.toml is the standard config** - archive/simple_XRD.txt is legacy
 3. **Angles:** Internally radians, externally degrees
-4. **Multiple dispatch:** Maintain both scalar and vector versions of width functions
+4. **Widths per reflection:** Evaluate widths at each peak centre, not per grid point
 5. **Error handling:** Validate inputs with descriptive ArgumentError messages
 6. **Documentation:** Follow existing docstring format (Arguments, Returns, Throws, Examples)
 7. **Don't over-engineer:** Keep solutions focused and simple (per project philosophy)

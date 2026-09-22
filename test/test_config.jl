@@ -26,7 +26,7 @@ end
 @testset "read_xrd_config" begin
     cfg = read_xrd_config(DATA_TOML)
     @test cfg isa XRDConfig
-    @test cfg.radiation in ("xray", "electron")
+    @test cfg.mode isa Radiation
     @test cfg.samples isa Vector{Tuple{String,String,Float64}}
     @test all(s[1] in ("SC", "BCC", "FCC") for s in cfg.samples)
     @test all(s[3] > 0 for s in cfg.samples)
@@ -35,8 +35,10 @@ end
     @test read_xrd_config(DATA_TOML).samples == read_xrd_config(TOML.parsefile(DATA_TOML)).samples
 
     cfg = read_xrd_config(base_config())
-    @test cfg.two_theta_min ≈ deg2rad(10.0)
-    @test cfg.two_theta_max ≈ deg2rad(120.0)
+    @test cfg.mode isa XRay
+    @test cfg.mode.two_theta_min ≈ deg2rad(10.0)
+    @test cfg.mode.two_theta_max ≈ deg2rad(120.0)
+    @test cfg.mode.lambda == 1.5418
     @test cfg.D === 500.0                          # integer in TOML, Float64 here
     @test cfg.samples == [("FCC", "Ag", 4.079), ("FCC", "Cu", 3.594), ("SC", "Po", 3.352)]
 end
@@ -44,17 +46,21 @@ end
 @testset "read_xrd_config defaults" begin
     c = with(base_config(), "instrument", "radiation", nothing)
     cfg = read_xrd_config(c)
-    @test cfg.radiation == "xray"
+    @test cfg.mode isa XRay
     @test cfg.noise_level == 0.0
-    @test cfg.voltage_kV == 200.0
-    @test cfg.g_min == 0.0
-    @test cfg.G_inst == 0.005
-    @test cfg.camera_constant == 50.0
-    @test cfg.image_px == 800
-    @test cfg.beam_stop_mm == 2.5
-    @test cfg.ring_phosphor == true
-    @test cfg.ring_gamma == 0.5
-    @test cfg.ring_noise == 0.0
+
+    e = read_xrd_config(base_config("electron")).mode
+    @test e isa Electron
+    @test e.voltage_kV == 200.0
+    @test e.g_min == 0.0
+    @test e.g_max == 1.2
+    @test e.G_inst == 0.005
+    @test e.camera_constant == 50.0
+    @test e.image_px == 800
+    @test e.beam_stop_mm == 2.5
+    @test e.ring_phosphor == true
+    @test e.ring_gamma == 0.5
+    @test e.ring_noise == 0.0
 
     # Zero samples is valid, with or without a [lattice] section
     c = deepcopy(base_config()); delete!(c, "lattice")
@@ -72,12 +78,13 @@ end
     for key in ("U", "V", "W")
         c = with(c, "peak_width", key, nothing)
     end
-    cfg = read_xrd_config(c)
-    @test cfg.radiation == "electron"
-    @test isnan(cfg.lambda) && isnan(cfg.U)
+    @test read_xrd_config(c).mode isa Electron
 
-    cfg = read_xrd_config(with(base_config(), "instrument", "g_max", nothing))
-    @test isnan(cfg.g_max)
+    @test read_xrd_config(with(base_config(), "instrument", "g_max", nothing)).mode isa XRay
+
+    # Keys of the unused mode are not checked, even when invalid
+    @test read_xrd_config(with(base_config(), "peak_width", "G_inst", -1.0)).mode isa XRay
+    @test read_xrd_config(with(base_config("electron"), "instrument", "lambda", "x")).mode isa Electron
 end
 
 @testset "read_xrd_config errors" begin
@@ -112,7 +119,7 @@ end
     @test_throws ArgumentError read_xrd_config(with(e, "instrument", "image_px", 1))
 
     # A negative V is valid when the Caglioti FWHM² stays positive
-    @test read_xrd_config(with(b, "peak_width", "V", -5e-5)).V == -5e-5
+    @test read_xrd_config(with(b, "peak_width", "V", -5e-5)).mode.V == -5e-5
 
     # Samples
     c = deepcopy(b); c["lattice"]["HCP"] = Dict{String,Any}("Mg" => 3.21)

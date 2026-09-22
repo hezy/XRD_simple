@@ -15,8 +15,8 @@ function reference_patterns(mode::String)
     x = Float64[]
     columns = Pair{String,Vector{Float64}}[]
     for (structure, element, a) in cfg.samples
-        x, y, title, _ = do_it(cfg, structure, element, a, :default)
-        push!(columns, title => y)
+        x, y = simulate(cfg, structure, a)
+        push!(columns, "$element-$structure" => y)
     end
     return x, columns
 end

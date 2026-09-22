@@ -53,27 +53,31 @@ end
 
 
 """
-    write_ring_outputs(cfg, structure, element, a, g, intensities, title)
+    write_ring_outputs(mode, structure, a, g, intensities, title)
 
 Render the electron-mode g-profile as a 2D ring image and write the matching
 reflection answer key. Outputs to `results/rings/`:
 - `{title}.png`              — the Debye–Scherrer ring image (student-facing)
 - `{title}_reflections.csv`  — hidden key: hkl, N, g, ring radius (mm), multiplicity
+
+X-ray mode has no ring output; its method does nothing.
 """
-function write_ring_outputs(cfg, structure, element, a, g, intensities, title)
+write_ring_outputs(::XRay, structure, a, x, intensities, title) = nothing
+
+function write_ring_outputs(mode::Electron, structure, a, g, intensities, title)
     isdir("results/rings") || mkpath("results/rings")
 
-    ring_plot = render_ring_image(g, intensities, cfg)
+    ring_plot = render_ring_image(g, intensities, mode)
     savefig(ring_plot, "./results/rings/$title.png")
 
-    rt = reflection_table(structure, a, cfg.g_max)
+    rt = reflection_table(structure, a, mode.g_max)
     key = DataFrame(
         h = [hkl[1] for hkl in rt.indices],
         k = [hkl[2] for hkl in rt.indices],
         l = [hkl[3] for hkl in rt.indices],
         N = rt.N,
         g_per_A = rt.g,
-        r_mm = cfg.camera_constant .* rt.g,
+        r_mm = mode.camera_constant .* rt.g,
         multiplicity = rt.multiplicity,
     )
     CSV.write("./results/rings/$(title)_reflections.csv", key)
@@ -97,14 +101,15 @@ function main()
     cfg = read_xrd_config(config_file)
 
     # Electron diffraction is plotted vs scattering vector g (1/Å); X-ray vs 2θ.
-    is_electron = cfg.radiation == "electron"
-    xcol = is_electron ? "g (1/Å)" : "2θ (deg)"
+    xcol = axis_label(cfg.mode)
 
     # The x column comes from the first pattern; all samples share one grid.
     df = DataFrame()
 
     for (structure, element, a) in cfg.samples
-        local x, intensities, title, the_plot = do_it(cfg, structure, element, a, plot_theme)
+        local x, intensities = simulate(cfg, structure, a)
+        local title = "$element-$structure"
+        local the_plot = plot_pattern(cfg.mode, x, intensities, title, plot_theme)
         ncol(df) == 0 && (df[!, xcol] = x)
         df[!, title] = intensities
 
@@ -118,9 +123,7 @@ function main()
 
         if save_plots
             savefig(the_plot, "./results/$title")
-            if is_electron
-                write_ring_outputs(cfg, structure, element, a, x, intensities, title)
-            end
+            write_ring_outputs(cfg.mode, structure, a, x, intensities, title)
         end
     end
 

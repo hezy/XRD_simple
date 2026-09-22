@@ -11,6 +11,7 @@ using CSV
 using ArgParse
 
 include("functions.jl")
+include("plotting.jl")
 
 
 # VS Code's Julia extension loads VSCodeServer into Main and routes plots to a
@@ -67,7 +68,7 @@ write_ring_outputs(::XRay, structure, a, x, intensities, title) = nothing
 function write_ring_outputs(mode::Electron, structure, a, g, intensities, title)
     isdir("results/rings") || mkpath("results/rings")
 
-    ring_plot = render_ring_image(g, intensities, mode)
+    ring_plot = plot_ring_image(ring_image(g, intensities, mode)..., mode)
     savefig(ring_plot, "./results/rings/$title.png")
 
     rt = reflection_table(structure, a, mode.g_max)

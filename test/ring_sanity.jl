@@ -3,7 +3,7 @@
 #   (1) the 1D g-profile's peaks coincide with the analytic g = √N/a positions
 #       from reflection_table, and
 #   (2) the radial image mapping r = camera_constant·g places each ring's
-#       intensity maximum at the analytic radius (tests render_ring_image's map).
+#       intensity maximum at the analytic radius (tests ring_image's map).
 #
 # Run:  julia --project=. test/ring_sanity.jl [config.toml]
 

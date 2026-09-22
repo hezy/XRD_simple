@@ -83,12 +83,6 @@ This file provides context for AI assistants working on the XRD_simple project.
 - `xrd-broadening-references.md` - Academic citations
 - `problems.md` - Known issues
 
-### Examples (archived)
-These include the former `../functions.jl` and do not run as they are.
-- `archive/example_peaks_width.jl` - Demonstrates peak width calculations
-- `archive/example_use_Voigt.jl` - Compares Voigt vs pseudo-Voigt
-- `archive/width.jl` - Peak width analysis utility
-
 ## Key Architecture Patterns
 
 ### Radiation Modes

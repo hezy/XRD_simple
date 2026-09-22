@@ -235,18 +235,15 @@ XRD_simple/
 │   ├── simulate.jl              # simulate: one pattern, either mode
 │   └── plotting.jl              # All Plots.jl calls (included by main.jl only)
 ├── test/                        # Test suite (julia --project=. test/runtests.jl)
-├── archive/                     # Legacy files and early-stage demo scripts
+├── archive/                     # Legacy files
 │   ├── functions_simple.jl      # Simplified reference version (256 lines)
-│   ├── simple_XRD.txt           # Legacy text config
-│   ├── example_peaks_width.jl   # Peak width demonstration
-│   ├── example_use_Voigt.jl     # Voigt profile comparison
-│   └── width.jl                 # Peak width analysis utility
+│   └── simple_XRD.txt           # Legacy text config
 ├── xrd-peak-broadening.md       # Detailed physics documentation
 ├── xrd-broadening-references.md # Academic references
 └── results/                     # Output directory (gitignored)
 ```
 
-**Note:** `archive/functions_simple.jl` is a simplified legacy version kept for educational reference. The scripts in `archive/` still include the former `functions.jl`, which no longer exists, and do not run as they are. `main.jl` and the tests use `src/`.
+**Note:** `archive/functions_simple.jl` is a simplified legacy version kept for educational reference. `main.jl` and the tests use `src/`.
 
 ## Documentation
 

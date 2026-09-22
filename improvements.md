@@ -28,7 +28,9 @@ Listed for context; no further action needed.
   are skipped there.
 - Archived five early-stage / legacy files (`functions_simple.jl`,
   `simple_XRD.txt`, `example_peaks_width.jl`, `example_use_Voigt.jl`,
-  `width.jl`) into `archive/`.
+  `width.jl`) into `archive/`. The three example scripts and the review notes
+  on `functions.jl` were later deleted (September 2026); they no longer ran
+  after the refactor.
 - September 2026 refactor (`REFACTOR_PLAN.md`), which also closed the former
   code-cleanup items: `using Distributions: Normal`; the vector methods of the
   peak functions (and with them the `peak_fwhm` scalar+vector MethodError) were

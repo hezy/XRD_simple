@@ -13,7 +13,8 @@ Listed for context; no further action needed.
 - Removed dead `sinθ_cleaned` in `bragg_angles`
 - Removed misleading broadcast dots in scalar `Voigt_peak` / `pseudo_Voigt_peak` validation
 - Fixed "Scaler" → "Scalar" typos
-- Corrected `abstract_peak` docstring type to `Union{Float64, Vector{Float64}}`
+- Removed the orphan `abstract_peak` docstring; its argument list is now in
+  the `Voigt_peak` docstring
 - Refactored `Miller_indices` to return `(indices, multiplicities)` with canonical `h ≥ k ≥ l ≥ 0` enumeration
 - Added `cubic_multiplicity` helper with cubic point-group counts
 - Added `bragg_max_hkl_sq(a, λ)` — physics-driven cutoff from `sin(θ) ≤ 1`
@@ -28,17 +29,13 @@ Listed for context; no further action needed.
 - Archived five early-stage / legacy files (`functions_simple.jl`,
   `simple_XRD.txt`, `example_peaks_width.jl`, `example_use_Voigt.jl`,
   `width.jl`) into `archive/`.
-
----
-
-## Code cleanup (open)
-
-| # | Item | Effort | Impact |
-|---|---|---|---|
-| 1 | Scope `using Distributions` → `using Distributions: Normal` | trivial | minor (faster load, clearer deps) |
-| 2 | `peak_fwhm` on mixed scalar+vector args gives a bare MethodError | trivial | low (diagnostic only) |
-| 3 | Redundant λ/a validation in `intensity_vs_angle` (callees re-validate) | trivial | low (code clarity) |
-| 4 | `do_it_zero` reads full config just to grab instrument params | trivial | low (minor waste) |
+- September 2026 refactor (`REFACTOR_PLAN.md`), which also closed the former
+  code-cleanup items: `using Distributions: Normal`; the vector methods of the
+  peak functions (and with them the `peak_fwhm` scalar+vector MethodError) were
+  removed; `intensity_vs_angle` and `do_it_zero` were removed; the repeated
+  checks in `reflection_table` were removed.
+- Fixed the Voigt vs. pseudo-Voigt width discrepancy: `pseudo_Voigt_peak` now
+  uses the combined FWHM for both components (refactor Phase 1).
 
 ---
 
@@ -139,31 +136,12 @@ the distortion.
 
 ---
 
-## Known issues
-
-### Voigt vs. pseudo-Voigt width discrepancy
-
-Documented in `problems.md`: Voigt peaks are ~2× broader than pseudo-Voigt
-with identical `w_L` and `w_G`. Not a cleanup — a real physics/implementation
-bug. Likely causes:
-
-- FWHM vs. HWHM mismatch in the erfcx argument
-- Sigma derivation: `σ = w_G / (2√(2 ln 2))` is Gaussian-standard but needs
-  verifying against the complex-error-function normalization
-- Cutoff region using `w_eff` from `peak_fwhm` may mask the true profile
-
-Worth a separate investigation session — not a quick fix.
-
----
-
 ## Suggested order
 
-1. **Quick cleanup commit:** items 1 and 3. Trivial surface, small clarity win.
-2. **Lorentz–polarization:** biggest realism gain for ~5 lines of code.
-3. **Debye–Waller:** natural follow-on; shares the per-family weight hook with LP.
-4. **Atomic form factor + full structure factor:** larger project, best done together —
+1. **Lorentz–polarization:** biggest realism gain for ~5 lines of code.
+2. **Debye–Waller:** natural follow-on; shares the per-family weight hook with LP.
+3. **Atomic form factor + full structure factor:** larger project, best done together —
    changes the data model and opens the door to multi-element cells.
-5. **Non-cubic lattices:** largest scope; best tackled after the physics model
+4. **Non-cubic lattices:** largest scope; best tackled after the physics model
    is richer, so the per-system modules have complete equations to implement.
-6. **Voigt width bug:** separate track, whenever the user wants to diagnose.
-7. **Ring-image distortion:** independent of the rest; any time.
+5. **Ring-image distortion:** independent of the rest; any time.

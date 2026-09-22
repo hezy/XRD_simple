@@ -1,10 +1,8 @@
-"""
-XRD sim: plotting
-by Hezy Amiel
-2023--2026
-
-All Plots.jl calls of the simulation. Include after `XRDSim.jl`.
-"""
+# XRD sim: plotting
+# by Hezy Amiel
+# 2023--2026
+#
+# All Plots.jl calls of the simulation. Include after `XRDSim.jl`.
 
 
 using Plots; gr()
@@ -31,8 +29,8 @@ plot_title(m::Electron, title::String) =
 Plot one pattern from `simulate`, with the axis label and title of `mode`.
 """
 function plot_pattern(mode::Radiation,
-                      x::Vector{Float64},
-                      y::Vector{Float64},
+                      x::AbstractVector{<:Real},
+                      y::AbstractVector{<:Real},
                       title::String,
                       plot_theme::Symbol
                       )::Plots.Plot
@@ -49,8 +47,8 @@ Draw a ring image from `ring_image` as a square heatmap (no axes or frame),
 ready to `savefig`. The colormap is phosphor green if `mode.ring_phosphor`,
 else grayscale.
 """
-function plot_ring_image(coords::Vector{Float64},
-                         img::Matrix{Float64},
+function plot_ring_image(coords::AbstractVector{<:Real},
+                         img::AbstractMatrix{<:Real},
                          mode::Electron
                          )::Plots.Plot
     cmap = mode.ring_phosphor ? cgrad(PHOSPHOR_RAMP) : cgrad(:grays)

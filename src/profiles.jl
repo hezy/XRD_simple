@@ -1,33 +1,25 @@
 # Peak profiles (Voigt, pseudo-Voigt), their combined FWHM, and the sum of peaks.
 
 """
-    abstract_peak(θ, θ₀, A, w_L, w_G; cutoff_sigma=5.0, normalize=false)
-
-Template for peak profile functions (Voigt and Pseudo-Voigt).
-
-Arguments:
-- `θ::Vector{Float64}`: Position values where to evaluate the peak
-- `θ₀::Float64`: Center position of the peak
-- `A::Float64`: Peak amplitude (must be positive)
-- `w_L::Float64`: Lorentzian full width at half maximum (FWHM) (must be positive)
-- `w_G::Float64`: Gaussian full width at half maximum (FWHM) (must be positive)
-
-Keyword Arguments:
-- `cutoff_sigma::Float64=5.0`: Number of standard deviations beyond which to set peak to zero
-- `normalize::Bool=false`: If true, normalize peak height to 1.0
-
-Returns:
-- `Vector{Float64}`: Peak intensity at each θ position
-"""
-
-
-"""
     Voigt_peak(θ, θ₀, A, w_L, w_G; cutoff_sigma=5.0, normalize=false)
 
 Computes Voigt peak profile as the convolution of Gaussian and Lorentzian functions
 using the complex error function.
 
-See `abstract_peak` for parameter descriptions.
+# Arguments
+- `θ::AbstractVector{<:Real}`: Position values where to evaluate the peak
+- `θ₀::Real`: Center position of the peak
+- `A::Real`: Peak area (must be positive)
+- `w_L::Real`: Lorentzian full width at half maximum (FWHM) (must be positive)
+- `w_G::Real`: Gaussian full width at half maximum (FWHM) (must be positive)
+
+# Keyword Arguments
+- `cutoff_sigma::Real=5.0`: The profile is zero farther than `cutoff_sigma`
+  combined FWHMs from θ₀
+- `normalize::Bool=false`: If true, normalize peak height to 1.0
+
+# Returns
+- `Vector{Float64}`: Peak intensity at each θ position
 
 Notes:
 - Uses the scaled complementary error function (erfcx) for numerical stability
@@ -35,12 +27,12 @@ Notes:
 - Implements bounds checking to improve performance for large datasets
 - The cutoff region is based on both Gaussian and Lorentzian widths
 """
-function Voigt_peak(θ::Vector{Float64},
-                    θ₀::Float64,
-                    A::Float64,
-                    w_L::Float64,
-                    w_G::Float64;
-                    cutoff_sigma::Float64=5.0,
+function Voigt_peak(θ::AbstractVector{<:Real},
+                    θ₀::Real,
+                    A::Real,
+                    w_L::Real,
+                    w_G::Real;
+                    cutoff_sigma::Real=5.0,
                     normalize::Bool=false
                     )::Vector{Float64}
 
@@ -89,18 +81,18 @@ Computes the Thompson–Cox–Hastings pseudo-Voigt approximation of a Voigt pea
 a linear combination η·L + (1-η)·G of a Lorentzian and a Gaussian that both have
 the combined FWHM f = `peak_fwhm(w_L, w_G)`.
 
-See `abstract_peak` for parameter descriptions.
+Arguments and return value as for `Voigt_peak`.
 
 Notes:
 - Mixing factor η is a cubic in w_L/f (Thompson, Cox & Hastings 1987)
 - Implements bounds checking to improve performance for large datasets
 """
-function pseudo_Voigt_peak(θ::Vector{Float64},
-                           θ₀::Float64,
-                           A::Float64,
-                           w_L::Float64,
-                           w_G::Float64;
-                           cutoff_sigma::Float64=5.0,
+function pseudo_Voigt_peak(θ::AbstractVector{<:Real},
+                           θ₀::Real,
+                           A::Real,
+                           w_L::Real,
+                           w_G::Real;
+                           cutoff_sigma::Real=5.0,
                            normalize::Bool=false
                            )::Vector{Float64}
 
@@ -149,15 +141,14 @@ end
 
 
 """
-    peak_fwhm(w_L::Float64, w_G::Float64)
+    peak_fwhm(w_L::Real, w_G::Real)
 
 Calculates the full width at half maximum for either Voigt or pseudo-Voigt profile
 (Olivero–Longbothum approximation, accurate to about 0.02 %).
 """
-function peak_fwhm(w_L::Float64,
-                   w_G::Float64
+function peak_fwhm(w_L::Real,
+                   w_G::Real
                    )::Float64
-                   
     return 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
 end
 
@@ -167,26 +158,26 @@ end
 
 Sum pseudo-Voigt peak profiles at given peak centres, weighted by multiplicity.
 
-Each entry in `θ_list` is one canonical reflection; its amplitude is the
+Each entry in `x_list` is one canonical reflection; its amplitude is the
 multiplicity of that family. Summing one weighted peak per family is
 mathematically identical to summing every sign+permutation variant at unit
 amplitude, and far cheaper.
 
 # Arguments
-- `x::Vector{Float64}`: Grid on which the pattern is evaluated (2θ in radians, or g)
-- `x_list::Vector{Float64}`: Peak centre positions, same unit as `x`
-- `multiplicities::Vector{Int}`: Multiplicity of each reflection family
-- `w_L::Vector{Float64}`: Lorentzian FWHM of each peak, evaluated at its centre
-- `w_G::Vector{Float64}`: Gaussian FWHM of each peak, evaluated at its centre
+- `x::AbstractVector{<:Real}`: Grid on which the pattern is evaluated (2θ in radians, or g)
+- `x_list::AbstractVector{<:Real}`: Peak centre positions, same unit as `x`
+- `multiplicities::AbstractVector{<:Integer}`: Multiplicity of each reflection family
+- `w_L::AbstractVector{<:Real}`: Lorentzian FWHM of each peak, evaluated at its centre
+- `w_G::AbstractVector{<:Real}`: Gaussian FWHM of each peak, evaluated at its centre
 
 # Returns
 - `Vector{Float64}`: Combined peak intensities at each x
 """
-function sum_peaks(x::Vector{Float64},
-                   x_list::Vector{Float64},
-                   multiplicities::Vector{Int},
-                   w_L::Vector{Float64},
-                   w_G::Vector{Float64},
+function sum_peaks(x::AbstractVector{<:Real},
+                   x_list::AbstractVector{<:Real},
+                   multiplicities::AbstractVector{<:Integer},
+                   w_L::AbstractVector{<:Real},
+                   w_G::AbstractVector{<:Real},
                    )::Vector{Float64}
 
     length(x_list) == length(multiplicities) == length(w_L) == length(w_G) ||

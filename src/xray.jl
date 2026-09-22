@@ -19,18 +19,18 @@ The Caglioti formula models instrumental resolution as a function of
 Bragg angle: FWHM² = U·tan²(θ) + V·tan(θ) + W
 
 # Arguments
-- `θ::Float64`: Bragg angle θ (half of 2θ) in radians
-- `U::Float64`: Caglioti parameter, rad² (typically positive)
-- `V::Float64`: Caglioti parameter, rad² (typically negative)
-- `W::Float64`: Caglioti parameter, rad² (typically positive)
+- `θ::Real`: Bragg angle θ (half of 2θ) in radians
+- `U::Real`: Caglioti parameter, rad² (typically positive)
+- `V::Real`: Caglioti parameter, rad² (typically negative)
+- `W::Real`: Caglioti parameter, rad² (typically positive)
 
 # Returns
 - `Float64`: Gaussian FWHM at θ, in radians of 2θ
 """
-function Gaussian_peaks_width(θ::Float64,
-                              U::Float64,
-                              V::Float64,
-                              W::Float64
+function Gaussian_peaks_width(θ::Real,
+                              U::Real,
+                              V::Real,
+                              W::Real
                               )::Float64
 
         return √(U * tan(θ)^2 + V * tan(θ) + W)
@@ -46,20 +46,20 @@ Combines crystallite size broadening (Scherrer equation) and
 microstrain broadening (Stokes-Wilson equation).
 
 # Arguments
-- `θ::Float64`: Bragg angle θ (half of 2θ) in radians
-- `K::Float64`: Scherrer constant (typically ≈ 0.9)
-- `E::Float64`: Microstrain (dimensionless)
-- `λ::Float64`: X-ray wavelength in Angstroms
-- `D::Float64`: Crystallite size in nanometers (converted to Å internally)
+- `θ::Real`: Bragg angle θ (half of 2θ) in radians
+- `K::Real`: Scherrer constant (typically ≈ 0.9)
+- `E::Real`: Microstrain (dimensionless)
+- `λ::Real`: X-ray wavelength in Angstroms
+- `D::Real`: Crystallite size in nanometers (converted to Å internally)
 
 # Returns
 - `Float64`: Lorentzian FWHM at θ, in radians of 2θ
 """
-function Lorentzian_peaks_width(θ::Float64,
-                                K::Float64,
-                                E::Float64,
-                                λ::Float64,
-                                D::Float64,
+function Lorentzian_peaks_width(θ::Real,
+                                K::Real,
+                                E::Real,
+                                λ::Real,
+                                D::Real,
                                 )::Float64
 
     D > 0 || throw(ArgumentError("Crystallite size D must be positive"))
@@ -81,15 +81,15 @@ end
 
 
 """
-   bragg_angles(wavelength::Float64, d_spacings::Vector{Float64})::Tuple{Vector{Float64}, Vector{Int}}
+    bragg_angles(wavelength::Real, d_spacings::AbstractVector{<:Real})::Tuple{Vector{Float64}, Vector{Int}}
 
 Calculate the Bragg diffraction angles (θ) for a given X-ray wavelength and set of crystal plane d-spacings.
 
 Uses Bragg's law: nλ = 2d·sin(θ), where n=1, λ is the wavelength, and d is the interplanar spacing.
 
 # Arguments
-- `wavelength::Float64`: X-ray wavelength in Angstroms (Å)
-- `d_spacings::Vector{Float64}`: Vector of interplanar spacings in Angstroms (Å)
+- `wavelength::Real`: X-ray wavelength in Angstroms (Å)
+- `d_spacings::AbstractVector{<:Real}`: Vector of interplanar spacings in Angstroms (Å)
 
 # Returns
 - `Tuple{Vector{Float64}, Vector{Int}}`: 
@@ -106,8 +106,8 @@ angles, valid_indices = bragg_angles(λ, d)
 # Throws
 * ArgumentError: If wavelength ≤ 0 or any d-spacing ≤ 0
 """
-function bragg_angles(wavelength::Float64,
-                      d_spacings::Vector{Float64}
+function bragg_angles(wavelength::Real,
+                      d_spacings::AbstractVector{<:Real}
                       )::Tuple{Vector{Float64}, Vector{Int}}
     wavelength <= 0 && throw(ArgumentError("Wavelength must be positive"))
     any(d_spacings .<= 0) && throw(ArgumentError("d-spacings must be positive"))
@@ -120,7 +120,7 @@ end
 
 
 """
-    bragg_max_hkl_sq(a::Float64, λ::Float64)::Int
+    bragg_max_hkl_sq(a::Real, λ::Real)::Int
 
 Largest h²+k²+l² for a cubic lattice that admits a real Bragg angle.
 
@@ -132,8 +132,8 @@ Note: peaks whose *centers* lie outside the scan window can still contribute
 through their wings, so the cutoff deliberately does not depend on
 `two_theta_max`.
 """
-function bragg_max_hkl_sq(a::Float64,
-                          λ::Float64
+function bragg_max_hkl_sq(a::Real,
+                          λ::Real
                           )::Int
     a > 0 || throw(ArgumentError("Lattice parameter must be positive"))
     λ > 0 || throw(ArgumentError("Wavelength must be positive"))
@@ -143,7 +143,7 @@ end
 
 
 """
-    background(mode::XRay, two_θ::Vector{Float64})::Vector{Float64}
+    background(mode::XRay, two_θ::AbstractVector{<:Real})::Vector{Float64}
 
 Simplified X-ray background over the 2θ grid (radians), for educational
 simulation purposes. Includes common physical effects seen in XRD patterns:
@@ -156,7 +156,7 @@ The model is written in θ = 2θ/2. Noise is applied by `simulate`, not here.
 # Returns
 - `Vector{Float64}`: Background intensity at each grid point (non-negative)
 """
-function background(::XRay, two_θ::Vector{Float64})::Vector{Float64}
+function background(::XRay, two_θ::AbstractVector{<:Real})::Vector{Float64}
     θ = two_θ ./ 2
 
     air_scatter = @. AIR_SCATTER_AMPLITUDE * exp(-AIR_SCATTER_DECAY * θ)
@@ -171,20 +171,20 @@ end
 
 grid(m::XRay, N::Int) = collect(LinRange(m.two_theta_min, m.two_theta_max, N))
 
-max_hkl_sq(m::XRay, a::Float64) = bragg_max_hkl_sq(a, m.lambda)
+max_hkl_sq(m::XRay, a::Real) = bragg_max_hkl_sq(a, m.lambda)
 
 # Reflections without a real Bragg angle are dropped with their multiplicities.
-function peak_centres(m::XRay, indices::Vector{Vector{Int}},
-                      multiplicities::Vector{Int}, a::Float64)
+function peak_centres(m::XRay, indices::AbstractVector{<:AbstractVector{<:Integer}},
+                      multiplicities::AbstractVector{<:Integer}, a::Real)
     θ_B, visible = bragg_angles(m.lambda, d_list(indices, a))
     return 2 .* θ_B, multiplicities[visible]
 end
 
-function peak_widths(m::XRay, two_θ₀::Float64, cfg::XRDConfig)
+function peak_widths(m::XRay, two_θ₀::Real, cfg::XRDConfig)
     θ_B = two_θ₀ / 2
     return (Lorentzian_peaks_width(θ_B, cfg.K, cfg.Epsilon, m.lambda, cfg.D),
             Gaussian_peaks_width(θ_B, m.U, m.V, m.W))
 end
 
-display_axis(::XRay, two_θ::Vector{Float64}) = rad2deg.(two_θ)
+display_axis(::XRay, two_θ::AbstractVector{<:Real}) = rad2deg.(two_θ)
 axis_label(::XRay) = "2θ (deg)"

@@ -26,7 +26,6 @@ A Julia-based simulation tool for powder diffraction patterns of cubic crystal s
 - **Multiple Output Formats**
   - Interactive plots (PNG export)
   - CSV data export
-  - Excel spreadsheet export
 
 ## Requirements
 
@@ -35,7 +34,7 @@ A Julia-based simulation tool for powder diffraction patterns of cubic crystal s
   - Plots.jl
   - DataFrames.jl
   - CSV.jl
-  - JSON.jl
+  - ArgParse.jl
   - TOML.jl
   - Distributions.jl
   - SpecialFunctions.jl
@@ -137,22 +136,6 @@ Or from the REPL / VS Code:
 include("main.jl")
 ```
 
-### Peak Width Analysis
-
-Explore how peak widths vary with angle:
-
-```julia
-include("archive/example_peaks_width.jl")
-```
-
-### Voigt vs Pseudo-Voigt Comparison
-
-Compare different peak profile models:
-
-```julia
-include("archive/example_use_Voigt.jl")
-```
-
 ## Output
 
 Running the simulation generates:
@@ -241,8 +224,17 @@ is dynamical.
 ```
 XRD_simple/
 ├── main.jl                      # Unified entry point (auto-detects VS Code)
-├── functions.jl                 # Core physics engine
 ├── data.toml                    # Configuration file
+├── src/
+│   ├── XRDSim.jl                # Entry file: includes the physics files below
+│   ├── config.jl                # XRay / Electron modes, XRDConfig, read_xrd_config
+│   ├── crystal.jl               # Miller indices, multiplicities, d and g spacings
+│   ├── profiles.jl              # Voigt and pseudo-Voigt profiles, sum_peaks
+│   ├── xray.jl                  # Bragg angles, Caglioti and Scherrer widths
+│   ├── electron.jl              # g-space widths, reflection table, ring image
+│   ├── simulate.jl              # simulate: one pattern, either mode
+│   └── plotting.jl              # All Plots.jl calls (included by main.jl only)
+├── test/                        # Test suite (julia --project=. test/runtests.jl)
 ├── archive/                     # Legacy files and early-stage demo scripts
 │   ├── functions_simple.jl      # Simplified reference version (256 lines)
 │   ├── simple_XRD.txt           # Legacy text config
@@ -254,7 +246,7 @@ XRD_simple/
 └── results/                     # Output directory (gitignored)
 ```
 
-**Note:** `archive/functions_simple.jl` is a simplified legacy version kept for educational reference. All current scripts use `functions.jl`.
+**Note:** `archive/functions_simple.jl` is a simplified legacy version kept for educational reference. The scripts in `archive/` still include the former `functions.jl`, which no longer exists, and do not run as they are. `main.jl` and the tests use `src/`.
 
 ## Documentation
 
@@ -264,7 +256,6 @@ XRD_simple/
 
 ## Known Issues
 
-- Voigt peak widths are approximately 2× broader than pseudo-Voigt profiles with identical input parameters (under investigation)
 - Electron mode: peak heights are multiplicity-only — the electron scattering factor f_e(s) is not yet modelled, so relative intensities are geometric rather than quantitative
 
 ## Contributing

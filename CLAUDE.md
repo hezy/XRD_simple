@@ -35,7 +35,8 @@ This file provides context for AI assistants working on the XRD_simple project.
   - Basic error handling
   - **STATUS:** Kept as simplified reference, NOT used by active scripts
 
-- **functions.jl** (2023–2026) - **CURRENT PRODUCTION VERSION**
+- **functions.jl** (2023–2026) - production version until the September 2026
+  refactor (`REFACTOR_PLAN.md`), which split it into files under `src/`
   - Uses TOML parsing
   - Advanced physics (Scherrer, Caglioti, Voigt profiles)
   - Works in radians internally
@@ -45,8 +46,21 @@ This file provides context for AI assistants working on the XRD_simple project.
 ## Critical Files
 
 ### Active Scripts (Use These)
-- `main.jl` - Unified entry point (auto-detects VS Code vs terminal REPL)
-- `functions.jl` - Core physics engine (both X-ray and electron paths) - **THE AUTHORITATIVE VERSION**
+- `main.jl` - Unified entry point (auto-detects VS Code vs terminal REPL);
+  includes `src/XRDSim.jl`, then `src/plotting.jl`
+- `src/XRDSim.jl` - Entry file of the physics (plain includes, not a module):
+  loads SpecialFunctions, `Distributions: Normal`, TOML, and includes in order
+  - `src/config.jl` - `Radiation`, `XRay`, `Electron`, `XRDConfig`, `read_xrd_config`
+  - `src/crystal.jl` - `cubic_multiplicity`, `Miller_indices`, `d_list`, `g_list`
+  - `src/profiles.jl` - `Voigt_peak`, `pseudo_Voigt_peak`, `peak_fwhm`, `sum_peaks`
+  - `src/xray.jl` - Caglioti and Scherrer widths, `bragg_angles`,
+    `bragg_max_hkl_sq`, X-ray background, `XRay` methods
+  - `src/electron.jl` - `electron_wavelength`, `ed_max_hkl_sq`,
+    `Lorentzian_peaks_width_g`, electron background, `Electron` methods,
+    `reflection_table`, `ring_image`
+  - `src/simulate.jl` - `simulate(cfg, structure, a)`
+- `src/plotting.jl` - Every Plots.jl call: `plot_title`, `plot_pattern`,
+  `plot_ring_image`. Not included by the tests.
 - `data.toml` - Configuration file - **THE STANDARD CONFIG FORMAT**
 
 ### Analysis / Answer Key (separate private repo)
@@ -70,6 +84,7 @@ This file provides context for AI assistants working on the XRD_simple project.
 - `problems.md` - Known issues
 
 ### Examples (archived)
+These include the former `../functions.jl` and do not run as they are.
 - `archive/example_peaks_width.jl` - Demonstrates peak width calculations
 - `archive/example_use_Voigt.jl` - Compares Voigt vs pseudo-Voigt
 - `archive/width.jl` - Peak width analysis utility
@@ -77,9 +92,14 @@ This file provides context for AI assistants working on the XRD_simple project.
 ## Key Architecture Patterns
 
 ### Radiation Modes
-- `read_xrd_config` returns `instrument["radiation"]` = `"xray"` (default) or
-  `"electron"`. `do_it` and `do_it_zero` branch on it; `do_it_electron` is the
-  g-space counterpart of the X-ray `do_it` body.
+- `read_xrd_config` returns one `XRDConfig`; its field `mode` is an `XRay` or an
+  `Electron` (subtypes of `abstract type Radiation`), chosen by `radiation`
+  (`"xray"` default, or `"electron"`) and holding the instrument parameters of
+  that mode. No other function reads the file or supplies a default.
+- The mode is selected by dispatch. One generic `simulate(cfg, structure, a)`
+  returns `(x, y)`, x in display units; its steps are methods on the mode:
+  `grid`, `max_hkl_sq`, `peak_centres`, `peak_widths`, `background`,
+  `display_axis`, `axis_label` (and `plot_title` in `plotting.jl`).
 - **X-ray path:** Bragg geometry, x-axis 2θ (degrees). Uses `lambda`,
   `two_theta_min/max`, Caglioti U/V/W.
 - **Electron path:** reciprocal-space geometry, x-axis g = 1/d (1/Å). Positions
@@ -113,7 +133,8 @@ Both support:
 - **Gaussian component** (instrumental): `Gaussian_peaks_width()` - Caglioti formula
 - **Lorentzian component** (sample): `Lorentzian_peaks_width()` - Scherrer + Stokes-Wilson
 - **Effective FWHM:** `peak_fwhm()` combines both
-- **Electron (g-space):** `compute_peak_widths_g()` — Lorentzian via
+- `peak_widths(mode, x₀, cfg)` returns `(w_L, w_G)` at one peak centre
+- **Electron (g-space):** `peak_widths(::Electron, …)` — Lorentzian via
   `Lorentzian_peaks_width_g()` (constant Scherrer K/D + strain 2εg), Gaussian a
   constant `G_inst`. `peak_fwhm()` and the profiles are reused unchanged.
 
@@ -172,9 +193,9 @@ Ag = 4.079
 ```
 
 **Important:** Angular parameters in config are in degrees and automatically
-converted to radians by `read_xrd_config()`. That function returns a flat
-vector of `(structure, element, a)` triples — one per uncommented lattice
-entry, any N (including 0) supported. Keys for the unused radiation mode are
+converted to radians by `read_xrd_config()`. Its `XRDConfig` holds, in the
+field `samples`, a sorted vector of `(structure, element, a)` triples — one per
+uncommented lattice entry, any N (including 0) supported. Keys for the unused radiation mode are
 ignored, so both X-ray and electron parameters can coexist in one file — flip
 `radiation` to switch.
 
@@ -209,20 +230,22 @@ ignored, so both X-ray and electron parameters can coexist in one file — flip
 - Maintain the cutoff optimization (`cutoff_sigma * w_eff`) for performance.
 
 ### Changing Background Model
-- Function: `background()` (X-ray) — air scattering (exponential at low angles)
-  + fluorescence (constant) + optional amorphous Gaussian hump.
-- Function: `background_electron()` (electron) — exponential central-beam tail +
+- Function: `background(::XRay, two_θ)` — air scattering (exponential at low
+  angles) + fluorescence (constant) + amorphous Gaussian hump.
+- Function: `background(::Electron, g)` — exponential central-beam tail +
   constant inelastic floor, over the g axis.
-- Keep the non-negative intensity constraint in both.
+- Keep the non-negative intensity constraint in both. Noise is applied once,
+  in `simulate`.
 
 ### Switching / Tuning Radiation Mode
 - Set `radiation` in `data.toml` to `"xray"` or `"electron"`.
-- Electron path entry point: `do_it_electron()`; helpers `electron_wavelength()`,
-  `g_list()`, `ed_max_hkl_sq()`, `Lorentzian_peaks_width_g()`,
-  `compute_peak_widths_g()`, `intensity_vs_g()`, `compute_ed_pattern()`.
-- **Ring output (electron only):** `render_ring_image(g, y, camera_constant; …)`
-  maps the 1D g-profile to a 2D Debye–Scherrer ring image by radial lookup
-  (r = camera_constant·g, so r² ∝ N); `reflection_table(structure, a, g_max)`
+- Electron path: the `Electron` methods of `simulate`'s steps (in
+  `src/electron.jl`); helpers `electron_wavelength()`, `g_list()`,
+  `ed_max_hkl_sq()`, `Lorentzian_peaks_width_g()`.
+- **Ring output (electron only):** `ring_image(g, y, mode::Electron)` maps the
+  1D g-profile to a 2D Debye–Scherrer ring image by radial lookup
+  (r = camera_constant·g, so r² ∝ N) and returns `(coords, img)`;
+  `plot_ring_image(coords, img, mode)` draws it. `reflection_table(structure, a, g_max)`
   returns the discrete answer key (hkl, N, g, multiplicity). `main.jl` calls
   `write_ring_outputs(…)` per electron sample → `results/rings/{title}.png` +
   `{title}_reflections.csv`. Sanity check: `test/ring_sanity.jl` (ring radii vs
@@ -231,17 +254,19 @@ ignored, so both X-ray and electron parameters can coexist in one file — flip
 - Electron knobs: `voltage_kV`, `g_min`/`g_max` (detector range), `G_inst`
   (instrumental Gaussian FWHM), plus the shared `K`, `Epsilon`, `D`.
 - To add the electron scattering factor f_e(s), weight each reflection in
-  `intensity_vs_g`/`sum_peaks` by m·|F|² instead of m (see Known Issues).
+  `sum_peaks` by m·|F|² instead of m (see Known Issues).
 
 ## Testing Approach
 
 A `test/` directory with a runtests.jl harness exists (crystal functions, peak
-profiles, widths, pattern computation, background, config, errors). Manual
-testing via:
+profiles, widths, pattern computation, background, config, errors, reference
+output). Run it with `julia --project=. test/runtests.jl`. The tests include
+`src/XRDSim.jl` only, not Plots. `test/test_reference.jl` compares `simulate`
+with the saved patterns in `test/reference/`; regenerate them with
+`julia --project=. test/reference/generate.jl` only when a change of the
+numbers is intended. Manual testing via:
 1. Run `main.jl` and verify plots look reasonable
-2. Optionally check archived demo scripts: `archive/example_peaks_width.jl`,
-   `archive/example_use_Voigt.jl`
-3. Verify CSV output in `results/XRD_results.csv`
+2. Verify CSV output in `results/XRD_results.csv`
 
 **Visual checks:**
 - SC: All peaks present
@@ -281,7 +306,7 @@ Equations documented in `xrd-peak-broadening.md`.
 ## Performance Considerations
 
 ### Cutoff Optimization
-Peak functions only calculate values within `cutoff_sigma * w_eff` of peak center. Default: 5σ.
+Peak functions only calculate values within `cutoff_sigma * w_eff` of peak center, where `w_eff` is the combined FWHM. Default: `cutoff_sigma = 5`.
 
 **Trade-off:** Accuracy vs speed. Adjust `cutoff_sigma` parameter if needed.
 
@@ -293,7 +318,7 @@ Use broadcasting (`@.` macro) for element-wise operations.
 
 ## Important Notes for AI Assistants
 
-1. **Always use functions.jl, never archive/functions_simple.jl** for modifications
+1. **Always modify the files in `src/`, never archive/functions_simple.jl**
 2. **data.toml is the standard config** - archive/simple_XRD.txt is legacy
 3. **Angles:** Internally radians, externally degrees
 4. **Widths per reflection:** Evaluate widths at each peak centre, not per grid point
@@ -313,7 +338,9 @@ Use broadcasting (`@.` macro) for element-wise operations.
 
 ---
 
-**Last Updated:** 2026-06 (moved the analysis answer key to a separate private
+**Last Updated:** 2026-09 (refactor of `REFACTOR_PLAN.md`: `functions.jl`
+split into `src/`, config parsed once into `XRDConfig`, radiation mode selected
+by dispatch, plotting separated from physics; 2026-06: moved the analysis answer key to a separate private
 repo and gitignored `analysis/` here; earlier: added electron-diffraction mode —
 1D powder profile in g-space, selected by `radiation` in data.toml; main.jl /
 main_VScode.jl merge, archive move, multi-lattice config support)

@@ -7,7 +7,7 @@ through the phases in order. Each phase ends with passing tests and one commit
 Physics *extensions* (Lorentz–polarization factor, structure factors, f_e(s))
 are not part of this plan; they stay in `improvements.md`.
 
-**Status:** Phases 1–4 done. Phase 5 not started.
+**Status:** Phases 1–5 done. Phase 6 not started.
 
 ---
 
@@ -151,14 +151,22 @@ all tests pass.
 
 Now: `functions.jl` loads Plots and calls `theme()`, so the tests load Plots.
 
-- [ ] **5.1** Physics functions return numbers only. `simulate` returns
+- [x] **5.1** Physics functions return numbers only. `simulate` returns
   `(x, y)`; the title is built by the caller.
-- [ ] **5.2** `render_ring_image` is split: `ring_image(...)` returns the
+- [x] **5.2** `render_ring_image` is split: `ring_image(...)` returns the
   matrix (physics, testable); a plotting function draws it with the colormap.
-- [ ] **5.3** All `Plots` calls (`theme`, `plot`, `heatmap`, `savefig`) live
+- [x] **5.3** All `Plots` calls (`theme`, `plot`, `heatmap`, `savefig`) live
   in the plotting file and in `main.jl`.
-- [ ] **5.4** The tests no longer load Plots, except `test/ring_sanity.jl` if
+- [x] **5.4** The tests no longer load Plots, except `test/ring_sanity.jl` if
   it needs to.
+
+  Result: new file `plotting.jl` (included by `main.jl` after `functions.jl`)
+  holds `using Plots`, `PHOSPHOR_RAMP`, `plot_title`, `plot_pattern` and
+  `plot_ring_image(coords, img, mode)`. `ring_image(g, y, mode)` in
+  `functions.jl` returns `(coords, img)`, the normalised, gamma-compressed
+  matrix; it replaces `render_ring_image`. Neither the tests nor
+  `test/ring_sanity.jl` load Plots. The CSV, the pattern plots and the ring
+  images of the reference configs are byte-identical to the Phase 4 output.
 
 **Done when:** `functions.jl` (or its successors) contains no `using Plots`.
 

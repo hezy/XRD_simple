@@ -6,7 +6,6 @@ Julia > 1.8
 """
 
 
-using Plots; gr()
 using SpecialFunctions
 #using Random
 using Distributions
@@ -43,7 +42,8 @@ const INELASTIC_LEVEL = 5.0
 Radiation mode of a simulation: `XRay` or `Electron`. Each subtype holds the
 instrument parameters of its mode, and the mode-specific steps of `simulate`
 (`grid`, `max_hkl_sq`, `peak_centres`, `peak_widths`, `background`,
-`display_axis`, `axis_label`, `plot_title`) are methods on it.
+`display_axis`, `axis_label`) are methods on it. The plot title of each mode
+(`plot_title`) is in `plotting.jl`.
 """
 abstract type Radiation end
 
@@ -774,7 +774,6 @@ end
 
 display_axis(::XRay, two_θ::Vector{Float64}) = rad2deg.(two_θ)
 axis_label(::XRay) = "2θ (deg)"
-plot_title(::XRay, title::String) = title
 
 
 """
@@ -898,8 +897,6 @@ peak_widths(m::Electron, g₀::Float64, cfg::XRDConfig) =
 
 display_axis(::Electron, g::Vector{Float64}) = g
 axis_label(::Electron) = "g (1/Å)"
-plot_title(m::Electron, title::String) =
-    "$title  (e⁻, λ=$(round(electron_wavelength(m.voltage_kV * 1000.0), digits=4)) Å)"
 
 
 """
@@ -937,17 +934,12 @@ function reflection_table(structure::String,
 end
 
 
-# Phosphor-green colour ramp (black → dark green → bright green → highlight),
-# the look of a fluorescent ED viewing screen. `gamma` < 1 lifts faint outer rings.
-const PHOSPHOR_RAMP = ["#000000", "#022b06", "#1f9b3a", "#5dff7a", "#e6ffe9"]
-
-
 """
     radial_profile_value(y, g_min, g_max, gg)
 
 Linear interpolation of the uniform g-grid profile `y` (over `[g_min, g_max]`) at
 scattering vector `gg`. Clamps to the end samples outside the grid. Internal
-helper for `render_ring_image`.
+helper for `ring_image`.
 """
 @inline function radial_profile_value(y::Vector{Float64},
                                       g_min::Float64,
@@ -964,9 +956,9 @@ end
 
 
 """
-    render_ring_image(g, y, mode::Electron) -> Plots.Plot
+    ring_image(g, y, mode::Electron) -> (coords, img)
 
-Render the 1D powder electron-diffraction profile `y(g)` as a 2D Debye–Scherrer
+Map the 1D powder electron-diffraction profile `y(g)` to a 2D Debye–Scherrer
 ring pattern. A powder pattern is rotationally symmetric, so the image is a pure
 radial lookup: a pixel at distance r (mm) from the centre maps to g = r /
 `camera_constant` (1/Å) and takes intensity `y(g)`. This is the SAED-style ring
@@ -977,16 +969,20 @@ image students measure — ring radius r = `camera_constant`·g, so r² ∝ N.
 - `y::Vector{Float64}`: profile intensity at each g
 - `mode::Electron`: ring settings — `camera_constant` (λL, mm·Å), `image_px`
   (side length, pixels), `beam_stop_mm` (central radius blanked to the floor),
-  `ring_phosphor` (green colormap, else grayscale), `ring_gamma` (display
-  gamma, <1 lifts faint outer rings), `ring_noise` (per-pixel multiplicative
-  noise, seeded upstream)
+  `ring_gamma` (display gamma, <1 lifts faint outer rings), `ring_noise`
+  (per-pixel multiplicative noise, seeded upstream)
 
-Returns a square `Plots.Plot` heatmap (no axes/frame) ready to `savefig`.
+# Returns
+- `coords::Vector{Float64}`: pixel positions (mm) along both axes, centred on 0
+- `img::Matrix{Float64}`: `image_px × image_px` intensities, normalised to
+  [0, 1] and gamma-compressed; `img[i, j]` is at `(coords[i], coords[j])`
+
+`plot_ring_image` in `plotting.jl` draws the result.
 """
-function render_ring_image(g::Vector{Float64},
-                           y::Vector{Float64},
-                           mode::Electron
-                           )::Plots.Plot
+function ring_image(g::Vector{Float64},
+                    y::Vector{Float64},
+                    mode::Electron
+                    )::Tuple{Vector{Float64}, Matrix{Float64}}
     length(g) == length(y) || throw(DimensionMismatch("g and y must have equal length"))
     camera_constant, image_px = mode.camera_constant, mode.image_px
     beam_stop_mm, gamma, noise_level = mode.beam_stop_mm, mode.ring_gamma, mode.ring_noise
@@ -1014,13 +1010,7 @@ function render_ring_image(g::Vector{Float64},
     lo, hi = extrema(img)
     disp = hi > lo ? @.(((img - lo) / (hi - lo))^gamma) : zero(img)
 
-    cmap = mode.ring_phosphor ? cgrad(PHOSPHOR_RAMP) : cgrad(:grays)
-    return heatmap(coords, coords, disp;
-                   c = cmap, aspect_ratio = :equal, colorbar = false,
-                   axis = false, ticks = false, framestyle = :none,
-                   legend = false, grid = false, widen = false,
-                   background_color = :black, margin = 0 * Plots.mm,
-                   size = (image_px, image_px), clims = (0, 1), show = false)
+    return coords, disp
 end
 
 
@@ -1065,21 +1055,4 @@ function simulate(cfg::XRDConfig,
     end
 
     return display_axis(mode, x), y
-end
-
-
-"""
-    plot_pattern(mode, x, y, title, plot_theme) -> Plots.Plot
-
-Plot one pattern from `simulate`, with the axis label and title of `mode`.
-"""
-function plot_pattern(mode::Radiation,
-                      x::Vector{Float64},
-                      y::Vector{Float64},
-                      title::String,
-                      plot_theme::Symbol
-                      )::Plots.Plot
-    theme(plot_theme)
-    return plot(x, y, title=plot_title(mode, title), xlabel=axis_label(mode),
-                ylabel="Intensity (arb.)", show=false)
 end

@@ -7,7 +7,7 @@ through the phases in order. Each phase ends with passing tests and one commit
 Physics *extensions* (Lorentz–polarization factor, structure factors, f_e(s))
 are not part of this plan; they stay in `improvements.md`.
 
-**Status:** Phase 1 not started.
+**Status:** Phase 1 done. Phase 2 not started.
 
 ---
 
@@ -16,31 +16,32 @@ are not part of this plan; they stay in `improvements.md`.
 These errors change the output. Fix them first, so that the later phases have
 correct reference values.
 
-- [ ] **1.1 Unit mismatch in Scherrer size broadening.**
+- [x] **1.1 Unit mismatch in Scherrer size broadening.**
   `Lorentzian_peaks_width` computes Kλ/(D cos θ) with λ in Å and D in nm, so
   the size term is 10× too large. Convert D to Å, as
   `Lorentzian_peaks_width_g` already does.
-- [ ] **1.2 Widths in 2θ, profile on θ.** Scherrer, Stokes–Wilson and Caglioti
+- [x] **1.2 Widths in 2θ, profile on θ.** Scherrer, Stokes–Wilson and Caglioti
   give FWHM in 2θ, but the grid and peak centres are in θ, so every X-ray
   peak is 2× too wide. Decision: compute the X-ray pattern on a 2θ grid
   (the axis the user sees and the axis the widths refer to). Keep radians
   internally.
-- [ ] **1.3 Caglioti docstring.** The formula gives FWHM², not HWHM². Also
+- [x] **1.3 Caglioti docstring.** The formula gives FWHM², not HWHM². Also
   state the unit of the result (radians of 2θ).
-- [ ] **1.4 Pseudo-Voigt uses two widths instead of one.** A
+- [x] **1.4 Pseudo-Voigt uses two widths instead of one.** A
   Thompson–Cox–Hastings pseudo-Voigt mixes a Lorentzian and a Gaussian that
   both have the combined FWHM f = `peak_fwhm(w_L, w_G)`. Rewrite
   `pseudo_Voigt_peak` accordingly. Then check whether the "Voigt is 2× broader"
   entry in `problems.md` is resolved, and remove it if so.
-- [ ] **1.5 Width evaluated at the peak centre.** The vector-width methods use
+- [x] **1.5 Width evaluated at the peak centre.** The vector-width methods use
   w(θ[i]) at each grid point, so the width changes across one peak. Evaluate
   w_L, w_G once per reflection at its centre, and pass scalars to the profile.
   Then delete the vector methods of `Voigt_peak` and `pseudo_Voigt_peak`
   (the vector method of `peak_fwhm` may still be useful; keep it if used).
-- [ ] **1.6 Retune `data.toml` if needed.** After 1.1 and 1.2 the X-ray peaks
+- [x] **1.6 Retune `data.toml` if needed.** After 1.1 and 1.2 the X-ray peaks
   are about 20× narrower for the size term. Check that the default D, ε and
   U/V/W still give readable patterns. `data.toml` is skip-worktree; change the
   committed defaults deliberately, not per-run toggles.
+  Result: no change needed. FWHM is 0.3° to 1.4° of 2θ, grid step 0.11°.
 
 **Tests to add:**
 - Scherrer: one reflection, known K, λ, D, θ; compare FWHM with a hand calculation.

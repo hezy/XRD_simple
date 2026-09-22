@@ -53,8 +53,8 @@ Arguments:
 - `θ::Vector{Float64}`: Position values where to evaluate the peak
 - `θ₀::Float64`: Center position of the peak
 - `A::Float64`: Peak amplitude (must be positive)
-- `w_L::Union{Float64, Vector{Float64}}`: Lorentzian full width at half maximum (FWHM) (must be positive)
-- `w_G::Union{Float64, Vector{Float64}}`: Gaussian full width at half maximum (FWHM) (must be positive)
+- `w_L::Float64`: Lorentzian full width at half maximum (FWHM) (must be positive)
+- `w_G::Float64`: Gaussian full width at half maximum (FWHM) (must be positive)
 
 Keyword Arguments:
 - `cutoff_sigma::Float64=5.0`: Number of standard deviations beyond which to set peak to zero
@@ -79,7 +79,6 @@ Notes:
 - Implements bounds checking to improve performance for large datasets
 - The cutoff region is based on both Gaussian and Lorentzian widths
 """
-# Scalar w's version
 function Voigt_peak(θ::Vector{Float64},
                     θ₀::Float64,
                     A::Float64,
@@ -125,67 +124,21 @@ function Voigt_peak(θ::Vector{Float64},
     return result
 end
 
-# Vector w's version
-function Voigt_peak(θ::Vector{Float64},
-                    θ₀::Float64,
-                    A::Float64,
-                    w_L::Vector{Float64},
-                    w_G::Vector{Float64};
-                    cutoff_sigma::Float64=5.0,
-                    normalize::Bool=false
-                    )::Vector{Float64}
-
-    # Validate parameters
-    A > 0 || throw(ArgumentError("Amplitude A must be positive"))
-    all(w_L .> 0) || throw(ArgumentError("Lorentzian width w_L must be positive"))
-    all(w_G .> 0) || throw(ArgumentError("Gaussian width w_G must be positive"))
-    cutoff_sigma > 0 || throw(ArgumentError("cutoff_sigma must be positive"))    
-    
-    # Initialize output array
-    result = zeros(Float64, length(θ))                   
-
-    # Calculate width parameters
-    γ = w_L / 2                                    # Lorentzian HWHM    
-    σ = w_G / (2√(2log(2)))                        # Gaussian standard deviation
-
-    # Calculate effective width 
-    w_eff = peak_fwhm(w_L, w_G)    
-    
-    # Calculate profile only for points within the cutoff region
-    for i in eachindex(θ)
-        # Check if point is within cutoff region
-        if abs(θ[i] - θ₀) ≤ cutoff_sigma * w_eff[i]
-            z = -im * (θ[i] - θ₀ + im * γ[i]) / (√2 * σ[i])    # Complex argument for erfcx
-            result[i] = A * real(erfcx(z)) / (√(2π) * σ[i])
-        end
-    end
-
-    # Normalize if needed
-    if normalize
-        maxval = maximum(result)
-        if maxval > 0
-            result ./= maxval
-        end
-    end
-    
-    return result
-end
-
 
 
 """
     pseudo_Voigt_peak(θ, θ₀, A, w_L, w_G; cutoff_sigma=5.0, normalize=false)
 
-Computes pseudo-Voigt peak profile as a linear combination of Gaussian and Lorentzian functions.
-The mixing factor is calculated based on the relative widths of the components.
+Computes the Thompson–Cox–Hastings pseudo-Voigt approximation of a Voigt peak:
+a linear combination η·L + (1-η)·G of a Lorentzian and a Gaussian that both have
+the combined FWHM f = `peak_fwhm(w_L, w_G)`.
 
 See `abstract_peak` for parameter descriptions.
 
 Notes:
-- Mixing factor is computed using the Humps2 approximation
+- Mixing factor η is a cubic in w_L/f (Thompson, Cox & Hastings 1987)
 - Implements bounds checking to improve performance for large datasets
 """
-# Scalar w's version
 function pseudo_Voigt_peak(θ::Vector{Float64},
                            θ₀::Float64,
                            A::Float64,
@@ -201,22 +154,21 @@ function pseudo_Voigt_peak(θ::Vector{Float64},
     w_G > 0 || throw(ArgumentError("Gaussian width w_G must be positive"))
     cutoff_sigma > 0 || throw(ArgumentError("cutoff_sigma must be positive"))
     
-    # Calculate width parameters
-    γ = w_L / 2
-    σ = w_G / (2√(2log(2)))
+    # Both components share the combined FWHM f
+    f = peak_fwhm(w_L, w_G)
+    γ = f / 2                                      # Lorentzian HWHM
+    σ = f / (2√(2log(2)))                          # Gaussian standard deviation
     
-    # Calculate effective width 
-    w_eff = peak_fwhm(w_L, w_G)    
-    
-    # Calculate mixing factor using Humps2 approximation
-    η = 1.36603 * (w_L/w_eff) - 0.47719 * (w_L/w_eff)^2 + 0.11116 * (w_L/w_eff)^3
+    # Mixing factor (Thompson-Cox-Hastings)
+    q = w_L / f
+    η = 1.36603 * q - 0.47719 * q^2 + 0.11116 * q^3
     
     # Initialize output array
     result = zeros(Float64, length(θ))
  
-        # Calculate profile only for points within the cutoff region
+    # Calculate profile only for points within the cutoff region
     for i in eachindex(θ)
-        if abs(θ[i] - θ₀) ≤ cutoff_sigma * w_eff
+        if abs(θ[i] - θ₀) ≤ cutoff_sigma * f
             # Lorentzian component
             L = γ / (π * ((θ[i] - θ₀)^2 + γ^2))
             # Gaussian component
@@ -236,85 +188,21 @@ function pseudo_Voigt_peak(θ::Vector{Float64},
     return result
 end
 
-# Vector w's version
-function pseudo_Voigt_peak(θ::Vector{Float64},
-                         θ₀::Float64,
-                         A::Float64,
-                         w_L::Vector{Float64},
-                         w_G::Vector{Float64};
-                         cutoff_sigma::Float64=5.0,
-                         normalize::Bool=false
-                         )::Vector{Float64}
-    
-    # Validate parameters
-    A > 0 || throw(ArgumentError("Amplitude A must be positive"))
-    all(w_L .> 0) || throw(ArgumentError("Lorentzian width w_L must be positive"))
-    all(w_G .> 0) || throw(ArgumentError("Gaussian width w_G must be positive"))
-    cutoff_sigma > 0 || throw(ArgumentError("cutoff_sigma must be positive"))
-    
-    # Calculate width parameters
-    γ = w_L / 2
-    σ = w_G / (2√(2log(2)))
-    
-    # Calculate effective width 
-    w_eff = peak_fwhm(w_L, w_G)    
-    
-    # Calculate mixing factor using Humps2 approximation
-    η = @. 1.36603 * (w_L/w_eff) - 0.47719 * (w_L/w_eff)^2 + 0.11116 * (w_L/w_eff)^3
-    
-    # Initialize output array
-    result = zeros(Float64, length(θ))
- 
-    
-    # Calculate profile only for points within the cutoff region
-    for i in eachindex(θ)
-        if abs(θ[i] - θ₀) ≤ cutoff_sigma * w_eff[i]
-            # Lorentzian component
-            L = γ[i] / (π * ((θ[i] - θ₀)^2 + γ[i]^2))
-            # Gaussian component
-            G = exp(-(θ[i] - θ₀)^2 / (2σ[i]^2)) / (σ[i] * √(2π))
-            # Combined profile
-            result[i] = A * (η[i] * L + (1 - η[i]) * G)
-        end
-    end
-    
-    if normalize
-        maxval = maximum(result)
-        if maxval > 0
-            result ./= maxval
-        end
-    end
-    
-    return result
-end
-
 
 # Utility functions that work with both Voigt and pseudo Voigt
 
 
 """
     peak_fwhm(w_L::Float64, w_G::Float64)
-    peak_fwhm(w_L::Vector{Float64}, w_G::Vector{Float64})
 
-Calculates the full width at half maximum for either Voigt or pseudo-Voigt profile.
-Handles both scalar and vector inputs.
+Calculates the full width at half maximum for either Voigt or pseudo-Voigt profile
+(Olivero–Longbothum approximation, accurate to about 0.02 %).
 """
-# Scalar version
 function peak_fwhm(w_L::Float64,
                    w_G::Float64
                    )::Float64
                    
     return 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
-end
-
-# Vector version
-function peak_fwhm(w_L::Vector{Float64},
-                   w_G::Vector{Float64}
-                   )::Vector{Float64}
-                   
-    length(w_L) == length(w_G) || throw(DimensionMismatch("w_L and w_G must have same length"))
-    
-    return @. 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
 end
 
 
@@ -324,16 +212,16 @@ end
 Calculate Gaussian peak widths using the Caglioti formula.
 
 The Caglioti formula models instrumental resolution as a function of
-scattering angle: HWHM² = U·tan²(θ) + V·tan(θ) + W
+Bragg angle: FWHM² = U·tan²(θ) + V·tan(θ) + W
 
 # Arguments
-- `θ::Vector{Float64}`: Scattering angles in radians
-- `U::Float64`: Caglioti parameter (typically positive)
-- `V::Float64`: Caglioti parameter (typically negative)
-- `W::Float64`: Caglioti parameter (typically positive)
+- `θ::Vector{Float64}`: Bragg angles θ (half of 2θ) in radians
+- `U::Float64`: Caglioti parameter, rad² (typically positive)
+- `V::Float64`: Caglioti parameter, rad² (typically negative)
+- `W::Float64`: Caglioti parameter, rad² (typically positive)
 
 # Returns
-- `Vector{Float64}`: Gaussian FWHM at each angle
+- `Vector{Float64}`: Gaussian FWHM at each angle, in radians of 2θ
 """
 function Gaussian_peaks_width(θ::Vector{Float64},
                               U::Float64,
@@ -354,14 +242,14 @@ Combines crystallite size broadening (Scherrer equation) and
 microstrain broadening (Stokes-Wilson equation).
 
 # Arguments
-- `θ::Vector{Float64}`: Scattering angles in radians
+- `θ::Vector{Float64}`: Bragg angles θ (half of 2θ) in radians
 - `K::Float64`: Scherrer constant (typically ≈ 0.9)
 - `E::Float64`: Microstrain (dimensionless)
 - `λ::Float64`: X-ray wavelength in Angstroms
-- `D::Float64`: Crystallite size in nanometers
+- `D::Float64`: Crystallite size in nanometers (converted to Å internally)
 
 # Returns
-- `Vector{Float64}`: Lorentzian FWHM at each angle
+- `Vector{Float64}`: Lorentzian FWHM at each angle, in radians of 2θ
 """
 function Lorentzian_peaks_width(θ::Vector{Float64},
                                 K::Float64,
@@ -370,12 +258,15 @@ function Lorentzian_peaks_width(θ::Vector{Float64},
                                 D::Float64,
                                 )::Vector{Float64}
 
+    D > 0 || throw(ArgumentError("Crystallite size D must be positive"))
+    D_Å = D * 10.0                      # nm → Å
+
     # Strain broadening (Stokes-Wilson)
     w_L_strain = @. 4 * E * tan(θ)
     # ε is microstrain
 
     # Size broadening (Scherrer)
-    w_L_size = @. K * λ / (D * cos(θ))
+    w_L_size = @. K * λ / (D_Å * cos(θ))
     # K is the Scherrer constant (typically ≈ 0.9)
     # λ is wavelength
     # D is crystallite size
@@ -468,9 +359,9 @@ end
 
 
 """
-    sum_peaks(θ, θ_list, multiplicities, w_L, w_G)
+    sum_peaks(x, x_list, multiplicities, w_L, w_G)
 
-Sum pseudo-Voigt peak profiles at given Bragg angles, weighted by multiplicity.
+Sum pseudo-Voigt peak profiles at given peak centres, weighted by multiplicity.
 
 Each entry in `θ_list` is one canonical reflection; its amplitude is the
 multiplicity of that family. Summing one weighted peak per family is
@@ -478,73 +369,74 @@ mathematically identical to summing every sign+permutation variant at unit
 amplitude, and far cheaper.
 
 # Arguments
-- `θ::Vector{Float64}`: Scattering angles in radians
-- `θ_list::Vector{Float64}`: Peak center positions (Bragg angles) in radians
+- `x::Vector{Float64}`: Grid on which the pattern is evaluated (2θ in radians, or g)
+- `x_list::Vector{Float64}`: Peak centre positions, same unit as `x`
 - `multiplicities::Vector{Int}`: Multiplicity of each reflection family
-- `w_L::Vector{Float64}`: Lorentzian FWHM parameters
-- `w_G::Vector{Float64}`: Gaussian FWHM parameters
+- `w_L::Vector{Float64}`: Lorentzian FWHM of each peak, evaluated at its centre
+- `w_G::Vector{Float64}`: Gaussian FWHM of each peak, evaluated at its centre
 
 # Returns
-- `Vector{Float64}`: Combined peak intensities at each θ
+- `Vector{Float64}`: Combined peak intensities at each x
 """
-function sum_peaks(θ::Vector{Float64},
-                   θ_list::Vector{Float64},
+function sum_peaks(x::Vector{Float64},
+                   x_list::Vector{Float64},
                    multiplicities::Vector{Int},
                    w_L::Vector{Float64},
                    w_G::Vector{Float64},
                    )::Vector{Float64}
 
-    length(θ_list) == length(multiplicities) || throw(DimensionMismatch(
-        "θ_list and multiplicities must have same length"))
+    length(x_list) == length(multiplicities) == length(w_L) == length(w_G) ||
+        throw(DimensionMismatch(
+            "x_list, multiplicities, w_L and w_G must have same length"))
 
-    y = zeros(length(θ))
-    for (θ₀, m) in zip(θ_list, multiplicities)
-        y .+= pseudo_Voigt_peak(θ, θ₀, Float64(m), w_L, w_G)
+    y = zeros(length(x))
+    for i in eachindex(x_list)
+        y .+= pseudo_Voigt_peak(x, x_list[i], Float64(multiplicities[i]), w_L[i], w_G[i])
     end
     return y
 end
 
 
 """
-   intensity_vs_angle(θ, indices, multiplicities, λ, a, w_L, w_G)
+   intensity_vs_angle(two_θ, indices, multiplicities, λ, a, peak_width)
 
 Calculate X-ray diffraction pattern by summing peak profiles at allowed Bragg angles.
+Each peak is centred at 2θ_B, and its widths are evaluated once, at θ_B.
 
 # Arguments
-- `θ::Vector{Float64}`: Scattering angles for intensity calculation (radians)
+- `two_θ::Vector{Float64}`: 2θ grid for intensity calculation (radians)
 - `indices::Vector{Vector{Int}}`: Canonical Miller indices
 - `multiplicities::Vector{Int}`: Multiplicity of each reflection family
 - `λ::Float64`: X-ray wavelength (Å)
 - `a::Float64`: Lattice parameter (Å)
-- `w_L::Vector{Float64}`: Lorentzian width parameters
-- `w_G::Vector{Float64}`: Gaussian width parameters
+- `peak_width::Dict{String,Float64}`: Peak width parameters (U, V, W, K, Epsilon, D)
 
 # Returns
-- `Vector{Float64}`: XRD intensities at each θ angle
+- `Vector{Float64}`: XRD intensities at each 2θ angle
 
 # Throws
-- `ArgumentError`: If λ ≤ 0, a ≤ 0, any width ≤ 0, or w_L and w_G have different lengths
+- `ArgumentError`: If λ ≤ 0, a ≤ 0, or any width ≤ 0
 - `DimensionMismatch`: If `indices` and `multiplicities` have different lengths
 """
-function intensity_vs_angle(θ::Vector{Float64},
+function intensity_vs_angle(two_θ::Vector{Float64},
                          indices::Vector{Vector{Int}},
                          multiplicities::Vector{Int},
                          λ::Float64,
                          a::Float64,
-                         w_L::Vector{Float64},
-                         w_G::Vector{Float64}
+                         peak_width::Dict{String,Float64}
                          )::Vector{Float64}
 
    λ <= 0 && throw(ArgumentError("Wavelength must be positive"))
    a <= 0 && throw(ArgumentError("Lattice parameter must be positive"))
    length(indices) == length(multiplicities) || throw(DimensionMismatch(
        "indices and multiplicities must have same length"))
-   length(w_L) != length(w_G) && throw(ArgumentError("Width parameter vectors must have same length"))
+
+   θ_list, valid_idx = bragg_angles(λ, d_list(indices, a))
+   w_L, w_G = compute_peak_widths(θ_list, peak_width, λ)
    any(w_L .<= 0) && throw(ArgumentError("Lorentzian widths must be positive"))
    any(w_G .<= 0) && throw(ArgumentError("Gaussian widths must be positive"))
 
-   θ_list, valid_idx = bragg_angles(λ, d_list(indices, a))
-   y = sum_peaks(θ, θ_list, multiplicities[valid_idx], w_L, w_G)
+   y = sum_peaks(two_θ, 2 .* θ_list, multiplicities[valid_idx], w_L, w_G)
    return y
 end
 
@@ -740,17 +632,17 @@ end
 """
     do_it_zero(file_name)
 
-Read XRD configuration and return the scattering angle array.
+Read XRD configuration and return the x-axis grid.
 
 A helper function that extracts instrument parameters from the TOML
-config file and constructs the 2θ angle grid. Used to initialize
+config file and constructs the x grid (2θ or g). Used to initialize
 a DataFrame in the main workflow.
 
 # Arguments
 - `file_name::String`: Path to TOML configuration file
 
 # Returns
-- `Vector{Float64}`: Scattering angles in radians (half of 2θ range)
+- `Vector{Float64}`: 2θ in degrees (X-ray) or g in 1/Å (electron)
 """
 function do_it_zero(file_name::String
                     )::Vector{Float64}
@@ -763,15 +655,15 @@ function do_it_zero(file_name::String
                                 instrument["N"]))
     end
 
-    θ = collect(LinRange((instrument["two_theta_min"]/2),
-                         (instrument["two_theta_max"]/2),
-                         instrument["N"]))
-    return θ
+    two_θ = collect(LinRange(instrument["two_theta_min"],
+                             instrument["two_theta_max"],
+                             instrument["N"]))
+    return rad2deg.(two_θ)
 end
 
 
 """
-    compute_peak_widths(θ, peak_width, instrument)
+    compute_peak_widths(θ, peak_width, λ)
 
 Calculate Lorentzian and Gaussian peak widths from configuration parameters.
 
@@ -779,20 +671,19 @@ Combines Scherrer size + Stokes-Wilson strain broadening for the Lorentzian
 component, and Caglioti instrumental resolution for the Gaussian component.
 
 # Arguments
-- `θ::Vector{Float64}`: Scattering angles in radians
+- `θ::Vector{Float64}`: Bragg angles θ of the reflections, in radians
 - `peak_width::Dict{String,Float64}`: Peak width parameters (U, V, W, K, Epsilon, D)
-- `instrument::Dict{String,Any}`: Instrument parameters (lambda)
+- `λ::Float64`: X-ray wavelength in Angstroms
 
 # Returns
-- `Tuple{Vector{Float64}, Vector{Float64}}`: (w_L, w_G) peak widths at each angle
+- `Tuple{Vector{Float64}, Vector{Float64}}`: (w_L, w_G), FWHM in radians of 2θ
 """
 function compute_peak_widths(θ::Vector{Float64},
                              peak_width::Dict{String,Float64},
-                             instrument::Dict{String,Any}
+                             λ::Float64
                              )::Tuple{Vector{Float64}, Vector{Float64}}
     K, ϵ, D = peak_width["K"], peak_width["Epsilon"], peak_width["D"]
     U, V, W = peak_width["U"], peak_width["V"], peak_width["W"]
-    λ = instrument["lambda"]
 
     w_L = Lorentzian_peaks_width(θ, K, ϵ, λ, D)
     w_G = Gaussian_peaks_width(θ, U, V, W)
@@ -801,7 +692,7 @@ end
 
 
 """
-    compute_xrd_pattern(θ, indices, multiplicities, λ, a, w_L, w_G; noise_level=0.0)
+    compute_xrd_pattern(two_θ, indices, multiplicities, λ, a, peak_width; noise_level=0.0)
 
 Compute XRD intensity pattern from peak parameters.
 
@@ -809,13 +700,12 @@ Sums pseudo-Voigt peak profiles at Bragg angles, adds background,
 and optionally applies multiplicative noise.
 
 # Arguments
-- `θ::Vector{Float64}`: Scattering angles in radians
+- `two_θ::Vector{Float64}`: 2θ grid in radians
 - `indices::Vector{Vector{Int}}`: Canonical Miller indices
 - `multiplicities::Vector{Int}`: Multiplicity of each reflection family
 - `λ::Float64`: X-ray wavelength in Angstroms
 - `a::Float64`: Lattice parameter in Angstroms
-- `w_L::Vector{Float64}`: Lorentzian FWHM at each angle
-- `w_G::Vector{Float64}`: Gaussian FWHM at each angle
+- `peak_width::Dict{String,Float64}`: Peak width parameters (U, V, W, K, Epsilon, D)
 
 # Keyword Arguments
 - `noise_level::Float64=0.0`: Multiplicative noise standard deviation
@@ -823,19 +713,19 @@ and optionally applies multiplicative noise.
 # Returns
 - `Vector{Float64}`: XRD intensities at each angle
 """
-function compute_xrd_pattern(θ::Vector{Float64},
+function compute_xrd_pattern(two_θ::Vector{Float64},
                              indices::Vector{Vector{Int}},
                              multiplicities::Vector{Int},
                              λ::Float64,
                              a::Float64,
-                             w_L::Vector{Float64},
-                             w_G::Vector{Float64};
+                             peak_width::Dict{String,Float64};
                              noise_level::Float64=0.0
                              )::Vector{Float64}
-    y = background(θ) .+ intensity_vs_angle(θ, indices, multiplicities, λ, a, w_L, w_G)
+    y = background(two_θ ./ 2) .+
+        intensity_vs_angle(two_θ, indices, multiplicities, λ, a, peak_width)
 
     if noise_level > 0
-        y .*= rand(Normal(1, noise_level), length(θ))
+        y .*= rand(Normal(1, noise_level), length(two_θ))
         y = max.(y, 0)
     end
 
@@ -919,7 +809,7 @@ reciprocal units — constant K/D — and strain broadening is Δg/g = 2E (from
 Δd/d = E). Replaces the angle-space `Lorentzian_peaks_width` for electrons.
 
 # Arguments
-- `g::Vector{Float64}`: Scattering vector grid (1/Å)
+- `g::Vector{Float64}`: Scattering vectors (1/Å) at which to evaluate the width
 - `K::Float64`: Scherrer constant (≈ 0.9)
 - `E::Float64`: Microstrain (dimensionless)
 - `D::Float64`: Crystallite size in nanometres (converted to Å internally)
@@ -938,7 +828,8 @@ end
 """
     compute_peak_widths_g(g, peak_width)
 
-Lorentzian and Gaussian FWHM (1/Å) on the g grid for the electron path.
+Lorentzian and Gaussian FWHM (1/Å) at the reflection centres `g` for the
+electron path.
 Lorentzian = Scherrer size + strain (`Lorentzian_peaks_width_g`); Gaussian =
 a constant instrumental point-spread `G_inst` (1/Å), replacing the Caglioti
 U/V/W terms which are degenerate at θ ≈ 0. `G_inst` defaults to 0.005 1/Å.
@@ -956,26 +847,26 @@ end
 
 
 """
-    intensity_vs_g(g, indices, multiplicities, a, w_L, w_G)
+    intensity_vs_g(g, indices, multiplicities, a, peak_width)
 
 Electron-diffraction intensity over the g grid: sum one multiplicity-weighted
-pseudo-Voigt per reflection family at its g = √(h²+k²+l²)/a centre. The
-g-space counterpart of `intensity_vs_angle`; heights are multiplicity-only,
-matching the X-ray path's fidelity.
+pseudo-Voigt per reflection family at its g = √(h²+k²+l²)/a centre, with the
+widths evaluated at that centre. The g-space counterpart of
+`intensity_vs_angle`; heights are multiplicity-only, matching the X-ray path's
+fidelity.
 """
 function intensity_vs_g(g::Vector{Float64},
                         indices::Vector{Vector{Int}},
                         multiplicities::Vector{Int},
                         a::Float64,
-                        w_L::Vector{Float64},
-                        w_G::Vector{Float64}
+                        peak_width::Dict{String,Float64}
                         )::Vector{Float64}
     a <= 0 && throw(ArgumentError("Lattice parameter must be positive"))
     length(indices) == length(multiplicities) || throw(DimensionMismatch(
         "indices and multiplicities must have same length"))
-    length(w_L) != length(w_G) && throw(ArgumentError("Width parameter vectors must have same length"))
 
     g_centers = g_list(indices, a)
+    w_L, w_G = compute_peak_widths_g(g_centers, peak_width)
     return sum_peaks(g, g_centers, multiplicities, w_L, w_G)
 end
 
@@ -1002,7 +893,7 @@ end
 
 
 """
-    compute_ed_pattern(g, indices, multiplicities, a, w_L, w_G; noise_level=0.0)
+    compute_ed_pattern(g, indices, multiplicities, a, peak_width; noise_level=0.0)
 
 Full electron-diffraction pattern: background_electron + intensity_vs_g, with
 optional multiplicative noise. The g-space analogue of `compute_xrd_pattern`.
@@ -1011,11 +902,10 @@ function compute_ed_pattern(g::Vector{Float64},
                             indices::Vector{Vector{Int}},
                             multiplicities::Vector{Int},
                             a::Float64,
-                            w_L::Vector{Float64},
-                            w_G::Vector{Float64};
+                            peak_width::Dict{String,Float64};
                             noise_level::Float64=0.0
                             )::Vector{Float64}
-    y = background_electron(g) .+ intensity_vs_g(g, indices, multiplicities, a, w_L, w_G)
+    y = background_electron(g) .+ intensity_vs_g(g, indices, multiplicities, a, peak_width)
 
     if noise_level > 0
         y .*= rand(Normal(1, noise_level), length(g))
@@ -1047,10 +937,9 @@ function do_it_electron(instrument::Dict{String,Any},
 
     max_hkl_sq = ed_max_hkl_sq(a, g_max)
     indices, multiplicities = Miller_indices(structure, max_hkl_sq)
-    w_L, w_G = compute_peak_widths_g(g, peak_width)
 
     noise_level = get(instrument, "noise_level", 0.0)
-    y = compute_ed_pattern(g, indices, multiplicities, a, w_L, w_G; noise_level=noise_level)
+    y = compute_ed_pattern(g, indices, multiplicities, a, peak_width; noise_level=noise_level)
 
     title = "$element-$structure"
 
@@ -1233,23 +1122,22 @@ function do_it(file_name::String,
         return do_it_electron(instrument, peak_width, structure, element, a, plot_theme)
     end
 
-    θ = collect(LinRange(instrument["two_theta_min"]/2,
-                         instrument["two_theta_max"]/2,
-                         instrument["N"]))
+    two_θ = collect(LinRange(instrument["two_theta_min"],
+                             instrument["two_theta_max"],
+                             instrument["N"]))
     λ = instrument["lambda"]
 
     max_hkl_sq = bragg_max_hkl_sq(a, λ)
     indices, multiplicities = Miller_indices(structure, max_hkl_sq)
-    w_L, w_G = compute_peak_widths(θ, peak_width, instrument)
 
     noise_level = get(instrument, "noise_level", 0.0)
-    y = compute_xrd_pattern(θ, indices, multiplicities, λ, a, w_L, w_G; noise_level=noise_level)
+    y = compute_xrd_pattern(two_θ, indices, multiplicities, λ, a, peak_width; noise_level=noise_level)
 
     title = "$element-$structure"
 
     theme(plot_theme)
 
-    twoθ_deg = 2 * rad2deg.(θ)
+    twoθ_deg = rad2deg.(two_θ)
     the_plot = plot(twoθ_deg, y, title=title, xlabel="2θ (deg)", ylabel="Intensity (arb.)", show=false)
 
     return twoθ_deg, y, title, the_plot

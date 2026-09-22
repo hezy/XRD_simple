@@ -3,7 +3,7 @@ using Test
 const DATA_TOML = joinpath(@__DIR__, "..", "data.toml")
 
 @testset "read_xrd_config" begin
-    instrument, peak_width, lattice = read_xrd_config(DATA_TOML)
+    instrument, peak_width, samples = read_xrd_config(DATA_TOML)
 
     @test haskey(instrument, "two_theta_min")
     @test haskey(instrument, "two_theta_max")
@@ -19,7 +19,7 @@ const DATA_TOML = joinpath(@__DIR__, "..", "data.toml")
     @test instrument["two_theta_min"] < 1.0
     @test instrument["two_theta_max"] < 3.0
 
-    @test haskey(lattice, "SC")
-    @test haskey(lattice, "BCC")
-    @test haskey(lattice, "FCC")
+    @test samples isa Vector{Tuple{String,String,Float64}}
+    @test all(s[1] in ("SC", "BCC", "FCC") for s in samples)
+    @test all(s[3] > 0 for s in samples)
 end

@@ -81,3 +81,39 @@ end
     @test y1 != y2
     @test y1 == y3
 end
+
+@testset "ring_image" begin
+    # With per-pixel noise, so that only properties robust to noise are tested
+    a = 3.352
+    toml = TOML.parsefile(ELECTRON_TOML)
+    toml["instrument"]["image_px"] = 201    # odd: one pixel at the centre
+    toml["instrument"]["ring_noise"] = 0.1
+    cfg = read_xrd_config(toml)
+    mode = cfg.mode
+    Random.seed!(42)
+    g, y = simulate(cfg, "SC", a)
+    coords, img = ring_image(g, y, mode)
+
+    @test length(coords) == mode.image_px
+    @test size(img) == (mode.image_px, mode.image_px)
+    @test coords[end] ≈ mode.camera_constant * mode.g_max
+    @test extrema(img) == (0.0, 1.0)
+
+    # The (100) ring lies at r = camera_constant · g = camera_constant / a,
+    # in all four directions from the centre
+    c = (mode.image_px + 1) ÷ 2
+    r₀ = mode.camera_constant / a
+    for (line, sign) in ((img[:, c], 1), (img[:, c], -1), (img[c, :], 1), (img[c, :], -1))
+        i₀ = argmin(abs.(coords .- sign * r₀))
+        window = i₀-3:i₀+3
+        @test abs(window[argmax(line[window])] - i₀) ≤ 1
+    end
+
+    # The beam stop is darker than the (100) ring
+    stop = [img[i, j] for i in eachindex(coords), j in eachindex(coords)
+            if hypot(coords[i], coords[j]) < mode.beam_stop_mm]
+    ring = img[argmin(abs.(coords .- r₀)), c]
+    @test !isempty(stop) && maximum(stop) < ring
+
+    @test_throws DimensionMismatch ring_image(g, y[1:end-1], mode)
+end

@@ -115,6 +115,30 @@ only the inner helpers become per-system.
 
 ---
 
+## Electron ring image (open)
+
+### 6. Geometric distortion of the ring image
+
+`ring_image` now draws ideal, exactly circular rings centred in the frame.
+Real SAED patterns are distorted, and students must measure through that:
+
+- Elliptical distortion (projector-lens astigmatism): the radius depends on
+  azimuth, r(φ) = r₀ · (1 + η cos 2(φ − φ₀)), with ellipticity η of about
+  0.5–2 % and axis angle φ₀
+- Pattern centre offset from the image centre (beam-stop position)
+- Optional: barrel or pincushion distortion, a radius error that grows with r
+
+Implementation: in the radial lookup of `ring_image`, replace r by the
+corrected radius before mapping to g = r / `camera_constant`. New `[instrument]`
+keys (e.g. `ring_ellipticity`, `ring_axis_deg`, `ring_centre_mm`), default 0.
+
+Tests: the ring-radius check of the `ring_image` test set assumes circular
+rings (the (100) ring within one pixel in four directions). With distortion,
+check the azimuthally averaged radius instead, or allow a tolerance equal to
+the distortion.
+
+---
+
 ## Known issues
 
 ### Voigt vs. pseudo-Voigt width discrepancy
@@ -142,3 +166,4 @@ Worth a separate investigation session — not a quick fix.
 5. **Non-cubic lattices:** largest scope; best tackled after the physics model
    is richer, so the per-system modules have complete equations to implement.
 6. **Voigt width bug:** separate track, whenever the user wants to diagnose.
+7. **Ring-image distortion:** independent of the rest; any time.

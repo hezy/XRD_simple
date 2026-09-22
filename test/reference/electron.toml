@@ -1,0 +1,31 @@
+# Fixed configuration for the reference-output test (REFACTOR_PLAN.md, Phase 2).
+# Do not edit: the saved patterns in electron.csv were computed from these values.
+
+[instrument]
+radiation = "electron"
+two_theta_min = 10.0
+two_theta_max = 120.0
+lambda = 1.5418
+voltage_kV = 200.0
+g_min = 0.0
+g_max = 1.2
+N = 1000
+noise_level = 0.0
+
+[peak_width]
+U = 0.0001
+V = 0.00005
+W = 0.00001
+G_inst = 0.005
+K = 0.9
+Epsilon = 0.001
+D = 500.0
+
+[lattice.SC]
+Po = 3.352
+
+[lattice.BCC]
+Fe = 2.866
+
+[lattice.FCC]
+Cu = 3.594

@@ -7,7 +7,7 @@ through the phases in order. Each phase ends with passing tests and one commit
 Physics *extensions* (Lorentz–polarization factor, structure factors, f_e(s))
 are not part of this plan; they stay in `improvements.md`.
 
-**Status:** Phase 1 done. Phase 2 not started.
+**Status:** Phases 1 and 2 done. Phase 3 not started.
 
 ---
 
@@ -61,10 +61,17 @@ for SC, BCC and FCC in both radiation modes.
 Phases 3–6 must not change the numbers. A reference output makes this
 checkable.
 
-- [ ] **2.1** With a fixed seed and `noise_level = 0`, save the pattern for
+- [x] **2.1** With a fixed seed and `noise_level = 0`, save the pattern for
   one sample per structure and per radiation mode to `test/reference/`.
-- [ ] **2.2** Add a test that recomputes these patterns and compares them with
+- [x] **2.2** Add a test that recomputes these patterns and compares them with
   `isapprox` (relative tolerance about 1e-12).
+
+  Result: `test/reference/{xray,electron}.toml` (fixed configs; Po-SC,
+  Fe-BCC, Cu-FCC), saved patterns in `{xray,electron}.csv`,
+  `test/test_reference.jl`. The patterns are computed through `do_it`, in
+  `test/reference/reference.jl`; phases 3 and 4 change only that function.
+  Regenerate with `julia --project=. test/reference/generate.jl`, only when a
+  change of the numbers is intended.
 
 **Done when:** the reference test passes on the Phase 1 code.
 

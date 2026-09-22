@@ -10,4 +10,5 @@ include(joinpath(@__DIR__, "..", "functions.jl"))
     include("test_background.jl")
     include("test_config.jl")
     include("test_errors.jl")
+    include("test_reference.jl")
 end

@@ -17,29 +17,29 @@ const INELASTIC_LEVEL = 5.0
 
 
 """
-    electron_wavelength(V::Float64)::Float64
+    electron_wavelength(V::Real)::Float64
 
 Relativistic de Broglie wavelength (Å) of an electron accelerated through `V`
 volts. E.g. 200 kV → 0.0251 Å. Not needed to place the g-axis peaks (which are
 purely geometric); used for labelling and as a hook for future camera-length /
 ring-radius extensions.
 """
-function electron_wavelength(V::Float64)::Float64
+function electron_wavelength(V::Real)::Float64
     V > 0 || throw(ArgumentError("Accelerating voltage must be positive"))
     return 12.2643 / sqrt(V * (1 + 0.978476e-6 * V))
 end
 
 
 """
-    ed_max_hkl_sq(a::Float64, g_max::Float64)::Int
+    ed_max_hkl_sq(a::Real, g_max::Real)::Int
 
 Largest h²+k²+l² with g = √(h²+k²+l²)/a ≤ g_max — i.e. reflections that fall
 within the plotted detector range. The electron analogue of `bragg_max_hkl_sq`;
 at electron wavelengths the Bragg `sinθ ≤ 1` bound is never binding, so the
 detector range sets the cutoff instead.
 """
-function ed_max_hkl_sq(a::Float64,
-                       g_max::Float64
+function ed_max_hkl_sq(a::Real,
+                       g_max::Real
                        )::Int
     a > 0 || throw(ArgumentError("Lattice parameter must be positive"))
     g_max > 0 || throw(ArgumentError("g_max must be positive"))
@@ -56,15 +56,15 @@ reciprocal units — constant K/D — and strain broadening is Δg/g = 2E (from
 Δd/d = E). Replaces the angle-space `Lorentzian_peaks_width` for electrons.
 
 # Arguments
-- `g::Float64`: Scattering vector (1/Å) at which to evaluate the width
-- `K::Float64`: Scherrer constant (≈ 0.9)
-- `E::Float64`: Microstrain (dimensionless)
-- `D::Float64`: Crystallite size in nanometres (converted to Å internally)
+- `g::Real`: Scattering vector (1/Å) at which to evaluate the width
+- `K::Real`: Scherrer constant (≈ 0.9)
+- `E::Real`: Microstrain (dimensionless)
+- `D::Real`: Crystallite size in nanometres (converted to Å internally)
 """
-function Lorentzian_peaks_width_g(g::Float64,
-                                  K::Float64,
-                                  E::Float64,
-                                  D::Float64
+function Lorentzian_peaks_width_g(g::Real,
+                                  K::Real,
+                                  E::Real,
+                                  D::Real
                                   )::Float64
     D > 0 || throw(ArgumentError("Crystallite size D must be positive"))
     D_Å = D * 10.0                      # nm → Å
@@ -73,13 +73,13 @@ end
 
 
 """
-    background(mode::Electron, g::Vector{Float64})::Vector{Float64}
+    background(mode::Electron, g::AbstractVector{<:Real})::Vector{Float64}
 
 Simplified powder-ED background over g: an exponential central-beam tail plus a
 constant inelastic (plasmon) floor. Non-negative. Noise is applied by
 `simulate`, not here.
 """
-function background(::Electron, g::Vector{Float64})::Vector{Float64}
+function background(::Electron, g::AbstractVector{<:Real})::Vector{Float64}
     return @. CENTRAL_BEAM_AMPLITUDE * exp(-CENTRAL_BEAM_DECAY * g) + INELASTIC_LEVEL
 end
 
@@ -91,15 +91,15 @@ end
 
 grid(m::Electron, N::Int) = collect(LinRange(m.g_min, m.g_max, N))
 
-max_hkl_sq(m::Electron, a::Float64) = ed_max_hkl_sq(a, m.g_max)
+max_hkl_sq(m::Electron, a::Real) = ed_max_hkl_sq(a, m.g_max)
 
-peak_centres(::Electron, indices::Vector{Vector{Int}},
-             multiplicities::Vector{Int}, a::Float64) = g_list(indices, a), multiplicities
+peak_centres(::Electron, indices::AbstractVector{<:AbstractVector{<:Integer}},
+             multiplicities::AbstractVector{<:Integer}, a::Real) = g_list(indices, a), multiplicities
 
-peak_widths(m::Electron, g₀::Float64, cfg::XRDConfig) =
+peak_widths(m::Electron, g₀::Real, cfg::XRDConfig) =
     (Lorentzian_peaks_width_g(g₀, cfg.K, cfg.Epsilon, cfg.D), m.G_inst)
 
-display_axis(::Electron, g::Vector{Float64}) = g
+display_axis(::Electron, g::AbstractVector{<:Real}) = g
 axis_label(::Electron) = "g (1/Å)"
 
 
@@ -119,12 +119,9 @@ This is the hidden key students reconstruct from measured ring radii (r² ratios
 N-sequence → SC/BCC/FCC selection rule → lattice constant a).
 """
 function reflection_table(structure::String,
-                          a::Float64,
-                          g_max::Float64
+                          a::Real,
+                          g_max::Real
                           )::NamedTuple
-    a > 0 || throw(ArgumentError("Lattice parameter must be positive"))
-    g_max > 0 || throw(ArgumentError("g_max must be positive"))
-
     max_hkl_sq = ed_max_hkl_sq(a, g_max)
     indices, multiplicities = Miller_indices(structure, max_hkl_sq)
     g = g_list(indices, a)

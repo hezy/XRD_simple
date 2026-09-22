@@ -1,8 +1,6 @@
-"""
-XRD sim
-by Hezy Amiel
-2023--2026
-"""
+# XRD sim
+# by Hezy Amiel
+# 2023--2026
 
 using Plots
 using Random

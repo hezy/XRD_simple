@@ -86,15 +86,15 @@ end
 
 
 """
-    d_list(indices::Vector{Vector{Int}}, a::Float64)::Vector{Float64}
+    d_list(indices::AbstractVector{<:AbstractVector{<:Integer}}, a::Real)::Vector{Float64}
 
 Calculate the interplanar distances (d-spacing) for a cubic crystal structure given Miller indices
 and lattice parameter.
 
 # Arguments
-- `indices::Vector{Vector{Int}}`: Array of Miller indices, where each index is a vector of three 
+- `indices::AbstractVector{<:AbstractVector{<:Integer}}`: Array of Miller indices, where each index is a vector of three 
    integers [h,k,l] representing crystallographic planes
-- `a::Float64`: Lattice parameter (unit cell edge length) in appropriate units
+- `a::Real`: Lattice parameter (unit cell edge length) in appropriate units
 
 # Returns
 - `Vector{Float64}`: Array of interplanar distances corresponding to each set of Miller indices
@@ -103,7 +103,7 @@ and lattice parameter.
 - `DimensionMismatch`: If any Miller index vector doesn't contain exactly 3 components
 - `DomainError`: If lattice parameter is not positive
 """
-function d_list(indices::Vector{Vector{Int}}, a::Float64)::Vector{Float64}
+function d_list(indices::AbstractVector{<:AbstractVector{<:Integer}}, a::Real)::Vector{Float64}
     # Validate lattice parameter
     a > 0 || throw(DomainError(a, "Lattice parameter must be positive"))
     
@@ -127,12 +127,12 @@ end
 
 
 """
-    g_list(indices::Vector{Vector{Int}}, a::Float64)::Vector{Float64}
+    g_list(indices::AbstractVector{<:AbstractVector{<:Integer}}, a::Real)::Vector{Float64}
 
 Scattering-vector magnitudes g = |G| = √(h²+k²+l²)/a (1/Å) for cubic Miller
 indices. The reciprocal-space analogue of `d_list` (g = 1/d).
 """
-function g_list(indices::Vector{Vector{Int}}, a::Float64)::Vector{Float64}
+function g_list(indices::AbstractVector{<:AbstractVector{<:Integer}}, a::Real)::Vector{Float64}
     a > 0 || throw(DomainError(a, "Lattice parameter must be positive"))
 
     result = Vector{Float64}(undef, length(indices))

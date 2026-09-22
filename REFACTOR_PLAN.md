@@ -7,7 +7,7 @@ through the phases in order. Each phase ends with passing tests and one commit
 Physics *extensions* (Lorentz–polarization factor, structure factors, f_e(s))
 are not part of this plan; they stay in `improvements.md`.
 
-**Status:** Phases 1–6 done. Phase 7 not started.
+**Status:** All phases (1–7) done.
 
 ---
 
@@ -206,14 +206,28 @@ Now: `functions.jl` loads Plots and calls `theme()`, so the tests load Plots.
 
 ## Phase 7: Small cleanups and documentation
 
-- [ ] **7.1** Change the banner strings ("Constants", "Functions",
+- [x] **7.1** Change the banner strings ("Constants", "Functions",
   "Electron diffraction (1D)") and the orphan `abstract_peak` docstring into
   comments. As strings, Julia attaches them to the next expression.
-- [ ] **7.2** Relax argument types from `Vector{Float64}` to `AbstractVector`
+- [x] **7.2** Relax argument types from `Vector{Float64}` to `AbstractVector`
   and `Float64` to `Real` where nothing depends on the concrete type.
-- [ ] **7.3** Remove validation that is repeated in both caller and callee.
-- [ ] **7.4** `using Distributions: Normal` (from `improvements.md`, item 1).
-- [ ] **7.5** Update `CLAUDE.md` (architecture, file list, function names),
+- [x] **7.3** Remove validation that is repeated in both caller and callee.
+- [x] **7.4** `using Distributions: Normal` (from `improvements.md`, item 1).
+- [x] **7.5** Update `CLAUDE.md` (architecture, file list, function names),
   `README.md`, `problems.md` and `improvements.md` to match the new code.
+
+  Result: the header strings of `src/XRDSim.jl`, `src/plotting.jl` and
+  `main.jl` are comments; the `abstract_peak` argument list is now in the
+  `Voigt_peak` docstring, and `pseudo_Voigt_peak` refers to it. Scalar
+  arguments are `Real`, vector arguments `AbstractVector{<:Real}` (Miller
+  indices `AbstractVector{<:AbstractVector{<:Integer}}`); struct fields and
+  return types stay concrete. `ring_image` and `radial_profile_value` keep
+  `Vector{Float64}`, because their index arithmetic assumes 1-based arrays.
+  `reflection_table` no longer repeats the checks of `ed_max_hkl_sq` and
+  `g_list`; no other function repeats a check of its callee. In the
+  documentation, the Voigt 2× width issue (fixed in 1.4) and the done cleanup
+  items were removed; `problems.md` needed no change. The README no longer
+  gives the `archive/` scripts as usage examples: they include the deleted
+  `functions.jl` and do not run. The reference test passes unchanged.
 
 **Done when:** the documentation names only functions that exist.

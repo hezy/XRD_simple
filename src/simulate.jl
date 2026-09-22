@@ -2,7 +2,7 @@
 # `XRay` (xray.jl) and `Electron` (electron.jl).
 
 """
-    simulate(cfg::XRDConfig, structure::String, a::Float64)
+    simulate(cfg::XRDConfig, structure::String, a::Real)
 
 Compute the powder pattern of one sample in the radiation mode `cfg.mode`.
 
@@ -16,7 +16,7 @@ deviation `cfg.noise_level`.
 # Arguments
 - `cfg::XRDConfig`: Configuration from `read_xrd_config`
 - `structure::String`: Crystal structure ("SC", "BCC", or "FCC")
-- `a::Float64`: Lattice parameter in Angstroms
+- `a::Real`: Lattice parameter in Angstroms
 
 # Returns
 - `(x, y)`: the x axis in display units (2θ in degrees, or g in 1/Å; see
@@ -24,7 +24,7 @@ deviation `cfg.noise_level`.
 """
 function simulate(cfg::XRDConfig,
                   structure::String,
-                  a::Float64
+                  a::Real
                   )::Tuple{Vector{Float64}, Vector{Float64}}
     mode = cfg.mode
     x = grid(mode, cfg.N)

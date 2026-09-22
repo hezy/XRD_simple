@@ -10,12 +10,12 @@
 include("../functions.jl")
 
 cfg = length(ARGS) ≥ 1 ? ARGS[1] : "data.toml"
-instrument, peak_width, samples = read_xrd_config(cfg)
-@assert get(instrument, "radiation", "xray") == "electron" "config must be electron mode"
+config = read_xrd_config(cfg)
+@assert config.radiation == "electron" "config must be electron mode"
 
-camera_constant = Float64(get(instrument, "camera_constant", 50.0))
-g_max = instrument["g_max"]
-tol_g = 2 * (g_max - get(instrument, "g_min", 0.0)) / instrument["N"]  # ~2 grid steps
+camera_constant = config.camera_constant
+g_max = config.g_max
+tol_g = 2 * (g_max - config.g_min) / config.N  # ~2 grid steps
 
 # Find local maxima of v above a floor; returns the x-locations (parabolic-refined).
 function peak_locations(x, v; rel_height = 0.02)
@@ -37,10 +37,10 @@ nearest_err(refs, cands) = [minimum(abs.(cands .- r)) for r in refs]
 println("Ring sanity check  (config: $cfg, camera_constant = $camera_constant mm·Å)")
 println("="^70)
 
-function run_checks(samples, instrument, peak_width, camera_constant, g_max, tol_g)
+function run_checks(config, camera_constant, g_max, tol_g)
 all_ok = true
-for (structure, element, a) in samples
-    g, y, _, _ = do_it_electron(instrument, peak_width, structure, element, a, :dark)
+for (structure, element, a) in config.samples
+    g, y, _, _ = do_it_electron(config, structure, element, a, :dark)
     rt = reflection_table(structure, a, g_max)
 
     # (1) profile peaks vs analytic g
@@ -68,7 +68,7 @@ end
 return all_ok
 end
 
-all_ok = run_checks(samples, instrument, peak_width, camera_constant, g_max, tol_g)
+all_ok = run_checks(config, camera_constant, g_max, tol_g)
 println("="^70)
 println(all_ok ? "ALL SANITY CHECKS PASSED" : "SANITY CHECK FAILED")
 exit(all_ok ? 0 : 1)

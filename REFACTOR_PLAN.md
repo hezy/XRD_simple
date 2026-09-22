@@ -7,7 +7,7 @@ through the phases in order. Each phase ends with passing tests and one commit
 Physics *extensions* (Lorentz–polarization factor, structure factors, f_e(s))
 are not part of this plan; they stay in `improvements.md`.
 
-**Status:** Phases 1 and 2 done. Phase 3 not started.
+**Status:** Phases 1–3 done. Phase 4 not started.
 
 ---
 
@@ -83,17 +83,23 @@ Now: the file is parsed 2 + N times (`main`, `do_it_zero`, `do_it` per
 sample), and defaults are applied by scattered `get(...)` calls that disagree
 (`image_px` is 700 in `render_ring_image`, 800 in `main`).
 
-- [ ] **3.1** `read_xrd_config` returns one struct (or NamedTuple) holding
+- [x] **3.1** `read_xrd_config` returns one struct (or NamedTuple) holding
   instrument, peak-width and sample data. It applies every default and
   validates every value in one place, with descriptive `ArgumentError`s
   (missing key, negative width, unknown `radiation`).
-- [ ] **3.2** All other functions receive this value, not a file name. Remove
+- [x] **3.2** All other functions receive this value, not a file name. Remove
   every `get(instrument, ..., default)` outside `read_xrd_config`.
-- [ ] **3.3** Delete `do_it_zero`. It only builds the first DataFrame column,
+- [x] **3.3** Delete `do_it_zero`. It only builds the first DataFrame column,
   which the loop overwrites. (With zero samples it writes θ in radians under
   the label "2θ (deg)".) Build the x column from the first computed pattern,
   or from the grid function of Phase 4.
-- [ ] **3.4** Update `test/test_config.jl`.
+- [x] **3.4** Update `test/test_config.jl`.
+
+  Result: `XRDConfig` struct; `read_xrd_config` has a file and a `Dict`
+  method (the tests use the `Dict` one). Parameters of the unused mode are
+  `NaN` when absent. Functions that took `instrument`/`peak_width` now take
+  `cfg`; `intensity_vs_angle`, `compute_xrd_pattern` and `compute_peak_widths`
+  take λ from it. `render_ring_image(g, y, cfg)` has no keyword defaults.
 
 **Done when:** the reference test and all other tests pass.
 

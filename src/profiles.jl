@@ -154,19 +154,19 @@ end
 
 
 """
-    sum_peaks(x, x_list, multiplicities, w_L, w_G)
+    sum_peaks(x, x_list, amplitudes, w_L, w_G)
 
-Sum pseudo-Voigt peak profiles at given peak centres, weighted by multiplicity.
+Sum pseudo-Voigt peak profiles at given peak centres, each with its own area.
 
-Each entry in `x_list` is one canonical reflection; its amplitude is the
-multiplicity of that family. Summing one weighted peak per family is
-mathematically identical to summing every sign+permutation variant at unit
-amplitude, and far cheaper.
+Each entry in `x_list` is one canonical reflection; its area is the
+multiplicity of that family times any intensity weight (see `peak_weights`).
+Summing one weighted peak per family is mathematically identical to summing
+every sign+permutation variant separately, and far cheaper.
 
 # Arguments
 - `x::AbstractVector{<:Real}`: Grid on which the pattern is evaluated (2θ in radians, or g)
 - `x_list::AbstractVector{<:Real}`: Peak centre positions, same unit as `x`
-- `multiplicities::AbstractVector{<:Integer}`: Multiplicity of each reflection family
+- `amplitudes::AbstractVector{<:Real}`: Area of each peak
 - `w_L::AbstractVector{<:Real}`: Lorentzian FWHM of each peak, evaluated at its centre
 - `w_G::AbstractVector{<:Real}`: Gaussian FWHM of each peak, evaluated at its centre
 
@@ -175,18 +175,18 @@ amplitude, and far cheaper.
 """
 function sum_peaks(x::AbstractVector{<:Real},
                    x_list::AbstractVector{<:Real},
-                   multiplicities::AbstractVector{<:Integer},
+                   amplitudes::AbstractVector{<:Real},
                    w_L::AbstractVector{<:Real},
                    w_G::AbstractVector{<:Real},
                    )::Vector{Float64}
 
-    length(x_list) == length(multiplicities) == length(w_L) == length(w_G) ||
+    length(x_list) == length(amplitudes) == length(w_L) == length(w_G) ||
         throw(DimensionMismatch(
-            "x_list, multiplicities, w_L and w_G must have same length"))
+            "x_list, amplitudes, w_L and w_G must have same length"))
 
     y = zeros(length(x))
     for i in eachindex(x_list)
-        y .+= pseudo_Voigt_peak(x, x_list[i], Float64(multiplicities[i]), w_L[i], w_G[i])
+        y .+= pseudo_Voigt_peak(x, x_list[i], amplitudes[i], w_L[i], w_G[i])
     end
     return y
 end

@@ -95,7 +95,18 @@ where:
 - ⟨D⟩v is the volume-weighted crystallite size
 - ε is the upper limit of strain distribution
 
-## 7. Electron Diffraction (reciprocal-space form)
+## 7. Peak Intensity (X-ray)
+
+The integrated intensity of reflection hkl is its multiplicity m times the
+Lorentz–polarization factor, for an unpolarized beam without monochromator:
+```
+I_hkl ∝ m · LP(θ),   LP(θ) = (1 + cos²2θ) / (sin²θ · cos θ)
+```
+LP is normalized to 1 at 2θ = 90°. It is large at low angles and has its
+minimum near 2θ ≈ 100°–120°. The atomic form factor and the Debye–Waller factor
+are not yet included.
+
+## 8. Electron Diffraction (reciprocal-space form)
 
 For 1D powder electron diffraction the natural coordinate is the scattering
 vector g = 1/d (1/Å) rather than 2θ, because at electron wavelengths

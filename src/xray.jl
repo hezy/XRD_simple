@@ -81,6 +81,33 @@ end
 
 
 """
+    Lorentz_polarization(θ::Real)::Float64
+
+Lorentz–polarization factor of a powder reflection at Bragg angle θ, for
+unpolarized radiation and no monochromator:
+
+    LP(θ) = (1 + cos²2θ) / (sin²θ · cos θ)
+
+normalized to 1 at 2θ = 90°. It multiplies the integrated intensity of each
+reflection; it is large at low angles and small near 2θ ≈ 100°–120°.
+
+# Arguments
+- `θ::Real`: Bragg angle θ (half of 2θ) in radians, 0 < θ < π/2
+
+# Returns
+- `Float64`: LP(θ) / LP(π/4)
+
+# Throws
+* ArgumentError: If θ is not in (0, π/2)
+"""
+function Lorentz_polarization(θ::Real)::Float64
+    0 < θ < π/2 || throw(ArgumentError("Bragg angle θ must be in (0, π/2)"))
+    LP(θ) = (1 + cos(2θ)^2) / (sin(θ)^2 * cos(θ))
+    return LP(θ) / LP(π/4)
+end
+
+
+"""
     bragg_angles(wavelength::Real, d_spacings::AbstractVector{<:Real})::Tuple{Vector{Float64}, Vector{Int}}
 
 Calculate the Bragg diffraction angles (θ) for a given X-ray wavelength and set of crystal plane d-spacings.
@@ -179,6 +206,8 @@ function peak_centres(m::XRay, indices::AbstractVector{<:AbstractVector{<:Intege
     θ_B, visible = bragg_angles(m.lambda, d_list(indices, a))
     return 2 .* θ_B, multiplicities[visible]
 end
+
+peak_weights(::XRay, two_θ₀::AbstractVector{<:Real}) = Lorentz_polarization.(two_θ₀ ./ 2)
 
 function peak_widths(m::XRay, two_θ₀::Real, cfg::XRDConfig)
     θ_B = two_θ₀ / 2

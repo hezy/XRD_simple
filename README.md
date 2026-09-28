@@ -19,6 +19,7 @@ A Julia-based simulation tool for powder diffraction patterns of cubic crystal s
 
 - **Realistic Simulations**
   - Angle-dependent peak broadening
+  - Lorentz–polarization factor on X-ray peak intensities
   - Background signal generation
   - Experimental noise simulation
   - Williamson-Hall analysis support
@@ -213,8 +214,8 @@ U/V/W terms are degenerate at θ ≈ 0). The crystallography (Miller indices,
 multiplicities, systematic absences) and the Voigt / pseudo-Voigt peak profiles
 are shared with the X-ray path.
 
-Peak **heights** are multiplicity-weighted only (the same fidelity as the X-ray
-path); the electron atomic scattering factor f_e(s) is not yet modelled, so the
+Peak **heights** are multiplicity-weighted only (the X-ray path adds the
+Lorentz–polarization factor); the electron atomic scattering factor f_e(s) is not yet modelled, so the
 relative intensities are geometric rather than quantitative. The model is
 kinematical — valid for thin specimens; real selected-area electron diffraction
 is dynamical.

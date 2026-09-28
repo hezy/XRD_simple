@@ -8,9 +8,10 @@ Compute the powder pattern of one sample in the radiation mode `cfg.mode`.
 
 The steps are the same for every mode; each step is a method on the mode type:
 grid (`grid`), reflections up to the cutoff (`max_hkl_sq`, `Miller_indices`),
-their centres and multiplicities (`peak_centres`), their widths at each centre
-(`peak_widths`), the sum of multiplicity-weighted pseudo-Voigt peaks
-(`sum_peaks`) on the `background`, and multiplicative noise of standard
+their centres and multiplicities (`peak_centres`), an angle-dependent weight of
+each (`peak_weights`, the Lorentz–polarization factor for X-rays), their widths
+at each centre (`peak_widths`), the sum of pseudo-Voigt peaks of area
+multiplicity × weight (`sum_peaks`) on the `background`, and multiplicative noise of standard
 deviation `cfg.noise_level`.
 
 # Arguments
@@ -34,7 +35,9 @@ function simulate(cfg::XRDConfig,
     widths = [peak_widths(mode, xᵢ, cfg) for xᵢ in x₀]
     w_L, w_G = first.(widths), last.(widths)
 
-    y = background(mode, x) .+ sum_peaks(x, x₀, m, w_L, w_G)
+    A = m .* peak_weights(mode, x₀)
+
+    y = background(mode, x) .+ sum_peaks(x, x₀, A, w_L, w_G)
 
     if cfg.noise_level > 0
         y .*= rand(Normal(1, cfg.noise_level), length(x))

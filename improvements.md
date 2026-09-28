@@ -38,36 +38,29 @@ Listed for context; no further action needed.
   checks in `reflection_table` were removed.
 - Fixed the Voigt vs. pseudo-Voigt width discrepancy: `pseudo_Voigt_peak` now
   uses the combined FWHM for both components (refactor Phase 1).
+- Added the Lorentz–polarization factor to X-ray peak areas
+  (`Lorentz_polarization`, normalized to 1 at 2θ = 90°), through the mode step
+  `peak_weights`; electron weights are 1 (September 2026).
 
 ---
 
 ## Physics model (open)
 
 All enhancements operate on the intensity of each reflection. Current code:
-`I ∝ multiplicity` only. Missing weights:
+`I ∝ multiplicity × LP(θ)` for X-rays, `I ∝ multiplicity` for electrons.
+Missing weights:
 
-### 1. Lorentz–polarization factor (highest value, lowest cost)
-
-```
-LP(θ) = (1 + cos²(2θ)) / (sin²(θ) · cos(θ))
-```
-
-Combined geometric (Lorentz) + polarization terms for unpolarized lab X-rays.
-**Changes relative peak heights by 5–10× across a typical scan** — boosts low
-angles, suppresses high angles. One-line multiplication inside the peak-sum
-loop. Biggest realism gain per line of code.
-
-### 2. Debye–Waller (thermal) factor
+### 1. Debye–Waller (thermal) factor
 
 ```
 exp(−2M) = exp(−B · (sin θ / λ)²)
 ```
 
 Atomic thermal vibration smears scattering; damps high-angle peaks. `B` is
-per-element (typical 0.3–1.5 Å² at room temperature). Trivial once the
-multiplicative-weight pipeline exists.
+per-element (typical 0.3–1.5 Å² at room temperature). Multiply it into
+`peak_weights(::XRay, …)`.
 
-### 3. Atomic form factor f(θ)
+### 2. Atomic form factor f(θ)
 
 ```
 f(sin θ / λ) = Σᵢ aᵢ · exp(−bᵢ · (sin θ / λ)²) + c      [Cromer–Mann, 9 params]
@@ -79,7 +72,7 @@ element. Weight becomes `|F|² ∝ (m · f(θ))²`.
 
 Sources: International Tables Vol. C, §6.1; Waasmaier–Kirfel (1995).
 
-### 4. Full structure factor |F|²
+### 3. Full structure factor |F|²
 
 ```
 F(hkl) = Σⱼ fⱼ · exp(2πi · (h xⱼ + k yⱼ + l zⱼ))
@@ -95,7 +88,7 @@ perovskites, alloys). Requires a data model change: unit cell = list of
 
 ## Architecture / extensibility (open)
 
-### 5. Non-cubic crystal systems
+### 4. Non-cubic crystal systems
 
 Current code is cubic-only. Generalizing to tetragonal, hexagonal,
 orthorhombic, etc. needs:
@@ -116,7 +109,7 @@ only the inner helpers become per-system.
 
 ## Electron ring image (open)
 
-### 6. Geometric distortion of the ring image
+### 5. Geometric distortion of the ring image
 
 `ring_image` now draws ideal, exactly circular rings centred in the frame.
 Real SAED patterns are distorted, and students must measure through that:
@@ -140,10 +133,9 @@ the distortion.
 
 ## Suggested order
 
-1. **Lorentz–polarization:** biggest realism gain for ~5 lines of code.
-2. **Debye–Waller:** natural follow-on; shares the per-family weight hook with LP.
-3. **Atomic form factor + full structure factor:** larger project, best done together —
+1. **Debye–Waller:** one factor in `peak_weights`, plus a B value per element.
+2. **Atomic form factor + full structure factor:** larger project, best done together —
    changes the data model and opens the door to multi-element cells.
-4. **Non-cubic lattices:** largest scope; best tackled after the physics model
+3. **Non-cubic lattices:** largest scope; best tackled after the physics model
    is richer, so the per-system modules have complete equations to implement.
-5. **Ring-image distortion:** independent of the rest; any time.
+4. **Ring-image distortion:** independent of the rest; any time.

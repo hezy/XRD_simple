@@ -34,6 +34,24 @@ const ELECTRON_TOML = joinpath(@__DIR__, "reference", "electron.toml")
     @test_throws DimensionMismatch sum_peaks(x, x_list, mult, [0.01], w_G)
 end
 
+@testset "Lorentz_polarization" begin
+    @test Lorentz_polarization(π/4) ≈ 1.0
+    # Analytic value at 2θ = 30°: (1 + cos²30°) / (sin²15° · cos15°) / (2√2)
+    θ = deg2rad(15.0)
+    @test Lorentz_polarization(θ) ≈ (1 + cosd(30)^2) / (sind(15)^2 * cosd(15)) / (2√2)
+    # Decreasing from low angles to its minimum near 2θ ≈ 100°
+    θs = deg2rad.(5.0:5.0:45.0)
+    @test issorted(Lorentz_polarization.(θs), rev=true)
+    @test_throws ArgumentError Lorentz_polarization(0.0)
+    @test_throws ArgumentError Lorentz_polarization(π/2)
+
+    cfg = read_xrd_config(XRAY_TOML)
+    two_θ₀ = deg2rad.([20.0, 90.0])
+    @test peak_weights(cfg.mode, two_θ₀) ≈ Lorentz_polarization.(two_θ₀ ./ 2)
+    cfg = read_xrd_config(ELECTRON_TOML)
+    @test peak_weights(cfg.mode, [0.3, 0.6]) == [1.0, 1.0]
+end
+
 @testset "peak_widths" begin
     cfg = read_xrd_config(XRAY_TOML)
     for two_θ_B in deg2rad.([20.0, 60.0, 100.0])

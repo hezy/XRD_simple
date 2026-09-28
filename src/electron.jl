@@ -96,6 +96,10 @@ max_hkl_sq(m::Electron, a::Real) = ed_max_hkl_sq(a, m.g_max)
 peak_centres(::Electron, indices::AbstractVector{<:AbstractVector{<:Integer}},
              multiplicities::AbstractVector{<:Integer}, a::Real) = g_list(indices, a), multiplicities
 
+# No angle-dependent weight: the Lorentz factor is constant in g, and f_e(s) is
+# not modelled (see Known Issues).
+peak_weights(::Electron, g₀::AbstractVector{<:Real}) = ones(length(g₀))
+
 peak_widths(m::Electron, g₀::Real, cfg::XRDConfig) =
     (Lorentzian_peaks_width_g(g₀, cfg.K, cfg.Epsilon, cfg.D), m.G_inst)
 

@@ -92,10 +92,11 @@ This file provides context for AI assistants working on the XRD_simple project.
   that mode. No other function reads the file or supplies a default.
 - The mode is selected by dispatch. One generic `simulate(cfg, structure, a)`
   returns `(x, y)`, x in display units; its steps are methods on the mode:
-  `grid`, `max_hkl_sq`, `peak_centres`, `peak_widths`, `background`,
+  `grid`, `max_hkl_sq`, `peak_centres`, `peak_weights`, `peak_widths`, `background`,
   `display_axis`, `axis_label` (and `plot_title` in `plotting.jl`).
 - **X-ray path:** Bragg geometry, x-axis 2θ (degrees). Uses `lambda`,
-  `two_theta_min/max`, Caglioti U/V/W.
+  `two_theta_min/max`, Caglioti U/V/W. Peak areas are multiplicity ×
+  `Lorentz_polarization(θ)` (unpolarized beam, normalized to 1 at 2θ = 90°).
 - **Electron path:** reciprocal-space geometry, x-axis g = 1/d (1/Å). Positions
   are `g = √(h²+k²+l²)/a` (no Bragg's law); reflection cutoff is `ed_max_hkl_sq`
   (g ≤ `g_max`), not `bragg_max_hkl_sq`. Uses `voltage_kV`, `g_min`/`g_max`,
@@ -195,12 +196,13 @@ ignored, so both X-ray and electron parameters can coexist in one file — flip
 
 ## Known Issues
 
-### Electron Intensities (multiplicity-only)
+### Intensities: no form factor, no Debye–Waller
 - Electron-mode peak heights are weighted by multiplicity only; the electron
   scattering factor f_e(s) is not modelled, so relative intensities are
   geometric, not quantitative. Adding f_e(s) (Doyle–Turner/Kirkland, or
   Mott–Bethe on X-ray f_x) would make low-g reflections correctly dominant —
-  and would also upgrade the X-ray heights, which are likewise multiplicity-only.
+  and would also upgrade the X-ray heights, which are multiplicity × Lorentz–
+  polarization only (no atomic form factor, no Debye–Waller factor).
 
 ### Compatibility
 - JSON.jl v1.3.0 had compatibility issues with LanguageServer (documented in JSON_compatibility_fix.md)
@@ -247,8 +249,8 @@ ignored, so both X-ray and electron parameters can coexist in one file — flip
   `ring_phosphor`, `ring_gamma`, `ring_noise`.
 - Electron knobs: `voltage_kV`, `g_min`/`g_max` (detector range), `G_inst`
   (instrumental Gaussian FWHM), plus the shared `K`, `Epsilon`, `D`.
-- To add the electron scattering factor f_e(s), weight each reflection in
-  `sum_peaks` by m·|F|² instead of m (see Known Issues).
+- To add the electron scattering factor f_e(s), return it from
+  `peak_weights(::Electron, g₀)` (see Known Issues).
 
 ## Testing Approach
 

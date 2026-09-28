@@ -239,10 +239,11 @@ XRD_simple/
 ├── data.toml                    # Configuration file
 ├── src/
 │   ├── XRDSim.jl                # Entry file: includes the physics files below
+│   ├── form_factors.jl          # X-ray atomic form factors (Waasmaier–Kirfel)
 │   ├── config.jl                # XRay / Electron modes, XRDConfig, read_xrd_config
 │   ├── crystal.jl               # Miller indices, multiplicities, d and g spacings
-│   ├── profiles.jl              # Voigt and pseudo-Voigt profiles, sum_peaks
-│   ├── xray.jl                  # Bragg angles, Caglioti and Scherrer widths
+│   ├── profiles.jl              # Voigt and pseudo-Voigt profiles, Debye–Waller, sum_peaks
+│   ├── xray.jl                  # Bragg angles, widths, Lorentz–polarization
 │   ├── electron.jl              # g-space widths, reflection table, ring image
 │   ├── simulate.jl              # simulate: one pattern, either mode
 │   └── plotting.jl              # All Plots.jl calls (included by main.jl only)
@@ -265,7 +266,7 @@ XRD_simple/
 
 ## Known Issues
 
-- Electron mode: peak heights are multiplicity-only — the electron scattering factor f_e(s) is not yet modelled, so relative intensities are geometric rather than quantitative
+- Electron mode: peak heights are multiplicity × Debye–Waller only — the electron scattering factor f_e(s) is not yet modelled, so relative intensities are not quantitative
 
 ## Contributing
 

@@ -164,5 +164,5 @@ whose tanθ terms are degenerate near θ = 0:
 
 The peak-shape functions (Gaussian, Lorentzian, pseudo-Voigt) and the
 size/strain separation are otherwise identical to the X-ray case. Heights are
-multiplicity-weighted; the electron atomic scattering factor f_e(s) — obtainable
+multiplicity × Debye–Waller factor (§7); the electron atomic scattering factor f_e(s) — obtainable
 from the X-ray factor via the Mott–Bethe relation — is not yet included.

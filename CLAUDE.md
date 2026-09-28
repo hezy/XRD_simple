@@ -55,13 +55,14 @@ This file provides context for AI assistants working on the XRD_simple project.
     `atomic_form_factor`
   - `src/config.jl` - `Radiation`, `XRay`, `Electron`, `XRDConfig`, `read_xrd_config`
   - `src/crystal.jl` - `cubic_multiplicity`, `Miller_indices`, `d_list`, `g_list`
-  - `src/profiles.jl` - `Voigt_peak`, `pseudo_Voigt_peak`, `peak_fwhm`, `sum_peaks`
-  - `src/xray.jl` - Caglioti and Scherrer widths, `bragg_angles`,
+  - `src/profiles.jl` - `Voigt_peak`, `pseudo_Voigt_peak`, `peak_fwhm`,
+    `Debye_Waller`, `sum_peaks`
+  - `src/xray.jl` - Caglioti and Scherrer widths, `Lorentz_polarization`, `bragg_angles`,
     `bragg_max_hkl_sq`, X-ray background, `XRay` methods
   - `src/electron.jl` - `electron_wavelength`, `ed_max_hkl_sq`,
     `Lorentzian_peaks_width_g`, electron background, `Electron` methods,
     `reflection_table`, `ring_image`
-  - `src/simulate.jl` - `simulate(cfg, structure, a)`
+  - `src/simulate.jl` - `simulate(cfg, structure, element, a, B)`
 - `src/plotting.jl` - Every Plots.jl call: `plot_title`, `plot_pattern`,
   `plot_ring_image`. Not included by the tests.
 - `data.toml` - Configuration file - **THE STANDARD CONFIG FORMAT**
@@ -93,7 +94,7 @@ This file provides context for AI assistants working on the XRD_simple project.
   `Electron` (subtypes of `abstract type Radiation`), chosen by `radiation`
   (`"xray"` default, or `"electron"`) and holding the instrument parameters of
   that mode. No other function reads the file or supplies a default.
-- The mode is selected by dispatch. One generic `simulate(cfg, structure, a)`
+- The mode is selected by dispatch. One generic `simulate(cfg, structure, element, a, B)`
   returns `(x, y)`, x in display units; its steps are methods on the mode:
   `grid`, `max_hkl_sq`, `peak_centres`, `peak_weights`, `peak_widths`, `background`,
   `display_axis`, `axis_label` (and `plot_title` in `plotting.jl`).
@@ -138,6 +139,17 @@ Both support:
 - **Electron (g-space):** `peak_widths(::Electron, …)` — Lorentzian via
   `Lorentzian_peaks_width_g()` (constant Scherrer K/D + strain 2εg), Gaussian a
   constant `G_inst`. `peak_fwhm()` and the profiles are reused unchanged.
+
+### Peak Intensity Weights
+- Each reflection is one pseudo-Voigt peak of area multiplicity × weight;
+  `peak_weights(mode, x₀, element, B)` returns the weights at the peak centres.
+- **X-ray:** `Lorentz_polarization(θ)` × (`atomic_form_factor(element, s)`/Z)² ×
+  `Debye_Waller(s, B)`, s = sin θ/λ. LP is normalized to 1 at 2θ = 90° and f
+  is divided by Z = f(0), so the weights are of order 1 and the peaks keep
+  their scale relative to the background.
+- **Electron:** `Debye_Waller(g/2, B)` only (no f_e(s) yet).
+- B comes from `[debye_waller]` in `data.toml` (per element, else `default`,
+  else 0) and travels in the sample tuple `(structure, element, a, B)`.
 
 ### Miller Index Generation
 `Miller_indices(cell_type::String, max_hkl_sq::Int)` enumerates the canonical
@@ -343,7 +355,9 @@ Use broadcasting (`@.` macro) for element-wise operations.
 
 ---
 
-**Last Updated:** 2026-09 (refactor of `REFACTOR_PLAN.md`: `functions.jl`
+**Last Updated:** 2026-09-28 (peak intensities: Lorentz–polarization factor,
+Debye–Waller factor with per-element B, X-ray atomic form factor; earlier in
+2026-09: refactor of `REFACTOR_PLAN.md`: `functions.jl`
 split into `src/`, config parsed once into `XRDConfig`, radiation mode selected
 by dispatch, plotting separated from physics; 2026-06: moved the analysis answer key to a separate private
 repo and gitignored `analysis/` here; earlier: added electron-diffraction mode —

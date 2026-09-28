@@ -48,3 +48,14 @@
 10. Ungár, T. (2004) "Microstructural parameters from X-ray diffraction peak broadening." Scripta Materialia, 51, 777-781.
 - Modern applications of line profile analysis
 - Discussion of dislocation density determination
+
+## Peak Intensity
+11. Cullity, B.D. & Stock, S.R. (2001) "Elements of X-Ray Diffraction", 3rd ed. Prentice Hall.
+- Lorentz–polarization factor of powder diffraction
+
+12. Waasmaier, D. & Kirfel, A. (1995) "New analytical scattering-factor functions for free atoms and ions." Acta Crystallographica A, 51, 416-431.
+- Five-Gaussian fit of the X-ray atomic form factor, 0 ≤ sin θ/λ ≤ 6 1/Å
+- Source of the coefficients in `src/form_factors.jl` (via the ESRF DABAX file f0_WaasKirf.dat)
+
+13. Peng, L.-M., Ren, G., Dudarev, S.L. & Whelan, M.J. (1996) "Debye–Waller factors and absorptive scattering factors of elemental crystals." Acta Crystallographica A, 52, 456-470.
+- Debye–Waller B of 44 elements from 1 K to 1000 K; intended source for `[debye_waller]` in data.toml

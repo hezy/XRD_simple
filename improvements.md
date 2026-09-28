@@ -47,6 +47,20 @@ Listed for context; no further action needed.
 
 ---
 
+## Pending data
+
+### Debye–Waller B values for `data.toml`
+
+The code reads B per element from `[debye_waller]`, but `data.toml` has no such
+section yet, so every B is 0 (no thermal damping). To do: add the section with
+the 293 K values for the elements in the lattice menu, taken from Peng, Ren,
+Dudarev & Whelan (1996), Acta Cryst. A52, 456–470, Table 2 (44 elemental
+crystals, 2–3 % accuracy). The IUCr server refuses automated download; obtain
+the PDF by hand. `data.toml` is skip-worktree: commit the section only in the
+public decoy version.
+
+---
+
 ## Physics model (open)
 
 All enhancements operate on the intensity of each reflection. Current code:
@@ -127,6 +141,8 @@ the distortion.
 
 ## Suggested order
 
+0. **Debye–Waller B values:** fill `[debye_waller]` in `data.toml` (see
+   Pending data).
 1. **Atomic form factor + full structure factor:** larger project, best done together —
    changes the data model and opens the door to multi-element cells.
 2. **Non-cubic lattices:** largest scope; best tackled after the physics model

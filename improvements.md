@@ -70,7 +70,22 @@ All enhancements operate on the intensity of each reflection. Current code:
 for electrons.
 Missing weights:
 
-### 1. Full structure factor |F|²
+### 1. Electron scattering factor f_e(s) (Mott–Bethe)
+
+```
+f_e(s) = 0.023934 Å · (Z − f(s)) / s²,   s = sin θ / λ = g / 2
+```
+
+Electron-mode heights carry no atomic scattering factor, so they are not
+quantitative (see `problems.md`). The Mott–Bethe relation gives f_e from the
+X-ray `atomic_form_factor` already in `src/form_factors.jl`; no new data table
+is needed. Multiply (f_e(s)/f_e(s_ref))², or another normalization of order 1,
+into `peak_weights(::Electron, g₀, element, B)`. The relation is singular at
+s = 0, but every reflection has s > 0. Optional: the relativistic factor γ at
+`voltage_kV`, which scales all f_e equally and does not change relative
+heights.
+
+### 2. Full structure factor |F|²
 
 ```
 F(hkl) = Σⱼ fⱼ · exp(2πi · (h xⱼ + k yⱼ + l zⱼ))
@@ -86,7 +101,7 @@ perovskites, alloys). Requires a data model change: unit cell = list of
 
 ## Architecture / extensibility (open)
 
-### 2. Non-cubic crystal systems
+### 3. Non-cubic crystal systems
 
 Current code is cubic-only. Generalizing to tetragonal, hexagonal,
 orthorhombic, etc. needs:
@@ -107,7 +122,7 @@ only the inner helpers become per-system.
 
 ## Electron ring image (open)
 
-### 3. Geometric distortion of the ring image
+### 4. Geometric distortion of the ring image
 
 `ring_image` now draws ideal, exactly circular rings centred in the frame.
 Real SAED patterns are distorted, and students must measure through that:
@@ -131,10 +146,12 @@ the distortion.
 
 ## Suggested order
 
-0. **Debye–Waller B values:** fill `[debye_waller]` in `data.toml` (see
+1. **Debye–Waller B values:** fill `[debye_waller]` in `data.toml` (see
    Pending data).
-1. **Full structure factor:** changes the data model and opens the door to
+2. **Electron scattering factor:** a few lines on top of the X-ray form factor;
+   removes the open item of `problems.md`.
+3. **Full structure factor:** changes the data model and opens the door to
    multi-element cells; the atomic form factor it needs is in place.
-2. **Non-cubic lattices:** largest scope; best tackled after the physics model
+4. **Non-cubic lattices:** largest scope; best tackled after the physics model
    is richer, so the per-system modules have complete equations to implement.
-3. **Ring-image distortion:** independent of the rest; any time.
+5. **Ring-image distortion:** independent of the rest; any time.

@@ -346,10 +346,12 @@ Use broadcasting (`@.` macro) for element-wise operations.
 
 ## Future Enhancements (Ideas)
 
-- Add hexagonal crystal structures
+The planned work, with its order, is in `improvements.md` (electron scattering
+factor, full structure factor, non-cubic lattices, ring-image distortion) and
+the known defects are in `problems.md`. Further ideas, not planned:
+
 - Implement Rietveld refinement
 - Add preferred orientation modeling
-- Create formal test suite
 - Interactive parameter fitting
 - Export to common XRD data formats (XRDML, UXD)
 

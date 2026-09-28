@@ -1,4 +1,5 @@
-# Peak profiles (Voigt, pseudo-Voigt), their combined FWHM, and the sum of peaks.
+# Peak profiles (Voigt, pseudo-Voigt), their combined FWHM, the Debye–Waller
+# factor shared by both modes, and the sum of peaks.
 
 """
     Voigt_peak(θ, θ₀, A, w_L, w_G; cutoff_sigma=5.0, normalize=false)
@@ -150,6 +151,32 @@ function peak_fwhm(w_L::Real,
                    w_G::Real
                    )::Float64
     return 0.5346 * w_L + √(0.2166 * w_L^2 + w_G^2)
+end
+
+
+"""
+    Debye_Waller(s::Real, B::Real)::Float64
+
+Debye–Waller (thermal) factor of the intensity of a reflection:
+
+    exp(−2B s²),   s = sin θ / λ = 1 / (2d) = g / 2
+
+where B = 8π²⟨u²⟩ is the parameter of the atomic temperature factor
+exp(−B s²) on the scattering amplitude. It damps high-angle reflections.
+
+# Arguments
+- `s::Real`: sin θ / λ in 1/Å
+- `B::Real`: Debye–Waller parameter in Å² (must not be negative)
+
+# Returns
+- `Float64`: the factor, in (0, 1]
+
+# Throws
+* ArgumentError: If B < 0
+"""
+function Debye_Waller(s::Real, B::Real)::Float64
+    B ≥ 0 || throw(ArgumentError("Debye–Waller parameter B must not be negative"))
+    return exp(-2B * s^2)
 end
 
 

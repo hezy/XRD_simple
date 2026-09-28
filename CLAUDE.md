@@ -96,11 +96,12 @@ This file provides context for AI assistants working on the XRD_simple project.
   `display_axis`, `axis_label` (and `plot_title` in `plotting.jl`).
 - **X-ray path:** Bragg geometry, x-axis 2θ (degrees). Uses `lambda`,
   `two_theta_min/max`, Caglioti U/V/W. Peak areas are multiplicity ×
-  `Lorentz_polarization(θ)` (unpolarized beam, normalized to 1 at 2θ = 90°).
+  `Lorentz_polarization(θ)` (unpolarized beam, normalized to 1 at 2θ = 90°) ×
+  `Debye_Waller(sin θ/λ, B)`.
 - **Electron path:** reciprocal-space geometry, x-axis g = 1/d (1/Å). Positions
   are `g = √(h²+k²+l²)/a` (no Bragg's law); reflection cutoff is `ed_max_hkl_sq`
   (g ≤ `g_max`), not `bragg_max_hkl_sq`. Uses `voltage_kV`, `g_min`/`g_max`,
-  `G_inst`. Heights are multiplicity-only (no f_e(s) yet).
+  `G_inst`. Heights are multiplicity × `Debye_Waller(g/2, B)` (no f_e(s) yet).
 - The crystallography (`Miller_indices`, `cubic_multiplicity`, absences) and the
   peak profiles (`Voigt_peak`, `pseudo_Voigt_peak`, `peak_fwhm`, `sum_peaks`) are
   shared by both paths.
@@ -185,24 +186,28 @@ V  = 3.0399
 [lattice.FCC]
 Ag = 4.079
 # Cu = 3.594
+
+[debye_waller]               # optional; Debye–Waller B (Å²), both modes
+default = 0.0                # elements not listed (0 = no thermal damping)
+# Fe = 0.35
 ```
 
 **Important:** Angular parameters in config are in degrees and automatically
 converted to radians by `read_xrd_config()`. Its `XRDConfig` holds, in the
-field `samples`, a sorted vector of `(structure, element, a)` triples — one per
+field `samples`, a sorted vector of `(structure, element, a, B)` tuples — one per
 uncommented lattice entry, any N (including 0) supported. Keys for the unused radiation mode are
 ignored, so both X-ray and electron parameters can coexist in one file — flip
 `radiation` to switch.
 
 ## Known Issues
 
-### Intensities: no form factor, no Debye–Waller
-- Electron-mode peak heights are weighted by multiplicity only; the electron
+### Intensities: no form factor
+- Electron-mode peak heights are weighted by multiplicity and Debye–Waller only; the electron
   scattering factor f_e(s) is not modelled, so relative intensities are
   geometric, not quantitative. Adding f_e(s) (Doyle–Turner/Kirkland, or
   Mott–Bethe on X-ray f_x) would make low-g reflections correctly dominant —
   and would also upgrade the X-ray heights, which are multiplicity × Lorentz–
-  polarization only (no atomic form factor, no Debye–Waller factor).
+  polarization × Debye–Waller only (no atomic form factor).
 
 ### Compatibility
 - JSON.jl v1.3.0 had compatibility issues with LanguageServer (documented in JSON_compatibility_fix.md)
@@ -249,8 +254,8 @@ ignored, so both X-ray and electron parameters can coexist in one file — flip
   `ring_phosphor`, `ring_gamma`, `ring_noise`.
 - Electron knobs: `voltage_kV`, `g_min`/`g_max` (detector range), `G_inst`
   (instrumental Gaussian FWHM), plus the shared `K`, `Epsilon`, `D`.
-- To add the electron scattering factor f_e(s), return it from
-  `peak_weights(::Electron, g₀)` (see Known Issues).
+- To add the electron scattering factor f_e(s), multiply it into
+  `peak_weights(::Electron, g₀, B)` (see Known Issues).
 
 ## Testing Approach
 

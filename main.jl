@@ -105,8 +105,8 @@ function main()
     # The x column comes from the first pattern; all samples share one grid.
     df = DataFrame()
 
-    for (structure, element, a) in cfg.samples
-        local x, intensities = simulate(cfg, structure, a)
+    for (structure, element, a, B) in cfg.samples
+        local x, intensities = simulate(cfg, structure, a, B)
         local title = "$element-$structure"
         local the_plot = plot_pattern(cfg.mode, x, intensities, title, plot_theme)
         ncol(df) == 0 && (df[!, xcol] = x)

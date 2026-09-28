@@ -20,6 +20,7 @@ A Julia-based simulation tool for powder diffraction patterns of cubic crystal s
 - **Realistic Simulations**
   - Angle-dependent peak broadening
   - Lorentz–polarization factor on X-ray peak intensities
+  - Debye–Waller (thermal) factor, B set per element
   - Background signal generation
   - Experimental noise simulation
   - Williamson-Hall analysis support
@@ -107,10 +108,18 @@ Fe = 2.866
 Pd = 3.859
 # Ag = 4.079
 # Cu = 3.594
+
+[debye_waller]               # optional; B in Å²
+default = 0.0                # elements not listed (0: no thermal damping)
+# Fe = 0.35
 ```
 
 Each uncommented entry under a `[lattice.*]` block produces one pattern.
 Leave entries commented out to skip them; add more to run several at once.
+
+**Debye–Waller factor.** Each reflection's intensity is multiplied by
+exp(−2B (sin θ/λ)²), in both radiation modes. `[debye_waller]` gives B for each
+element; elements not listed use `default`. Without the section, B = 0.
 
 **Radiation mode.** `radiation` selects the physics path. With `"xray"` the
 X-ray-only keys are used (2θ window, `lambda`, Caglioti U/V/W); with
@@ -214,8 +223,8 @@ U/V/W terms are degenerate at θ ≈ 0). The crystallography (Miller indices,
 multiplicities, systematic absences) and the Voigt / pseudo-Voigt peak profiles
 are shared with the X-ray path.
 
-Peak **heights** are multiplicity-weighted only (the X-ray path adds the
-Lorentz–polarization factor); the electron atomic scattering factor f_e(s) is not yet modelled, so the
+Peak **heights** are multiplicity × Debye–Waller factor (the X-ray path adds
+the Lorentz–polarization factor); the electron atomic scattering factor f_e(s) is not yet modelled, so the
 relative intensities are geometric rather than quantitative. The model is
 kinematical — valid for thin specimens; real selected-area electron diffraction
 is dynamical.

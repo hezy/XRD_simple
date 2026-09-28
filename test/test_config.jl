@@ -27,9 +27,10 @@ end
     cfg = read_xrd_config(DATA_TOML)
     @test cfg isa XRDConfig
     @test cfg.mode isa Radiation
-    @test cfg.samples isa Vector{Tuple{String,String,Float64}}
+    @test cfg.samples isa Vector{Tuple{String,String,Float64,Float64}}
     @test all(s[1] in ("SC", "BCC", "FCC") for s in cfg.samples)
     @test all(s[3] > 0 for s in cfg.samples)
+    @test all(s[4] ≥ 0 for s in cfg.samples)
 
     # The file and the Dict methods agree
     @test read_xrd_config(DATA_TOML).samples == read_xrd_config(TOML.parsefile(DATA_TOML)).samples
@@ -40,7 +41,12 @@ end
     @test cfg.mode.two_theta_max ≈ deg2rad(120.0)
     @test cfg.mode.lambda == 1.5418
     @test cfg.D === 500.0                          # integer in TOML, Float64 here
-    @test cfg.samples == [("FCC", "Ag", 4.079), ("FCC", "Cu", 3.594), ("SC", "Po", 3.352)]
+    @test cfg.samples == [("FCC", "Ag", 4.079, 0.0), ("FCC", "Cu", 3.594, 0.0), ("SC", "Po", 3.352, 0.0)]
+
+    # [debye_waller]: an element entry, else the default; others are ignored
+    c = deepcopy(base_config())
+    c["debye_waller"] = Dict{String,Any}("default" => 0.5, "Cu" => 0.55, "Fe" => 0.35)
+    @test [s[4] for s in read_xrd_config(c).samples] == [0.5, 0.55, 0.5]
 end
 
 @testset "read_xrd_config defaults" begin
@@ -125,5 +131,13 @@ end
     c = deepcopy(b); c["lattice"]["HCP"] = Dict{String,Any}("Mg" => 3.21)
     @test_throws ArgumentError read_xrd_config(c)
     c = deepcopy(b); c["lattice"]["SC"]["Po"] = -3.352
+    @test_throws ArgumentError read_xrd_config(c)
+
+    # Debye–Waller
+    c = deepcopy(b); c["debye_waller"] = Dict{String,Any}("Cu" => -0.5)
+    @test_throws ArgumentError read_xrd_config(c)
+    c = deepcopy(b); c["debye_waller"] = Dict{String,Any}("default" => -0.5)
+    @test_throws ArgumentError read_xrd_config(c)
+    c = deepcopy(b); c["debye_waller"] = Dict{String,Any}("Cu" => "0.5")
     @test_throws ArgumentError read_xrd_config(c)
 end

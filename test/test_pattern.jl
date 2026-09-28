@@ -45,11 +45,37 @@ end
     @test_throws ArgumentError Lorentz_polarization(0.0)
     @test_throws ArgumentError Lorentz_polarization(π/2)
 
+end
+
+@testset "Debye_Waller" begin
+    @test Debye_Waller(0.5, 0.0) == 1.0
+    @test Debye_Waller(0.0, 1.0) == 1.0
+    @test Debye_Waller(0.5, 0.4) ≈ exp(-0.2)
+    @test Debye_Waller(0.6, 0.4) < Debye_Waller(0.3, 0.4)
+    @test_throws ArgumentError Debye_Waller(0.5, -0.1)
+end
+
+@testset "peak_weights" begin
+    # X-ray: LP × DW with s = sin θ / λ
     cfg = read_xrd_config(XRAY_TOML)
+    λ = cfg.mode.lambda
     two_θ₀ = deg2rad.([20.0, 90.0])
-    @test peak_weights(cfg.mode, two_θ₀) ≈ Lorentz_polarization.(two_θ₀ ./ 2)
+    @test peak_weights(cfg.mode, two_θ₀, 0.0) ≈ Lorentz_polarization.(two_θ₀ ./ 2)
+    @test peak_weights(cfg.mode, two_θ₀, 0.5) ≈
+          Lorentz_polarization.(two_θ₀ ./ 2) .* exp.(-2 * 0.5 .* (sin.(two_θ₀ ./ 2) ./ λ) .^ 2)
+
+    # Electron: DW only, with s = g/2
     cfg = read_xrd_config(ELECTRON_TOML)
-    @test peak_weights(cfg.mode, [0.3, 0.6]) == [1.0, 1.0]
+    @test peak_weights(cfg.mode, [0.3, 0.6], 0.0) == [1.0, 1.0]
+    @test peak_weights(cfg.mode, [0.3, 0.6], 0.5) ≈ exp.(-2 * 0.5 .* ([0.3, 0.6] ./ 2) .^ 2)
+
+    # In a pattern, B lowers a high-angle peak more than a low-angle one
+    x, y0 = simulate(read_xrd_config(XRAY_TOML), "SC", 3.352, 0.0)
+    _, y1 = simulate(read_xrd_config(XRAY_TOML), "SC", 3.352, 1.0)
+    peak(y, two_θ) = y[argmin(abs.(x .- two_θ))]
+    d(N) = 3.352 / √N
+    two_θ(N) = 2asind(λ / (2d(N)))
+    @test peak(y1, two_θ(1)) / peak(y0, two_θ(1)) > peak(y1, two_θ(9)) / peak(y0, two_θ(9))
 end
 
 @testset "peak_widths" begin

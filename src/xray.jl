@@ -207,7 +207,8 @@ function peak_centres(m::XRay, indices::AbstractVector{<:AbstractVector{<:Intege
     return 2 .* θ_B, multiplicities[visible]
 end
 
-peak_weights(::XRay, two_θ₀::AbstractVector{<:Real}) = Lorentz_polarization.(two_θ₀ ./ 2)
+peak_weights(m::XRay, two_θ₀::AbstractVector{<:Real}, B::Real) =
+    @. Lorentz_polarization(two_θ₀ / 2) * Debye_Waller(sin(two_θ₀ / 2) / m.lambda, B)
 
 function peak_widths(m::XRay, two_θ₀::Real, cfg::XRDConfig)
     θ_B = two_θ₀ / 2

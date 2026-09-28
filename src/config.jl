@@ -5,7 +5,7 @@
 
 Radiation mode of a simulation: `XRay` or `Electron`. Each subtype holds the
 instrument parameters of its mode, and the mode-specific steps of `simulate`
-(`grid`, `max_hkl_sq`, `peak_centres`, `peak_widths`, `background`,
+(`grid`, `max_hkl_sq`, `peak_centres`, `peak_weights`, `peak_widths`, `background`,
 `display_axis`, `axis_label`) are methods on it. The plot title of each mode
 (`plot_title`) is in `plotting.jl`.
 """
@@ -70,8 +70,9 @@ no other function reads the TOML file or supplies a default.
 - `N::Int`: number of grid points
 - `noise_level::Float64`: multiplicative noise standard deviation (0–1)
 - `K`: Scherrer constant; `Epsilon`: microstrain; `D`: crystallite size (nm)
-- `samples::Vector{Tuple{String,String,Float64}}`: `(structure, element, a)`
-  triples, sorted; may be empty
+- `samples::Vector{Tuple{String,String,Float64,Float64}}`:
+  `(structure, element, a, B)`, sorted; may be empty. `B` is the Debye–Waller
+  parameter (Å²) of the element
 """
 struct XRDConfig
     mode::Radiation
@@ -80,7 +81,7 @@ struct XRDConfig
     K::Float64
     Epsilon::Float64
     D::Float64
-    samples::Vector{Tuple{String,String,Float64}}
+    samples::Vector{Tuple{String,String,Float64,Float64}}
 end
 
 
@@ -119,13 +120,16 @@ and return one `XRDConfig`. The `Dict` method takes an already parsed file.
 of that mode. Keys of the other mode are ignored, not read or checked: both
 X-ray and electron parameters can stay in one file. The 2θ limits are
 converted from degrees to radians. Each uncommented `element = a` entry under
-`[lattice.STRUCTURE]` becomes one sample; zero samples is valid.
+`[lattice.STRUCTURE]` becomes one sample; zero samples is valid. The optional
+section `[debye_waller]` gives the Debye–Waller parameter B (Å²) of each sample:
+an `element = B` entry, or else the key `default`. Entries for elements that
+are not samples are ignored.
 
 # Defaults
 `radiation = "xray"`, `noise_level = 0`, `voltage_kV = 200`, `g_min = 0`,
 `G_inst = 0.005`, `camera_constant = 50`, `image_px = 800`,
 `beam_stop_mm = 2.5`, `ring_phosphor = true`, `ring_gamma = 0.5`,
-`ring_noise = 0`. All other keys of the selected mode are required.
+`ring_noise = 0`, `[debye_waller] default = 0` (no thermal damping). All other keys of the selected mode are required.
 
 # Throws
 - `ArgumentError`: missing section or key, value of the wrong type, unknown
@@ -159,7 +163,12 @@ function read_xrd_config(config::Dict)
 
     mode = radiation == "xray" ? read_xray(inst, pw) : read_electron(inst, pw)
 
-    samples = Tuple{String,String,Float64}[]
+    dw = get(config, "debye_waller", Dict{String,Any}())
+    dw isa Dict || throw(ArgumentError("[debye_waller] must be a table of element = B entries"))
+    B_default = config_value(dw, "debye_waller", "default", Float64, 0.0)
+    config_check(B_default ≥ 0, "[debye_waller] default must not be negative, got $B_default")
+
+    samples = Tuple{String,String,Float64,Float64}[]
     for (structure, elements) in get(config, "lattice", Dict{String,Any}())
         section = "lattice.$structure"
         structure in ("SC", "BCC", "FCC") ||
@@ -168,7 +177,9 @@ function read_xrd_config(config::Dict)
         for element in keys(elements)
             a = config_value(elements, section, element, Float64)
             config_check(a > 0, "[$section] $element: lattice parameter must be positive, got $a")
-            push!(samples, (structure, element, a))
+            B = config_value(dw, "debye_waller", element, Float64, B_default)
+            config_check(B ≥ 0, "[debye_waller] $element: B must not be negative, got $B")
+            push!(samples, (structure, element, a, B))
         end
     end
     sort!(samples)

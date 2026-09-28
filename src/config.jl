@@ -120,7 +120,8 @@ and return one `XRDConfig`. The `Dict` method takes an already parsed file.
 of that mode. Keys of the other mode are ignored, not read or checked: both
 X-ray and electron parameters can stay in one file. The 2θ limits are
 converted from degrees to radians. Each uncommented `element = a` entry under
-`[lattice.STRUCTURE]` becomes one sample; zero samples is valid. The optional
+`[lattice.STRUCTURE]` becomes one sample; zero samples is valid. Each element
+must be a chemical symbol with an atomic form factor (H to Cf). The optional
 section `[debye_waller]` gives the Debye–Waller parameter B (Å²) of each sample:
 an `element = B` entry, or else the key `default`. Entries for elements that
 are not samples are ignored.
@@ -177,6 +178,8 @@ function read_xrd_config(config::Dict)
         for element in keys(elements)
             a = config_value(elements, section, element, Float64)
             config_check(a > 0, "[$section] $element: lattice parameter must be positive, got $a")
+            config_check(haskey(FORM_FACTOR_COEFFICIENTS, element),
+                "[$section] $element: unknown element; use a symbol from H to Cf, e.g. Fe")
             B = config_value(dw, "debye_waller", element, Float64, B_default)
             config_check(B ≥ 0, "[debye_waller] $element: B must not be negative, got $B")
             push!(samples, (structure, element, a, B))

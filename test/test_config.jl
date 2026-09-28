@@ -132,6 +132,8 @@ end
     @test_throws ArgumentError read_xrd_config(c)
     c = deepcopy(b); c["lattice"]["SC"]["Po"] = -3.352
     @test_throws ArgumentError read_xrd_config(c)
+    c = deepcopy(b); c["lattice"]["SC"]["Xx"] = 3.0
+    @test_throws ArgumentError read_xrd_config(c)
 
     # Debye–Waller
     c = deepcopy(b); c["debye_waller"] = Dict{String,Any}("Cu" => -0.5)

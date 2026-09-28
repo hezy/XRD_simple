@@ -106,7 +106,7 @@ function main()
     df = DataFrame()
 
     for (structure, element, a, B) in cfg.samples
-        local x, intensities = simulate(cfg, structure, a, B)
+        local x, intensities = simulate(cfg, structure, element, a, B)
         local title = "$element-$structure"
         local the_plot = plot_pattern(cfg.mode, x, intensities, title, plot_theme)
         ncol(df) == 0 && (df[!, xcol] = x)

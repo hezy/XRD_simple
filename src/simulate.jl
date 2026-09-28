@@ -2,7 +2,7 @@
 # `XRay` (xray.jl) and `Electron` (electron.jl).
 
 """
-    simulate(cfg::XRDConfig, structure::String, a::Real, B::Real=0.0)
+    simulate(cfg::XRDConfig, structure::String, element::String, a::Real, B::Real=0.0)
 
 Compute the powder pattern of one sample in the radiation mode `cfg.mode`.
 
@@ -10,7 +10,7 @@ The steps are the same for every mode; each step is a method on the mode type:
 grid (`grid`), reflections up to the cutoff (`max_hkl_sq`, `Miller_indices`),
 their centres and multiplicities (`peak_centres`), an angle-dependent weight of
 each (`peak_weights`: the Debye–Waller factor, and for X-rays also the
-Lorentz–polarization factor), their widths
+Lorentz–polarization factor and the squared atomic form factor f²/Z²), their widths
 at each centre (`peak_widths`), the sum of pseudo-Voigt peaks of area
 multiplicity × weight (`sum_peaks`) on the `background`, and multiplicative noise of standard
 deviation `cfg.noise_level`.
@@ -18,6 +18,7 @@ deviation `cfg.noise_level`.
 # Arguments
 - `cfg::XRDConfig`: Configuration from `read_xrd_config`
 - `structure::String`: Crystal structure ("SC", "BCC", or "FCC")
+- `element::String`: Chemical symbol of the (single) element, e.g. "Fe"
 - `a::Real`: Lattice parameter in Angstroms
 - `B::Real`: Debye–Waller parameter in Å² (0: no thermal damping)
 
@@ -27,6 +28,7 @@ deviation `cfg.noise_level`.
 """
 function simulate(cfg::XRDConfig,
                   structure::String,
+                  element::String,
                   a::Real,
                   B::Real=0.0
                   )::Tuple{Vector{Float64}, Vector{Float64}}
@@ -38,7 +40,7 @@ function simulate(cfg::XRDConfig,
     widths = [peak_widths(mode, xᵢ, cfg) for xᵢ in x₀]
     w_L, w_G = first.(widths), last.(widths)
 
-    A = m .* peak_weights(mode, x₀, B)
+    A = m .* peak_weights(mode, x₀, element, B)
 
     y = background(mode, x) .+ sum_peaks(x, x₀, A, w_L, w_G)
 

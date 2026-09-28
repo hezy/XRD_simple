@@ -50,6 +50,9 @@ This file provides context for AI assistants working on the XRD_simple project.
   includes `src/XRDSim.jl`, then `src/plotting.jl`
 - `src/XRDSim.jl` - Entry file of the physics (plain includes, not a module):
   loads SpecialFunctions, `Distributions: Normal`, TOML, and includes in order
+  - `src/form_factors.jl` - `FORM_FACTOR_COEFFICIENTS` (Waasmaier–Kirfel,
+    H–Cf, generated from the DABAX file; do not edit by hand),
+    `atomic_form_factor`
   - `src/config.jl` - `Radiation`, `XRay`, `Electron`, `XRDConfig`, `read_xrd_config`
   - `src/crystal.jl` - `cubic_multiplicity`, `Miller_indices`, `d_list`, `g_list`
   - `src/profiles.jl` - `Voigt_peak`, `pseudo_Voigt_peak`, `peak_fwhm`, `sum_peaks`
@@ -97,7 +100,9 @@ This file provides context for AI assistants working on the XRD_simple project.
 - **X-ray path:** Bragg geometry, x-axis 2θ (degrees). Uses `lambda`,
   `two_theta_min/max`, Caglioti U/V/W. Peak areas are multiplicity ×
   `Lorentz_polarization(θ)` (unpolarized beam, normalized to 1 at 2θ = 90°) ×
-  `Debye_Waller(sin θ/λ, B)`.
+  (f/Z)² (`atomic_form_factor`, divided by f(0) = Z) × `Debye_Waller(sin θ/λ, B)`.
+  Element keys in `[lattice.*]` must be chemical symbols (checked in
+  `read_xrd_config`); `simulate(cfg, structure, element, a, B)`.
 - **Electron path:** reciprocal-space geometry, x-axis g = 1/d (1/Å). Positions
   are `g = √(h²+k²+l²)/a` (no Bragg's law); reflection cutoff is `ed_max_hkl_sq`
   (g ≤ `g_max`), not `bragg_max_hkl_sq`. Uses `voltage_kV`, `g_min`/`g_max`,
@@ -201,13 +206,12 @@ ignored, so both X-ray and electron parameters can coexist in one file — flip
 
 ## Known Issues
 
-### Intensities: no form factor
+### Electron intensities: no scattering factor
 - Electron-mode peak heights are weighted by multiplicity and Debye–Waller only; the electron
   scattering factor f_e(s) is not modelled, so relative intensities are
   geometric, not quantitative. Adding f_e(s) (Doyle–Turner/Kirkland, or
-  Mott–Bethe on X-ray f_x) would make low-g reflections correctly dominant —
-  and would also upgrade the X-ray heights, which are multiplicity × Lorentz–
-  polarization × Debye–Waller only (no atomic form factor).
+  Mott–Bethe on the X-ray `atomic_form_factor`) would make low-g reflections
+  correctly dominant. The X-ray heights include the form factor.
 
 ### Compatibility
 - JSON.jl v1.3.0 had compatibility issues with LanguageServer (documented in JSON_compatibility_fix.md)

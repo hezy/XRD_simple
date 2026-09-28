@@ -55,23 +55,41 @@ end
     @test_throws ArgumentError Debye_Waller(0.5, -0.1)
 end
 
+@testset "atomic_form_factor" begin
+    # f(0) = Z for every tabulated neutral atom
+    Z = Dict("H" => 1, "Al" => 13, "Fe" => 26, "Cu" => 29, "Ag" => 47, "W" => 74,
+             "Au" => 79, "Po" => 84, "Cf" => 98)
+    for (el, z) in Z
+        @test atomic_form_factor(el, 0.0) ≈ z atol = 0.05
+    end
+    @test length(FORM_FACTOR_COEFFICIENTS) == 98
+    @test all(abs(sum(c[1:6]) - round(sum(c[1:6]))) < 0.05 for c in values(FORM_FACTOR_COEFFICIENTS))
+    # Decreasing with s
+    @test issorted(atomic_form_factor.("Cu", 0.0:0.1:2.0), rev=true)
+    @test_throws ArgumentError atomic_form_factor("Xx", 0.5)
+    @test_throws ArgumentError atomic_form_factor("Fe", -0.1)
+    @test_throws ArgumentError atomic_form_factor("Fe", 6.5)
+end
+
 @testset "peak_weights" begin
-    # X-ray: LP × DW with s = sin θ / λ
+    # X-ray: LP × f² × DW with s = sin θ / λ
     cfg = read_xrd_config(XRAY_TOML)
     λ = cfg.mode.lambda
     two_θ₀ = deg2rad.([20.0, 90.0])
-    @test peak_weights(cfg.mode, two_θ₀, 0.0) ≈ Lorentz_polarization.(two_θ₀ ./ 2)
-    @test peak_weights(cfg.mode, two_θ₀, 0.5) ≈
-          Lorentz_polarization.(two_θ₀ ./ 2) .* exp.(-2 * 0.5 .* (sin.(two_θ₀ ./ 2) ./ λ) .^ 2)
+    s = sin.(two_θ₀ ./ 2) ./ λ
+    f² = (atomic_form_factor.("Fe", s) ./ atomic_form_factor("Fe", 0.0)) .^ 2
+    @test peak_weights(cfg.mode, two_θ₀, "Fe", 0.0) ≈ Lorentz_polarization.(two_θ₀ ./ 2) .* f²
+    @test peak_weights(cfg.mode, two_θ₀, "Fe", 0.5) ≈
+          Lorentz_polarization.(two_θ₀ ./ 2) .* f² .* exp.(-2 * 0.5 .* s .^ 2)
 
     # Electron: DW only, with s = g/2
     cfg = read_xrd_config(ELECTRON_TOML)
-    @test peak_weights(cfg.mode, [0.3, 0.6], 0.0) == [1.0, 1.0]
-    @test peak_weights(cfg.mode, [0.3, 0.6], 0.5) ≈ exp.(-2 * 0.5 .* ([0.3, 0.6] ./ 2) .^ 2)
+    @test peak_weights(cfg.mode, [0.3, 0.6], "Fe", 0.0) == [1.0, 1.0]
+    @test peak_weights(cfg.mode, [0.3, 0.6], "Fe", 0.5) ≈ exp.(-2 * 0.5 .* ([0.3, 0.6] ./ 2) .^ 2)
 
     # In a pattern, B lowers a high-angle peak more than a low-angle one
-    x, y0 = simulate(read_xrd_config(XRAY_TOML), "SC", 3.352, 0.0)
-    _, y1 = simulate(read_xrd_config(XRAY_TOML), "SC", 3.352, 1.0)
+    x, y0 = simulate(read_xrd_config(XRAY_TOML), "SC", "Po", 3.352, 0.0)
+    _, y1 = simulate(read_xrd_config(XRAY_TOML), "SC", "Po", 3.352, 1.0)
     peak(y, two_θ) = y[argmin(abs.(x .- two_θ))]
     d(N) = 3.352 / √N
     two_θ(N) = 2asind(λ / (2d(N)))
@@ -96,7 +114,7 @@ end
     a = 3.352
     for (file, label) in ((XRAY_TOML, "2θ (deg)"), (ELECTRON_TOML, "g (1/Å)"))
         cfg = read_xrd_config(file)
-        x, y = simulate(cfg, "SC", a)
+        x, y = simulate(cfg, "SC", "Po", a)
         @test length(x) == length(y) == cfg.N
         @test all(y .>= 0)
         @test axis_label(cfg.mode) == label
@@ -104,14 +122,14 @@ end
 
     # X-ray: x is 2θ in degrees, and the (100) peak lies at 2θ_B
     cfg = read_xrd_config(XRAY_TOML)
-    x, y = simulate(cfg, "SC", a)
+    x, y = simulate(cfg, "SC", "Po", a)
     @test x[1] ≈ 10.0 && x[end] ≈ 120.0
     i = argmin(abs.(x .- rad2deg(2asin(cfg.mode.lambda / (2a)))))
     @test y[i] ≈ maximum(y[max(1, i-5):i+5])
 
     # Electron: the (100) peak lies at g = 1/a
     cfg = read_xrd_config(ELECTRON_TOML)
-    x, y = simulate(cfg, "SC", a)
+    x, y = simulate(cfg, "SC", "Po", a)
     i = argmin(abs.(x .- 1 / a))
     @test y[i] ≈ maximum(y[max(1, i-5):i+5])
 
@@ -119,9 +137,9 @@ end
     toml = TOML.parsefile(XRAY_TOML)
     toml["instrument"]["noise_level"] = 0.1
     cfg = read_xrd_config(toml)
-    Random.seed!(42); _, y1 = simulate(cfg, "SC", a)
-    Random.seed!(43); _, y2 = simulate(cfg, "SC", a)
-    Random.seed!(42); _, y3 = simulate(cfg, "SC", a)
+    Random.seed!(42); _, y1 = simulate(cfg, "SC", "Po", a)
+    Random.seed!(43); _, y2 = simulate(cfg, "SC", "Po", a)
+    Random.seed!(42); _, y3 = simulate(cfg, "SC", "Po", a)
     @test y1 != y2
     @test y1 == y3
 end
@@ -135,7 +153,7 @@ end
     cfg = read_xrd_config(toml)
     mode = cfg.mode
     Random.seed!(42)
-    g, y = simulate(cfg, "SC", a)
+    g, y = simulate(cfg, "SC", "Po", a)
     coords, img = ring_image(g, y, mode)
 
     @test length(coords) == mode.image_px

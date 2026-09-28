@@ -21,6 +21,7 @@ A Julia-based simulation tool for powder diffraction patterns of cubic crystal s
   - Angle-dependent peak broadening
   - Lorentz–polarization factor on X-ray peak intensities
   - Debye–Waller (thermal) factor, B set per element
+  - X-ray atomic form factor (Waasmaier–Kirfel 1995, H to Cf)
   - Background signal generation
   - Experimental noise simulation
   - Williamson-Hall analysis support
@@ -114,7 +115,8 @@ default = 0.0                # elements not listed (0: no thermal damping)
 # Fe = 0.35
 ```
 
-Each uncommented entry under a `[lattice.*]` block produces one pattern.
+Each uncommented entry under a `[lattice.*]` block produces one pattern. The
+key must be a chemical symbol (H to Cf); it selects the atomic form factor.
 Leave entries commented out to skip them; add more to run several at once.
 
 **Debye–Waller factor.** Each reflection's intensity is multiplied by
@@ -224,7 +226,7 @@ multiplicities, systematic absences) and the Voigt / pseudo-Voigt peak profiles
 are shared with the X-ray path.
 
 Peak **heights** are multiplicity × Debye–Waller factor (the X-ray path adds
-the Lorentz–polarization factor); the electron atomic scattering factor f_e(s) is not yet modelled, so the
+the Lorentz–polarization factor and the atomic form factor); the electron atomic scattering factor f_e(s) is not yet modelled, so the
 relative intensities are geometric rather than quantitative. The model is
 kinematical — valid for thin specimens; real selected-area electron diffraction
 is dynamical.

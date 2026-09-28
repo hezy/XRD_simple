@@ -40,7 +40,7 @@ println("="^70)
 function run_checks(config, camera_constant, g_max, tol_g)
 all_ok = true
 for (structure, element, a, B) in config.samples
-    g, y = simulate(config, structure, a, B)
+    g, y = simulate(config, structure, element, a, B)
     rt = reflection_table(structure, a, g_max)
 
     # (1) profile peaks vs analytic g

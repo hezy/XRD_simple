@@ -97,8 +97,9 @@ peak_centres(::Electron, indices::AbstractVector{<:AbstractVector{<:Integer}},
              multiplicities::AbstractVector{<:Integer}, a::Real) = g_list(indices, a), multiplicities
 
 # Debye–Waller only, with s = g/2: the Lorentz factor is constant in g, and
-# f_e(s) is not modelled (see Known Issues).
-peak_weights(::Electron, g₀::AbstractVector{<:Real}, B::Real) = Debye_Waller.(g₀ ./ 2, B)
+# f_e(s) is not modelled (see Known Issues). `element` is not used yet.
+peak_weights(::Electron, g₀::AbstractVector{<:Real}, element::String, B::Real) =
+    Debye_Waller.(g₀ ./ 2, B)
 
 peak_widths(m::Electron, g₀::Real, cfg::XRDConfig) =
     (Lorentzian_peaks_width_g(g₀, cfg.K, cfg.Epsilon, cfg.D), m.G_inst)

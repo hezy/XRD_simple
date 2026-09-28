@@ -98,18 +98,29 @@ where:
 ## 7. Peak Intensity
 
 The integrated intensity of reflection hkl is its multiplicity m times the
-Lorentz–polarization factor (X-ray, unpolarized beam without monochromator)
-and the Debye–Waller factor:
+Lorentz–polarization factor (X-ray, unpolarized beam without monochromator),
+the squared atomic form factor (X-ray) and the Debye–Waller factor:
 ```
-I_hkl ∝ m · LP(θ) · exp(−2B s²)
+I_hkl ∝ m · LP(θ) · (f(s)/Z)² · exp(−2B s²)
 LP(θ) = (1 + cos²2θ) / (sin²θ · cos θ),   s = sin θ / λ = 1/(2d)
+f(s)  = c + Σᵢ aᵢ exp(−bᵢ s²),   i = 1…5
 ```
 LP is normalized to 1 at 2θ = 90°. It is large at low angles and has its
 minimum near 2θ ≈ 100°–120°. B = 8π²⟨u²⟩ (Å²) is the parameter of the atomic
 temperature factor exp(−B s²) on the amplitude, so the intensity carries
-exp(−2B s²); typical room-temperature values are 0.2–2 Å². In electron mode
-the Lorentz–polarization factor is omitted and s = g/2. The atomic form factor
-is not yet included.
+exp(−2B s²); typical room-temperature values are 0.2–2 Å².
+
+f(s) is the X-ray scattering amplitude of one neutral atom, in electrons. It
+equals Z at s = 0 and falls with s because the electron cloud has a finite
+size. The coefficients are those of Waasmaier & Kirfel (1995), Acta Cryst.
+A51, 416–431, fitted to International Tables Vol. C, Table 6.1.1.1, and valid
+for 0 ≤ s ≤ 6 1/Å. Dividing by Z keeps the weights of order 1; for a
+single-element cubic cell the structure factor is n·f (n atoms per cell), so
+the relative intensities within one pattern are unchanged by this scaling.
+Anomalous dispersion (f′, f″) is omitted.
+
+In electron mode the Lorentz–polarization factor and f are omitted and
+s = g/2; only the Debye–Waller factor applies.
 
 ## 8. Electron Diffraction (reciprocal-space form)
 

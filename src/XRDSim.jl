@@ -12,6 +12,7 @@ using Distributions: Normal
 using TOML
 
 
+include("form_factors.jl")
 include("config.jl")
 include("crystal.jl")
 include("profiles.jl")

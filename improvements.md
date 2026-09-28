@@ -44,6 +44,8 @@ Listed for context; no further action needed.
 - Added the Debye–Waller factor exp(−2B (sin θ/λ)²) in both modes, with B per
   element from the optional `[debye_waller]` section of `data.toml`
   (September 2026).
+- Added the X-ray atomic form factor: Waasmaier–Kirfel coefficients for H–Cf
+  in `src/form_factors.jl`; peak areas carry (f/Z)² (September 2026).
 
 ---
 
@@ -64,23 +66,11 @@ public decoy version.
 ## Physics model (open)
 
 All enhancements operate on the intensity of each reflection. Current code:
-`I ∝ multiplicity × LP(θ) × DW` for X-rays, `I ∝ multiplicity × DW` for
-electrons.
+`I ∝ multiplicity × LP(θ) × (f/Z)² × DW` for X-rays, `I ∝ multiplicity × DW`
+for electrons.
 Missing weights:
 
-### 1. Atomic form factor f(θ)
-
-```
-f(sin θ / λ) = Σᵢ aᵢ · exp(−bᵢ · (sin θ / λ)²) + c      [Cromer–Mann, 9 params]
-```
-
-X-ray scattering amplitude of a single atom; falls off with angle because the
-electron cloud is not a point. Needs a table of Cromer–Mann coefficients per
-element. Weight becomes `|F|² ∝ (m · f(θ))²`.
-
-Sources: International Tables Vol. C, §6.1; Waasmaier–Kirfel (1995).
-
-### 2. Full structure factor |F|²
+### 1. Full structure factor |F|²
 
 ```
 F(hkl) = Σⱼ fⱼ · exp(2πi · (h xⱼ + k yⱼ + l zⱼ))
@@ -96,7 +86,7 @@ perovskites, alloys). Requires a data model change: unit cell = list of
 
 ## Architecture / extensibility (open)
 
-### 3. Non-cubic crystal systems
+### 2. Non-cubic crystal systems
 
 Current code is cubic-only. Generalizing to tetragonal, hexagonal,
 orthorhombic, etc. needs:
@@ -117,7 +107,7 @@ only the inner helpers become per-system.
 
 ## Electron ring image (open)
 
-### 4. Geometric distortion of the ring image
+### 3. Geometric distortion of the ring image
 
 `ring_image` now draws ideal, exactly circular rings centred in the frame.
 Real SAED patterns are distorted, and students must measure through that:
@@ -143,8 +133,8 @@ the distortion.
 
 0. **Debye–Waller B values:** fill `[debye_waller]` in `data.toml` (see
    Pending data).
-1. **Atomic form factor + full structure factor:** larger project, best done together —
-   changes the data model and opens the door to multi-element cells.
+1. **Full structure factor:** changes the data model and opens the door to
+   multi-element cells; the atomic form factor it needs is in place.
 2. **Non-cubic lattices:** largest scope; best tackled after the physics model
    is richer, so the per-system modules have complete equations to implement.
 3. **Ring-image distortion:** independent of the rest; any time.

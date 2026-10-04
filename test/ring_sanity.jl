@@ -39,9 +39,9 @@ println("="^70)
 
 function run_checks(config, camera_constant, g_max, tol_g)
 all_ok = true
-for (structure, element, a, B) in config.samples
-    g, y = simulate(config, structure, element, a, B)
-    rt = reflection_table(structure, a, g_max)
+for sample in config.samples
+    g, y = simulate(config, sample)
+    rt = reflection_table(sample.centering, sample.a, g_max)
 
     # (1) profile peaks vs analytic g
     gpeaks = peak_locations(g, y)
@@ -59,7 +59,7 @@ for (structure, element, a, B) in config.samples
 
     ok = max_eg ≤ tol_g && max_er ≤ 2 * camera_constant * tol_g
     all_ok &= ok
-    println(rpad("$element-$structure", 10),
+    println(rpad(sample.name, 10),
             " | reflections: ", rpad(length(rt.g), 3),
             " | max g-peak err: ", rpad(round(max_eg, sigdigits=2), 9), " 1/Å",
             " | max ring-radius err: ", rpad(round(max_er, sigdigits=2), 8), " mm",

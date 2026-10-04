@@ -27,10 +27,11 @@ end
     cfg = read_xrd_config(DATA_TOML)
     @test cfg isa XRDConfig
     @test cfg.mode isa Radiation
-    @test cfg.samples isa Vector{Tuple{String,String,Float64,Float64}}
-    @test all(s[1] in ("SC", "BCC", "FCC") for s in cfg.samples)
-    @test all(s[3] > 0 for s in cfg.samples)
-    @test all(s[4] ≥ 0 for s in cfg.samples)
+    @test cfg.model isa ReflectionModel
+    @test cfg.samples isa Vector{Sample}
+    @test all(s.centering in ("SC", "BCC", "FCC") for s in cfg.samples)
+    @test all(s.a > 0 for s in cfg.samples)
+    @test all(atom.B ≥ 0 for s in cfg.samples for atom in s.atoms)
 
     # The file and the Dict methods agree
     @test read_xrd_config(DATA_TOML).samples == read_xrd_config(TOML.parsefile(DATA_TOML)).samples
@@ -41,7 +42,10 @@ end
     @test cfg.mode.two_theta_max ≈ deg2rad(120.0)
     @test cfg.mode.lambda == 1.5418
     @test cfg.D === 500.0                          # integer in TOML, Float64 here
-    @test cfg.samples == [("FCC", "Ag", 4.079, 0.0), ("FCC", "Cu", 3.594, 0.0), ("SC", "Po", 3.352, 0.0)]
+    @test cfg.model isa AbsenceRules
+    @test cfg.samples == [lattice_sample("FCC", "Ag", 4.079), lattice_sample("FCC", "Cu", 3.594),
+                          lattice_sample("SC", "Po", 3.352)]
+    @test cfg.samples[1] == Sample("Ag-FCC", "FCC", 4.079, [Atom("Ag", (0.0, 0.0, 0.0), 0.0)])
 
     # [debye_waller]: an entry of the sample's structure, else the default;
     # others are ignored (Ag under BCC does not apply to FCC Ag)
@@ -49,7 +53,32 @@ end
     c["debye_waller"] = Dict{String,Any}("default" => 0.5,
         "FCC" => Dict{String,Any}("Cu" => 0.55, "Fe" => 0.56),
         "BCC" => Dict{String,Any}("Ag" => 0.9, "Fe" => 0.33))
-    @test [s[4] for s in read_xrd_config(c).samples] == [0.5, 0.55, 0.5]
+    @test [only(s.atoms).B for s in read_xrd_config(c).samples] == [0.5, 0.55, 0.5]
+end
+
+# A rock-salt cell as parsed TOML: FCC lattice, Na at the origin, Cl at (½,0,0)
+nacl_cell() = Dict{String,Any}("lattice" => "FCC", "a" => 5.64,
+    "basis" => Any[Dict{String,Any}("element" => "Na", "xyz" => Any[0, 0, 0]),
+                   Dict{String,Any}("element" => "Cl", "xyz" => Any[0.5, 0, 0], "B" => 1.2)])
+
+function with_cell(cfg, cell=nacl_cell(); name="NaCl", reflections="structure_factor")
+    c = deepcopy(cfg)
+    c["model"] = Dict{String,Any}("reflections" => reflections)
+    c["cell"] = Dict{String,Any}(name => cell)
+    return c
+end
+
+@testset "read_xrd_config [model] and [cell]" begin
+    @test read_xrd_config(base_config()).model isa AbsenceRules
+    c = deepcopy(base_config()); c["model"] = Dict{String,Any}("reflections" => "structure_factor")
+    @test read_xrd_config(c).model isa StructureFactor
+
+    c = with_cell(base_config())
+    c["debye_waller"] = Dict{String,Any}("default" => 0.4)
+    cfg = read_xrd_config(c)
+    @test [s.name for s in cfg.samples] == ["Ag-FCC", "Cu-FCC", "NaCl", "Po-SC"]
+    @test cfg.samples[3] == Sample("NaCl", "FCC", 5.64,
+        [Atom("Na", (0.0, 0.0, 0.0), 0.4), Atom("Cl", (0.5, 0.0, 0.0), 1.2)])
 end
 
 @testset "read_xrd_config defaults" begin
@@ -157,4 +186,22 @@ end
     @test_throws ArgumentError read_xrd_config(c)
     c = deepcopy(b); c["debye_waller"] = Dict{String,Any}("HCP" => Dict{String,Any}("Mg" => 1.8))
     @test_throws ArgumentError read_xrd_config(c)
+
+    # [model]
+    c = deepcopy(b); c["model"] = Dict{String,Any}("reflections" => "kinematic")
+    @test_throws ArgumentError read_xrd_config(c)
+
+    # [cell.*]: only with the structure factor, and well formed
+    @test_throws ArgumentError read_xrd_config(with_cell(b; reflections="rules"))
+    for (key, value) in (("lattice", "HCP"), ("lattice", nothing), ("a", -5.64), ("a", nothing),
+                         ("basis", Any[]), ("basis", nothing), ("basis", "Na"))
+        @test_throws ArgumentError read_xrd_config(with_cell(b, with(Dict("x" => nacl_cell()), "x", key, value)["x"]))
+    end
+    for (key, value) in (("element", "Xx"), ("element", nothing), ("xyz", Any[0, 0]),
+                         ("xyz", Any[0, "0", 0]), ("xyz", nothing), ("B", -1.0))
+        cell = nacl_cell()
+        value === nothing ? delete!(cell["basis"][2], key) : (cell["basis"][2][key] = value)
+        @test_throws ArgumentError read_xrd_config(with_cell(b, cell))
+    end
+    @test_throws ArgumentError read_xrd_config(with_cell(b; name="Cu-FCC"))     # name taken
 end

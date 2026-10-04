@@ -105,9 +105,9 @@ function main()
     # The x column comes from the first pattern; all samples share one grid.
     df = DataFrame()
 
-    for (structure, element, a, B) in cfg.samples
-        local x, intensities = simulate(cfg, structure, element, a, B)
-        local title = "$element-$structure"
+    for sample in cfg.samples
+        local x, intensities = simulate(cfg, sample)
+        local title = sample.name
         local the_plot = plot_pattern(cfg.mode, x, intensities, title, plot_theme)
         ncol(df) == 0 && (df[!, xcol] = x)
         df[!, title] = intensities
@@ -122,7 +122,7 @@ function main()
 
         if save_plots
             savefig(the_plot, "./results/$title")
-            write_ring_outputs(cfg.mode, structure, a, x, intensities, title)
+            write_ring_outputs(cfg.mode, sample.centering, sample.a, x, intensities, title)
         end
     end
 

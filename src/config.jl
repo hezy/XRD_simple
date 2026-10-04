@@ -67,6 +67,84 @@ end
 
 
 """
+    ReflectionModel
+
+Method that decides which reflections a sample has and their scattering weights:
+`AbsenceRules` or `StructureFactor`, chosen once per run by `reflections` in
+`[model]`.
+"""
+abstract type ReflectionModel end
+
+"""
+    AbsenceRules <: ReflectionModel
+
+The fixed systematic-absence rules of the centering (SC, BCC, FCC) for a
+monatomic cell. Cannot describe a `[cell.*]` sample.
+"""
+struct AbsenceRules <: ReflectionModel end
+
+"""
+    StructureFactor <: ReflectionModel
+
+The full structure factor F(hkl) = Σⱼ fⱼ exp(2πi (h xⱼ + k yⱼ + l zⱼ)) over the
+atoms of the unit cell. The absences follow from F = 0.
+"""
+struct StructureFactor <: ReflectionModel end
+
+
+"""
+    Atom
+
+One atom of the basis of a unit cell.
+
+# Fields
+- `element::String`: chemical symbol
+- `xyz::NTuple{3,Float64}`: fractional position in the cubic cell
+- `B::Float64`: Debye–Waller parameter (Å²)
+"""
+struct Atom
+    element::String
+    xyz::NTuple{3,Float64}
+    B::Float64
+end
+
+
+"""
+    Sample
+
+One simulated sample: a cubic lattice of centering `centering` (SC, BCC or
+FCC) with lattice parameter `a` (Å), and a basis of atoms. The full cell is the
+basis repeated by the centering translations. An `element = a` entry of
+`[lattice.STRUCTURE]` is a one-atom basis at the origin, named "element-STRUCTURE";
+a `[cell.NAME]` section is a sample named NAME.
+
+# Fields
+- `name::String`: title of the sample in the plots and the output files
+- `centering::String`: "SC", "BCC" or "FCC"
+- `a::Float64`: lattice parameter (Å)
+- `atoms::Vector{Atom}`: the basis
+"""
+struct Sample
+    name::String
+    centering::String
+    a::Float64
+    atoms::Vector{Atom}
+end
+
+Base.:(==)(s::Sample, t::Sample) =
+    (s.name, s.centering, s.a, s.atoms) == (t.name, t.centering, t.a, t.atoms)
+
+"""
+    lattice_sample(structure, element, a, B=0.0) -> Sample
+
+The monatomic sample of an `element = a` entry of `[lattice.STRUCTURE]`: one
+atom at the origin, named "element-structure".
+"""
+lattice_sample(structure::String, element::String, a::Real, B::Real=0.0) =
+    Sample("$element-$structure", structure, a, [Atom(element, (0.0, 0.0, 0.0), B)])
+
+
+"""
     XRDConfig
 
 Every parameter of one simulation run, read from `data.toml` by
@@ -75,21 +153,21 @@ no other function reads the TOML file or supplies a default.
 
 # Fields
 - `mode::Radiation`: `XRay` or `Electron`, with its instrument parameters
+- `model::ReflectionModel`: `AbsenceRules` or `StructureFactor`
 - `N::Int`: number of grid points
 - `noise_level::Float64`: multiplicative noise standard deviation (0–1)
 - `K`: Scherrer constant; `Epsilon`: microstrain; `D`: crystallite size (nm)
-- `samples::Vector{Tuple{String,String,Float64,Float64}}`:
-  `(structure, element, a, B)`, sorted; may be empty. `B` is the Debye–Waller
-  parameter (Å²) of the element
+- `samples::Vector{Sample}`: sorted by centering, then name; may be empty
 """
 struct XRDConfig
     mode::Radiation
+    model::ReflectionModel
     N::Int
     noise_level::Float64
     K::Float64
     Epsilon::Float64
     D::Float64
-    samples::Vector{Tuple{String,String,Float64,Float64}}
+    samples::Vector{Sample}
 end
 
 
@@ -136,13 +214,22 @@ an `element = B` entry under `[debye_waller.STRUCTURE]`, or else the key
 between phases of one element (BCC and FCC Fe). Entries that are not samples
 are ignored.
 
+The optional section `[model]` selects the reflection method by the key
+`reflections`: `"rules"` (`AbsenceRules`) or `"structure_factor"`
+(`StructureFactor`). Each `[cell.NAME]` section is one more sample, with the
+keys `lattice` (SC, BCC or FCC), `a` (Å) and `basis`, a non-empty array of
+`{ element = "Na", xyz = [0, 0, 0] }` tables with an optional `B` (Å², else the
+`[debye_waller]` default). Cells need `reflections = "structure_factor"`.
+Sample names must be unique.
+
 # Defaults
 `radiation = "xray"`, `noise_level = 0`, `voltage_kV = 200`, `g_min = 0`,
 `G_inst = 0.005`, `camera_constant = 50`, `image_px = 800`,
 `beam_stop_mm = 2.5`, `ring_phosphor = true`, `ring_gamma = 0.5`,
 `ring_noise = 0`, `ring_ellipticity = 0`, `ring_axis_deg = 0`,
 `ring_centre_x_mm = 0`, `ring_centre_y_mm = 0`, `ring_radial_distortion = 0`
-(no distortion), `[debye_waller] default = 0` (no thermal damping). All other keys of the selected mode are required.
+(no distortion), `[debye_waller] default = 0` (no thermal damping),
+`[model] reflections = "rules"`. All other keys of the selected mode are required.
 
 # Throws
 - `ArgumentError`: missing section or key, value of the wrong type, unknown
@@ -185,7 +272,14 @@ function read_xrd_config(config::Dict)
             throw(ArgumentError("[debye_waller] $key: expected default or a [debye_waller.SC], [debye_waller.BCC] or [debye_waller.FCC] table of element = B entries"))
     end
 
-    samples = Tuple{String,String,Float64,Float64}[]
+    model_table = get(config, "model", Dict{String,Any}())
+    model_table isa Dict || throw(ArgumentError("[model] must be a table"))
+    reflections = get(model_table, "reflections", "rules")
+    reflections in ("rules", "structure_factor") ||
+        throw(ArgumentError("[model] reflections must be \"rules\" or \"structure_factor\", got $(repr(reflections))"))
+    model = reflections == "rules" ? AbsenceRules() : StructureFactor()
+
+    samples = Sample[]
     for (structure, elements) in get(config, "lattice", Dict{String,Any}())
         section = "lattice.$structure"
         structure in ("SC", "BCC", "FCC") ||
@@ -199,12 +293,54 @@ function read_xrd_config(config::Dict)
             B = config_value(get(dw, structure, Dict{String,Any}()), "debye_waller.$structure",
                              element, Float64, B_default)
             config_check(B ≥ 0, "[debye_waller.$structure] $element: B must not be negative, got $B")
-            push!(samples, (structure, element, a, B))
+            push!(samples, lattice_sample(structure, element, a, B))
         end
     end
-    sort!(samples)
 
-    return XRDConfig(mode, N, noise_level, K, Epsilon, D, samples)
+    cells = get(config, "cell", Dict{String,Any}())
+    cells isa Dict || throw(ArgumentError("[cell] must be a table of [cell.NAME] sections"))
+    for (name, cell) in cells
+        model isa StructureFactor ||
+            throw(ArgumentError("[cell.$name] needs reflections = \"structure_factor\" in [model]; the absence rules describe only one atom per lattice point"))
+        push!(samples, read_cell(name, cell, B_default))
+    end
+
+    names = [s.name for s in samples]
+    allunique(names) ||
+        throw(ArgumentError("two samples have the same name: $(first(n for n in names if count(==(n), names) > 1))"))
+    sort!(samples, by = s -> (s.centering, s.name))
+
+    return XRDConfig(mode, model, N, noise_level, K, Epsilon, D, samples)
+end
+
+
+# One [cell.NAME] section: lattice, a, and a non-empty basis of atoms.
+function read_cell(name::String, cell, B_default::Float64)::Sample
+    section = "cell.$name"
+    cell isa Dict || throw(ArgumentError("[$section] must be a table with lattice, a and basis"))
+    lattice = get(cell, "lattice", nothing)
+    lattice in ("SC", "BCC", "FCC") ||
+        throw(ArgumentError("[$section] lattice must be \"SC\", \"BCC\" or \"FCC\", got $(repr(lattice))"))
+    a = config_value(cell, section, "a", Float64)
+    config_check(a > 0, "[$section] a must be positive, got $a")
+
+    basis = get(cell, "basis", nothing)
+    (basis isa AbstractVector && !isempty(basis) && all(b -> b isa Dict, basis)) ||
+        throw(ArgumentError("[$section] basis must be a non-empty array of { element = ..., xyz = [x, y, z] } tables"))
+    atoms = Atom[]
+    for (i, b) in enumerate(basis)
+        where_ = "[$section] basis atom $i"
+        element = get(b, "element", nothing)
+        (element isa String && haskey(FORM_FACTOR_COEFFICIENTS, element)) ||
+            throw(ArgumentError("$where_: unknown element $(repr(element)); use a symbol from H to Cf, e.g. Fe"))
+        xyz = get(b, "xyz", nothing)
+        (xyz isa AbstractVector && length(xyz) == 3 && all(v -> v isa Real && !(v isa Bool), xyz)) ||
+            throw(ArgumentError("$where_: xyz must be three numbers (fractional coordinates), got $(repr(xyz))"))
+        B = config_value(b, "$section.basis", "B", Float64, B_default)
+        config_check(B ≥ 0, "$where_: B must not be negative, got $B")
+        push!(atoms, Atom(element, Tuple(Float64.(xyz)), B))
+    end
+    return Sample(name, lattice, a, atoms)
 end
 
 

@@ -163,34 +163,34 @@ axis_label(::Electron) = "g (1/Å)"
 
 
 """
-    reflection_table(structure, a, g_max)
+    reflection_table(model::ReflectionModel, mode::Electron, sample::Sample)
 
-Discrete answer key for the ring pattern. Returns every allowed reflection family
-with g = √(h²+k²+l²)/a ≤ g_max, as a NamedTuple of equal-length vectors sorted by
-g:
+Discrete answer key for the ring pattern. Returns every reflection family of
+`sample` present under the reflection method `model` (see `reflections`), with
+g = √(h²+k²+l²)/a ≤ g_max, as a NamedTuple of equal-length vectors sorted by g:
 
 - `indices`      : canonical `[h,k,l]` representatives
 - `N`            : N = h²+k²+l² (the ring's squared-index; ring r² ∝ N)
 - `g`            : scattering vector g = √N/a (1/Å) — ring radius is `camera_constant·g`
 - `multiplicity` : reflection multiplicity (relative ring brightness, geometric)
+- `weight`       : scattering weight at s = g/2 (see `scattering_weights`); with
+  the structure factor, |F|²/F(000)² with the Debye–Waller factor
 
 This is the hidden key students reconstruct from measured ring radii (r² ratios →
 N-sequence → SC/BCC/FCC selection rule → lattice constant a).
 """
-function reflection_table(structure::String,
-                          a::Real,
-                          g_max::Real
-                          )::NamedTuple
-    max_hkl_sq = ed_max_hkl_sq(a, g_max)
-    indices, multiplicities = Miller_indices(structure, max_hkl_sq)
-    g = g_list(indices, a)
+function reflection_table(model::ReflectionModel, mode::Electron, sample::Sample)::NamedTuple
+    indices, multiplicities = reflections(model, sample, ed_max_hkl_sq(sample.a, mode.g_max))
+    g = g_list(indices, sample.a)
     N = [h^2 + k^2 + l^2 for (h, k, l) in indices]
+    weight = scattering_weights(model, mode, sample, indices, scattering_s(mode, g))
 
     perm = sortperm(g)
     return (indices = indices[perm],
             N = N[perm],
             g = g[perm],
-            multiplicity = multiplicities[perm])
+            multiplicity = multiplicities[perm],
+            weight = weight[perm])
 end
 
 

@@ -52,6 +52,11 @@ Listed for context; no further action needed.
 - Added geometric distortion of the electron ring image: ellipticity and its
   axis, pattern-centre offset, and barrel/pincushion distortion, as optional
   `[instrument]` keys with default 0 (October 2026).
+- Added the full structure factor as a second reflection method, selected by
+  `reflections` in `[model]` (`AbsenceRules` or `StructureFactor`): F(hkl)
+  over the atoms of the unit cell, with multi-atom cells given as
+  `[cell.NAME]` sections (lattice, a, basis). For monatomic cells both methods
+  give the same pattern (October 2026).
 - B is keyed by structure, `[debye_waller.STRUCTURE]`, since phases of one
   element differ (BCC and FCC Fe). `data.toml` holds the 293 K values of
   Peng, Ren, Dudarev & Whelan (1996), supplement SUP82472, Table 1, for the
@@ -60,30 +65,9 @@ Listed for context; no further action needed.
 
 ---
 
-## Physics model (open)
-
-All enhancements operate on the intensity of each reflection. Current code:
-`I ∝ multiplicity × LP(θ) × (f/Z)² × DW` for X-rays,
-`I ∝ multiplicity × (f_e/f_e(0))² × DW` for electrons.
-Missing weight:
-
-### 1. Full structure factor |F|²
-
-```
-F(hkl) = Σⱼ fⱼ · exp(2πi · (h xⱼ + k yⱼ + l zⱼ))
-```
-
-Replaces the hardcoded "BCC means h+k+l even" rule with a general sum over
-atom positions in the unit cell. Collapses to the current centering filters
-for single-element cubic, generalizes to multi-element cells (NaCl, diamond,
-perovskites, alloys). Requires a data model change: unit cell = list of
-(element, fractional position).
-
----
-
 ## Architecture / extensibility (open)
 
-### 2. Non-cubic crystal systems
+### 1. Non-cubic crystal systems
 
 Current code is cubic-only. Generalizing to tetragonal, hexagonal,
 orthorhombic, etc. needs:
@@ -104,7 +88,6 @@ only the inner helpers become per-system.
 
 ## Suggested order
 
-1. **Full structure factor:** changes the data model and opens the door to
-   multi-element cells; the atomic form factor it needs is in place.
-2. **Non-cubic lattices:** largest scope; best tackled after the physics model
-   is richer, so the per-system modules have complete equations to implement.
+1. **Non-cubic lattices:** the remaining item; the structure factor, the form
+   factors and the Debye–Waller factor are in place, and need only the
+   per-system d-spacing, multiplicity and enumeration.

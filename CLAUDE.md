@@ -53,8 +53,11 @@ This file provides context for AI assistants working on the XRD_simple project.
   - `src/form_factors.jl` - `FORM_FACTOR_COEFFICIENTS` (Waasmaier–Kirfel,
     H–Cf, generated from the DABAX file; do not edit by hand),
     `atomic_form_factor`
-  - `src/config.jl` - `Radiation`, `XRay`, `Electron`, `XRDConfig`, `read_xrd_config`
-  - `src/crystal.jl` - `cubic_multiplicity`, `Miller_indices`, `d_list`, `g_list`
+  - `src/config.jl` - `Radiation`, `XRay`, `Electron`, `ReflectionModel`,
+    `AbsenceRules`, `StructureFactor`, `Atom`, `Sample`, `lattice_sample`,
+    `XRDConfig`, `read_xrd_config`
+  - `src/crystal.jl` - `cubic_multiplicity`, `family_members`, `Miller_indices`,
+    `d_list`, `g_list`, `unit_cell`
   - `src/profiles.jl` - `Voigt_peak`, `pseudo_Voigt_peak`, `peak_fwhm`,
     `Debye_Waller`, `sum_peaks`
   - `src/xray.jl` - Caglioti and Scherrer widths, `Lorentz_polarization`, `bragg_angles`,
@@ -62,7 +65,10 @@ This file provides context for AI assistants working on the XRD_simple project.
   - `src/electron.jl` - `electron_wavelength`, `ed_max_hkl_sq`,
     `Lorentzian_peaks_width_g`, electron background, `Electron` methods,
     `reflection_table`, `ring_image`
-  - `src/simulate.jl` - `simulate(cfg, structure, element, a, B)`
+  - `src/reflections.jl` - the two reflection methods: `reflections`,
+    `scattering_weights` for `AbsenceRules` and `StructureFactor`
+  - `src/simulate.jl` - `simulate(cfg, sample)`, and
+    `simulate(cfg, structure, element, a, B)` for a monatomic sample
 - `src/plotting.jl` - Every Plots.jl call: `plot_title`, `plot_pattern`,
   `plot_ring_image`. Not included by the tests.
 - `data.toml` - Configuration file - **THE STANDARD CONFIG FORMAT**
@@ -94,24 +100,25 @@ This file provides context for AI assistants working on the XRD_simple project.
   `Electron` (subtypes of `abstract type Radiation`), chosen by `radiation`
   (`"xray"` default, or `"electron"`) and holding the instrument parameters of
   that mode. No other function reads the file or supplies a default.
-- The mode is selected by dispatch. One generic `simulate(cfg, structure, element, a, B)`
+- The mode is selected by dispatch. One generic `simulate(cfg, sample)`
   returns `(x, y)`, x in display units; its steps are methods on the mode:
-  `grid`, `max_hkl_sq`, `peak_centres`, `peak_weights`, `peak_widths`, `background`,
-  `display_axis`, `axis_label` (and `plot_title` in `plotting.jl`).
+  `grid`, `max_hkl_sq`, `peak_centres`, `angular_factor`, `scattering_s`,
+  `form_factor`, `peak_widths`, `background`, `display_axis`, `axis_label`
+  (and `plot_title` in `plotting.jl`), and on the reflection method
+  `cfg.model`: `reflections`, `scattering_weights`.
 - **X-ray path:** Bragg geometry, x-axis 2θ (degrees). Uses `lambda`,
   `two_theta_min/max`, Caglioti U/V/W. Peak areas are multiplicity ×
   `Lorentz_polarization(θ)` (unpolarized beam, normalized to 1 at 2θ = 90°) ×
-  (f/Z)² (`atomic_form_factor`, divided by f(0) = Z) × `Debye_Waller(sin θ/λ, B)`.
-  Element keys in `[lattice.*]` must be chemical symbols (checked in
-  `read_xrd_config`); `simulate(cfg, structure, element, a, B)`.
+  the scattering weight (see Peak Intensity Weights). Element keys in
+  `[lattice.*]` must be chemical symbols (checked in `read_xrd_config`).
 - **Electron path:** reciprocal-space geometry, x-axis g = 1/d (1/Å). Positions
   are `g = √(h²+k²+l²)/a` (no Bragg's law); reflection cutoff is `ed_max_hkl_sq`
   (g ≤ `g_max`), not `bragg_max_hkl_sq`. Uses `voltage_kV`, `g_min`/`g_max`,
-  `G_inst`. Heights are multiplicity × (`electron_form_factor(element, g/2)`/f_e(0))² ×
-  `Debye_Waller(g/2, B)`; f_e comes from the X-ray form factor by Mott–Bethe.
-- The crystallography (`Miller_indices`, `cubic_multiplicity`, absences) and the
-  peak profiles (`Voigt_peak`, `pseudo_Voigt_peak`, `peak_fwhm`, `sum_peaks`) are
-  shared by both paths.
+  `G_inst`. Heights are multiplicity × the scattering weight with f_e
+  (`electron_form_factor`, from the X-ray form factor by Mott–Bethe), s = g/2.
+- The crystallography (`Miller_indices`, `cubic_multiplicity`, the reflection
+  methods) and the peak profiles (`Voigt_peak`, `pseudo_Voigt_peak`,
+  `peak_fwhm`, `sum_peaks`) are shared by both paths.
 
 ### Angle Convention (X-ray path)
 - **Grid and peak centres:** 2θ in **radians**. Widths from Scherrer,
@@ -142,17 +149,39 @@ Both support:
   constant `G_inst`. `peak_fwhm()` and the profiles are reused unchanged.
 
 ### Peak Intensity Weights
-- Each reflection is one pseudo-Voigt peak of area multiplicity × weight;
-  `peak_weights(mode, x₀, element, B)` returns the weights at the peak centres.
-- **X-ray:** `Lorentz_polarization(θ)` × (`atomic_form_factor(element, s)`/Z)² ×
-  `Debye_Waller(s, B)`, s = sin θ/λ. LP is normalized to 1 at 2θ = 90° and f
-  is divided by Z = f(0), so the weights are of order 1 and the peaks keep
-  their scale relative to the background.
-- **Electron:** (`electron_form_factor(element, s)`/f_e(0))² × `Debye_Waller(s, B)`,
-  s = g/2. f_e is Mott–Bethe on the Waasmaier–Kirfel coefficients, with
-  Z = f₀(0) of the fit, so f_e(0) is finite. No Lorentz factor (constant in g).
+- Each reflection is one pseudo-Voigt peak of area multiplicity ×
+  `angular_factor(mode, x₀)` × `scattering_weights(model, mode, sample, indices, s)`,
+  s = `scattering_s(mode, x₀)` (sin θ/λ for X-rays, g/2 for electrons).
+- **Angular factor:** X-ray `Lorentz_polarization(θ)`, normalized to 1 at
+  2θ = 90°; electron 1 (the Lorentz factor is constant in g).
+- **Form factor:** `form_factor(mode, element, s)` is `atomic_form_factor` (X-ray)
+  or `electron_form_factor` (electron; Mott–Bethe on the Waasmaier–Kirfel
+  coefficients, with Z = f₀(0) of the fit, so f_e(0) is finite).
+- **Scattering weight, `AbsenceRules`:** (f(s)/f(0))² × `Debye_Waller(s, B)` of
+  the single atom. Dividing by f(0) keeps the weights of order 1, so the peaks
+  keep their scale relative to the background.
+- **Scattering weight, `StructureFactor`:** |F(hkl)|²/F(000)², averaged over
+  the family members (`family_members`), F = Σⱼ fⱼ(s) exp(−Bⱼs²)
+  exp(2πi h·rⱼ) over `unit_cell(sample)`. Equal to the rules weight for
+  monatomic cells (tested in `test/test_structure_factor.jl`).
 - B comes from `[debye_waller]` in `data.toml` (per structure and element
-  under `[debye_waller.STRUCTURE]`, else `default`, else 0) and travels in the sample tuple `(structure, element, a, B)`.
+  under `[debye_waller.STRUCTURE]`, else `default`, else 0), or from the `B`
+  of a basis atom in `[cell.*]`; it is stored in each `Atom` of the sample.
+
+### Reflection Methods
+`reflections` in `[model]` selects, once per run, `AbsenceRules` (`"rules"`,
+default) or `StructureFactor` (`"structure_factor"`), stored in `cfg.model`.
+A `Sample` is a centering (SC/BCC/FCC), `a`, and a basis of `Atom`s;
+`unit_cell(sample)` repeats the basis by the centering translations and
+rejects two atoms on one site. `[lattice.*]` entries are one-atom samples
+(`lattice_sample`), named "element-STRUCTURE"; `[cell.NAME]` sections (keys
+`lattice`, `a`, `basis`) are multi-atom samples named NAME and require
+`StructureFactor`.
+- **`AbsenceRules`:** `Miller_indices(sample.centering, …)`; one-atom basis only.
+- **`StructureFactor`:** `Miller_indices("SC", …)`, then a family is dropped
+  when the phase sum Σ exp(2πi h·rⱼ) over the sites of each kind of atom
+  (element, B) vanishes for every member: a systematic absence, independent
+  of s. Weak reflections (KCl odd hkl) stay.
 
 ### Miller Index Generation
 `Miller_indices(cell_type::String, max_hkl_sq::Int)` enumerates the canonical
@@ -212,6 +241,15 @@ V  = 3.0399
 Ag = 4.079
 # Cu = 3.594
 
+[model]
+reflections = "rules"        # "rules" | "structure_factor"
+
+# [cell.NaCl]                # multi-atom cell; needs "structure_factor"
+# lattice = "FCC"
+# a = 5.640
+# basis = [ { element = "Na", xyz = [0, 0, 0] },
+#           { element = "Cl", xyz = [0.5, 0, 0], B = 1.2 } ]   # B optional
+
 [debye_waller]               # optional; Debye–Waller B (Å²), both modes
 default = 0.0                # elements not listed (0 = no thermal damping)
 
@@ -221,8 +259,9 @@ default = 0.0                # elements not listed (0 = no thermal damping)
 
 **Important:** Angular parameters in config are in degrees and automatically
 converted to radians by `read_xrd_config()`. Its `XRDConfig` holds, in the
-field `samples`, a sorted vector of `(structure, element, a, B)` tuples — one per
-uncommented lattice entry, any N (including 0) supported. Keys for the unused radiation mode are
+field `samples`, a vector of `Sample`s sorted by centering, then name — one per
+uncommented lattice entry or `[cell.*]` section, any N (including 0) supported.
+Sample names must be unique. Keys for the unused radiation mode are
 ignored, so both X-ray and electron parameters can coexist in one file — flip
 `radiation` to switch.
 
@@ -239,9 +278,14 @@ ignored, so both X-ray and electron parameters can coexist in one file — flip
    absence rule.
 2. If its point group differs from cubic, add a new multiplicity helper
    alongside `cubic_multiplicity` and call it from `Miller_indices`.
-3. Add a `[lattice.NEWTYPE]` block to `data.toml` with one or more
+3. Add its lattice translations to `CENTERING_TRANSLATIONS` (`unit_cell`), so
+   that `StructureFactor` gives the same absences.
+4. Add a `[lattice.NEWTYPE]` block to `data.toml` with one or more
    `element = a` entries. The main loop picks it up automatically — no
    changes needed in `main.jl`.
+
+A cubic structure with several atoms (NaCl, diamond, ...) needs no code: write
+it as a `[cell.NAME]` section and run with `reflections = "structure_factor"`.
 
 ### Modifying Peak Profiles
 - Primary functions: `Voigt_peak()` and `pseudo_Voigt_peak()`
@@ -265,8 +309,9 @@ ignored, so both X-ray and electron parameters can coexist in one file — flip
 - **Ring output (electron only):** `ring_image(g, y, mode::Electron)` maps the
   1D g-profile to a 2D Debye–Scherrer ring image by radial lookup
   (r = camera_constant·g, so r² ∝ N) and returns `(coords, img)`;
-  `plot_ring_image(coords, img, mode)` draws it. `reflection_table(structure, a, g_max)`
-  returns the discrete answer key (hkl, N, g, multiplicity). `main.jl` calls
+  `plot_ring_image(coords, img, mode)` draws it. `reflection_table(model, mode, sample)`
+  returns the discrete answer key (hkl, N, g, multiplicity, scattering weight)
+  of the chosen reflection method. `main.jl` calls
   `write_ring_outputs(…)` per electron sample → `results/rings/{title}.png` +
   `{title}_reflections.csv`. Sanity check: `test/ring_sanity.jl` (ring radii vs
   analytic g=√N/a). Knobs: `camera_constant`, `image_px`, `beam_stop_mm`,
@@ -366,7 +411,9 @@ the known defects are in `problems.md`. Further ideas, not planned:
 
 ---
 
-**Last Updated:** 2026-09-28 (peak intensities: Lorentz–polarization factor,
+**Last Updated:** 2026-10-05 (second reflection method: full structure factor
+over the atoms of the unit cell, selected by `[model] reflections`; samples are
+`Sample` unit cells, multi-atom cells in `[cell.*]`; 2026-09-28: peak intensities: Lorentz–polarization factor,
 Debye–Waller factor with per-element B, X-ray atomic form factor; earlier in
 2026-09: refactor of `REFACTOR_PLAN.md`: `functions.jl`
 split into `src/`, config parsed once into `XRDConfig`, radiation mode selected

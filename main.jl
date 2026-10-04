@@ -52,24 +52,25 @@ end
 
 
 """
-    write_ring_outputs(mode, structure, a, g, intensities, title)
+    write_ring_outputs(mode, model, sample, g, intensities, title)
 
 Render the electron-mode g-profile as a 2D ring image and write the matching
-reflection answer key. Outputs to `results/rings/`:
+reflection answer key of the reflection method `model`. Outputs to `results/rings/`:
 - `{title}.png`              — the Debye–Scherrer ring image (student-facing)
-- `{title}_reflections.csv`  — hidden key: hkl, N, g, ring radius (mm), multiplicity
+- `{title}_reflections.csv`  — hidden key: hkl, N, g, ring radius (mm),
+  multiplicity, scattering weight
 
 X-ray mode has no ring output; its method does nothing.
 """
-write_ring_outputs(::XRay, structure, a, x, intensities, title) = nothing
+write_ring_outputs(::XRay, model, sample, x, intensities, title) = nothing
 
-function write_ring_outputs(mode::Electron, structure, a, g, intensities, title)
+function write_ring_outputs(mode::Electron, model, sample, g, intensities, title)
     isdir("results/rings") || mkpath("results/rings")
 
     ring_plot = plot_ring_image(ring_image(g, intensities, mode)..., mode)
     savefig(ring_plot, "./results/rings/$title.png")
 
-    rt = reflection_table(structure, a, mode.g_max)
+    rt = reflection_table(model, mode, sample)
     key = DataFrame(
         h = [hkl[1] for hkl in rt.indices],
         k = [hkl[2] for hkl in rt.indices],
@@ -78,6 +79,7 @@ function write_ring_outputs(mode::Electron, structure, a, g, intensities, title)
         g_per_A = rt.g,
         r_mm = mode.camera_constant .* rt.g,
         multiplicity = rt.multiplicity,
+        weight = rt.weight,
     )
     CSV.write("./results/rings/$(title)_reflections.csv", key)
     return ring_plot
@@ -122,7 +124,7 @@ function main()
 
         if save_plots
             savefig(the_plot, "./results/$title")
-            write_ring_outputs(cfg.mode, sample.centering, sample.a, x, intensities, title)
+            write_ring_outputs(cfg.mode, cfg.model, sample, x, intensities, title)
         end
     end
 

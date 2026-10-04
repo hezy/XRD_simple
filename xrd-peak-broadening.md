@@ -132,6 +132,39 @@ f_e is the scattering of the electrostatic potential: the nucleus minus the
 electron cloud. It falls much faster with s than f, so low-g rings dominate.
 The relativistic factor γ scales every f_e equally and is omitted.
 
+### Structure factor
+
+With `reflections = "structure_factor"` the factor (f/Z)² (or (f_e/f_e(0))²)
+and the Debye–Waller factor are replaced by the structure factor of the unit
+cell:
+```
+I_hkl ∝ m · LP(θ) · |F(hkl)|² / F(000)²
+F(hkl) = Σⱼ fⱼ(s) exp(−Bⱼ s²) exp(2πi (h xⱼ + k yⱼ + l zⱼ))
+F(000) = Σⱼ fⱼ(0)
+```
+The sum runs over every atom j of the cubic cell, at fractional position
+(xⱼ, yⱼ, zⱼ): the basis atoms and their copies by the centering translations,
+(½,½,½) for BCC and (0,½,½), (½,0,½), (½,½,0) for FCC. Each atom carries its own
+B. |F|² is averaged over the m members of the family, which changes nothing
+for a cell with the full cubic symmetry m-3m. A reflection is systematically
+absent when the phase sum over the sites of each kind of atom vanishes; it is
+then zero at every s.
+
+For a monatomic cell of n atoms F = n f exp(−B s²) on the allowed reflections
+and zero on the others, and F(000) = n Z, so the weight is (f/Z)² exp(−2B s²)
+and the BCC and FCC absence rules follow. With several kinds of atom the
+pattern carries more information:
+
+- NaCl (FCC, Na at 0, Cl at (½,0,0)): F = 4(f_Na + f_Cl) for h, k, l all even,
+  4(f_Na − f_Cl) for all odd. In KCl, K⁺ and Cl⁻ have nearly the same f, so the
+  odd reflections almost vanish and the pattern looks like SC with a/2.
+- CsCl (SC, Cs at 0, Cl at (½,½,½)): F = f_Cs ± f_Cl; the h+k+l odd reflections
+  are weak but present, so the cell is SC, not BCC.
+- Diamond (FCC, atoms at 0 and (¼,¼,¼)): F = 4f (1 + i^(h+k+l)) for the FCC
+  reflections, which is zero for h+k+l = 4n+2 (200, 222).
+- Ordered Cu₃Au (SC, Au at 0, Cu at the face centres): F = f_Au + 3f_Cu on the
+  FCC reflections and f_Au − f_Cu on the others, the superlattice lines.
+
 ## 8. Electron Diffraction (reciprocal-space form)
 
 For 1D powder electron diffraction the natural coordinate is the scattering

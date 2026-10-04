@@ -9,7 +9,9 @@ A Julia-based simulation tool for powder diffraction patterns of cubic crystal s
   - Scherrer equation for crystallite size broadening
   - Caglioti formula for instrumental broadening
   - Voigt and pseudo-Voigt peak profiles
-  - Systematic absences for BCC and FCC structures
+  - Two reflection methods, chosen in `data.toml`: the fixed systematic-absence
+    rules of SC, BCC and FCC, or the full structure factor over the atoms of
+    the unit cell (multi-atom cells such as NaCl, CsCl, diamond Si, Cu₃Au)
 
 - **Two Radiation Modes**
   - **X-ray** — intensity vs 2θ (degrees), Cu Kα by default
@@ -97,6 +99,9 @@ K = 0.9                      # Scherrer constant (both)
 Epsilon = 0.001              # Microstrain (both)
 D = 500.0                    # Crystallite size (nm, both)
 
+[model]
+reflections = "rules"        # "rules" | "structure_factor"
+
 [lattice.SC]
 Po = 3.352                   # Element = lattice parameter (Å)
 
@@ -110,6 +115,12 @@ Pd = 3.859
 # Ag = 4.079
 # Cu = 3.594
 
+# [cell.NaCl]                # a multi-atom cell; needs "structure_factor"
+# lattice = "FCC"
+# a = 5.640
+# basis = [ { element = "Na", xyz = [0, 0, 0] },
+#           { element = "Cl", xyz = [0.5, 0, 0] } ]
+
 [debye_waller]               # optional; B in Å²
 default = 0.0                # elements not listed (0: no thermal damping)
 
@@ -120,6 +131,19 @@ default = 0.0                # elements not listed (0: no thermal damping)
 Each uncommented entry under a `[lattice.*]` block produces one pattern. The
 key must be a chemical symbol (H to Cf); it selects the atomic form factor.
 Leave entries commented out to skip them; add more to run several at once.
+
+**Reflection method.** `reflections` in `[model]` selects how the reflections
+and their intensities are found, once per run. `"rules"` (the default) applies
+the fixed absence rules: all hkl for SC, h+k+l even for BCC, h, k, l all odd or
+all even for FCC. `"structure_factor"` computes
+F(hkl) = Σⱼ fⱼ exp(2πi (h xⱼ + k yⱼ + l zⱼ)) over every atom of the unit cell;
+a reflection is absent where F = 0. For the one-atom `[lattice.*]` entries the
+two methods give the same pattern. A `[cell.NAME]` section describes a cell
+with several atoms: `lattice` is the centering (SC, BCC or FCC), `a` the
+lattice parameter, and `basis` lists each atom once, with its fractional
+position `xyz` and an optional `B`; the centering translations add the copies.
+Cells need `"structure_factor"`. `data.toml` has commented examples: NaCl, KCl,
+CsCl, Si (diamond) and ordered Cu₃Au.
 
 **Debye–Waller factor.** Each reflection's intensity is multiplied by
 exp(−2B (sin θ/λ)²), in both radiation modes. `[debye_waller.STRUCTURE]` gives B
@@ -155,19 +179,21 @@ include("main.jl")
 
 Running the simulation generates:
 
-- **PNG files**: `results/{element}-{structure}.png` — one per uncommented
-  lattice entry (e.g. `Fe-BCC.png`, `Pd-FCC.png`).
+- **PNG files**: `results/{name}.png` — one per sample. A lattice entry is
+  named `{element}-{structure}` (e.g. `Fe-BCC.png`), a cell by its section
+  name (e.g. `NaCl.png`).
 - **CSV file**: `results/XRD_results.csv` — an x-axis column plus one intensity
-  column per sample, named `{element}-{structure}`. The x column is
+  column per sample, named as above. The x column is
   `2θ (deg)` in X-ray mode and `g (1/Å)` in electron mode.
 
 In **electron mode** each sample additionally produces a 2D Debye–Scherrer ring
-image (`results/rings/{element}-{structure}.png`) and a reflection answer-key CSV
-(`results/rings/{element}-{structure}_reflections.csv`). The ring image is a pure
+image (`results/rings/{name}.png`) and a reflection answer-key CSV
+(`results/rings/{name}_reflections.csv`). The ring image is a pure
 radial map of the 1D profile: a pixel at radius `r` (mm) takes the intensity at
 `g = r / camera_constant`, so ring radius `r = camera_constant · g` and `r² ∝ N`
-(`N = h²+k²+l²`). The answer key lists every allowed reflection — `h k l`, `N`,
-`g`, ring radius (mm), multiplicity — sorted by `g`; it is the hidden key for the
+(`N = h²+k²+l²`). The answer key lists every reflection present under the chosen
+reflection method — `h k l`, `N`, `g`, ring radius (mm), multiplicity,
+scattering weight — sorted by `g`; it is the hidden key for the
 lab's ring-identification exercise (measure radii → `r²` ratios → `N`-sequence →
 SC/BCC/FCC selection rule → lattice constant `a`). Ring cosmetics are tunable in
 `[instrument]`: `camera_constant` (λL, mm·Å), `image_px`, `beam_stop_mm`,
@@ -255,10 +281,11 @@ XRD_simple/
 │   ├── XRDSim.jl                # Entry file: includes the physics files below
 │   ├── form_factors.jl          # X-ray atomic form factors (Waasmaier–Kirfel)
 │   ├── config.jl                # XRay / Electron modes, XRDConfig, read_xrd_config
-│   ├── crystal.jl               # Miller indices, multiplicities, d and g spacings
+│   ├── crystal.jl               # Miller indices, multiplicities, d and g spacings, unit cell
 │   ├── profiles.jl              # Voigt and pseudo-Voigt profiles, Debye–Waller, sum_peaks
 │   ├── xray.jl                  # Bragg angles, widths, Lorentz–polarization
 │   ├── electron.jl              # g-space widths, reflection table, ring image
+│   ├── reflections.jl           # Reflection methods: absence rules, structure factor
 │   ├── simulate.jl              # simulate: one pattern, either mode
 │   └── plotting.jl              # All Plots.jl calls (included by main.jl only)
 ├── test/                        # Test suite (julia --project=. test/runtests.jl)

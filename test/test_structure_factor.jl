@@ -111,3 +111,20 @@ end
         @test all(isfinite, y) && all(≥(0), y)
     end
 end
+
+@testset "reflection_table follows the reflection method" begin
+    mode = read_xrd_config(SF_ELECTRON_TOML).mode
+    cu = lattice_sample("FCC", "Cu", 3.594, 0.55)
+    rules, sf = reflection_table(AbsenceRules(), mode, cu), reflection_table(StructureFactor(), mode, cu)
+    @test rules.indices == sf.indices
+    @test rules.weight ≈ sf.weight
+    @test issorted(rules.g)
+    @test rules.g ≈ sqrt.(rules.N) ./ cu.a
+
+    si = cell("Si", "FCC", 5.431, origin("Si"), Atom("Si", (0.25, 0.25, 0.25), 0.0))
+    rt = reflection_table(StructureFactor(), mode, si)
+    @test !(4 in rt.N) && !(12 in rt.N)          # 200 and 222 absent
+    @test 16 in rt.N                             # 400 present
+    @test_throws ArgumentError reflection_table(AbsenceRules(), mode,
+        cell("NaCl", "FCC", 5.64, origin("Na"), Atom("Cl", (0.5, 0.0, 0.0), 0.0)))
+end

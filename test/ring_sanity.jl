@@ -41,7 +41,7 @@ function run_checks(config, camera_constant, g_max, tol_g)
 all_ok = true
 for sample in config.samples
     g, y = simulate(config, sample)
-    rt = reflection_table(sample.centering, sample.a, g_max)
+    rt = reflection_table(config.model, config.mode, sample)
 
     # (1) profile peaks vs analytic g
     gpeaks = peak_locations(g, y)

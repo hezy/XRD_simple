@@ -1,4 +1,5 @@
-# Cubic crystallography: Miller indices, multiplicities, d and g spacings.
+# Cubic crystallography: Miller indices, multiplicities, d and g spacings, and
+# the atoms of a unit cell.
 
 """
     cubic_multiplicity(h::Int, k::Int, l::Int)::Int
@@ -27,6 +28,23 @@ function cubic_multiplicity(h::Int, k::Int, l::Int)::Int
     end
 
     return perms * sign_variants
+end
+
+
+"""
+    family_members(hkl) -> Vector{NTuple{3,Int}}
+
+Every distinct sign and permutation variant of the Miller index `hkl`: the
+members of the {hkl} family under the cubic point group m-3m. Their number is
+`cubic_multiplicity`.
+"""
+function family_members(hkl::AbstractVector{<:Integer})::Vector{NTuple{3,Int}}
+    members = Set{NTuple{3,Int}}()
+    for (i, j, k) in ((1, 2, 3), (1, 3, 2), (2, 1, 3), (2, 3, 1), (3, 1, 2), (3, 2, 1)),
+        sh in (1, -1), sk in (1, -1), sl in (1, -1)
+        push!(members, (sh * hkl[i], sk * hkl[j], sl * hkl[k]))
+    end
+    return sort!(collect(members), rev=true)
 end
 
 
@@ -144,3 +162,44 @@ function g_list(indices::AbstractVector{<:AbstractVector{<:Integer}}, a::Real)::
     end
     return result
 end
+
+
+# Lattice translations of each centering, in fractional coordinates.
+const CENTERING_TRANSLATIONS = Dict(
+    "SC"  => [(0.0, 0.0, 0.0)],
+    "BCC" => [(0.0, 0.0, 0.0), (0.5, 0.5, 0.5)],
+    "FCC" => [(0.0, 0.0, 0.0), (0.0, 0.5, 0.5), (0.5, 0.0, 0.5), (0.5, 0.5, 0.0)])
+
+
+"""
+    unit_cell(sample::Sample) -> Vector{Atom}
+
+Every atom of the cubic unit cell of `sample`: each basis atom repeated by the
+centering translations, with positions reduced into [0, 1).
+
+# Throws
+- `ArgumentError`: if two atoms fall on one site, for example a basis atom and
+  the centering copy of another. The basis lists each atom once, not its
+  centering copies (CsCl is SC with a two-atom basis, not BCC).
+
+# Examples
+```julia
+unit_cell(lattice_sample("BCC", "Fe", 2.866))   # Fe at (0,0,0) and (½,½,½)
+```
+"""
+function unit_cell(sample::Sample)::Vector{Atom}
+    atoms = Atom[]
+    for atom in sample.atoms, t in CENTERING_TRANSLATIONS[sample.centering]
+        xyz = mod.(atom.xyz .+ t, 1.0)
+        for other in atoms
+            same_site(xyz, other.xyz) && throw(ArgumentError(
+                "sample $(sample.name): $(other.element) and $(atom.element) fall on one site, $(other.xyz), " *
+                "after the $(sample.centering) translations; list each atom of the basis once, not its centering copies"))
+        end
+        push!(atoms, Atom(atom.element, xyz, atom.B))
+    end
+    return atoms
+end
+
+# Two fractional positions in [0, 1) on one site, modulo a lattice vector.
+same_site(p, q) = all(d -> min(d, 1 - d) < 1e-6, abs.(p .- q))

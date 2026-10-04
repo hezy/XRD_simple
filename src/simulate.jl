@@ -32,8 +32,6 @@ of standard deviation `cfg.noise_level`.
   `axis_label`) and the intensity at each x
 """
 function simulate(cfg::XRDConfig, sample::Sample)::Tuple{Vector{Float64}, Vector{Float64}}
-    cfg.model isa AbsenceRules ||
-        throw(ArgumentError("reflections = \"structure_factor\" is not implemented yet"))
     mode, model, a = cfg.mode, cfg.model, sample.a
     x = grid(mode, cfg.N)
 

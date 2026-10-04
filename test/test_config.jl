@@ -204,4 +204,6 @@ end
         @test_throws ArgumentError read_xrd_config(with_cell(b, cell))
     end
     @test_throws ArgumentError read_xrd_config(with_cell(b; name="Cu-FCC"))     # name taken
+    cell = nacl_cell(); cell["lattice"] = "BCC"; cell["basis"][2]["xyz"] = Any[0.5, 0.5, 0.5]
+    @test_throws ArgumentError read_xrd_config(with_cell(b, cell))               # Cl on the Na site
 end

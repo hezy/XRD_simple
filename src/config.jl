@@ -341,7 +341,9 @@ function read_cell(name::String, cell, B_default::Float64)::Sample
         config_check(B ≥ 0, "$where_: B must not be negative, got $B")
         push!(atoms, Atom(element, Tuple(Float64.(xyz)), B))
     end
-    return Sample(name, lattice, a, atoms)
+    sample = Sample(name, lattice, a, atoms)
+    unit_cell(sample)       # throws if two atoms fall on one site
+    return sample
 end
 
 

@@ -46,20 +46,11 @@ Listed for context; no further action needed.
   (September 2026).
 - Added the X-ray atomic form factor: Waasmaier–Kirfel coefficients for H–Cf
   in `src/form_factors.jl`; peak areas carry (f/Z)² (September 2026).
-
----
-
-## Pending data
-
-### Debye–Waller B values for `data.toml`
-
-The code reads B per element from `[debye_waller]`, but `data.toml` has no such
-section yet, so every B is 0 (no thermal damping). To do: add the section with
-the 293 K values for the elements in the lattice menu, taken from Peng, Ren,
-Dudarev & Whelan (1996), Acta Cryst. A52, 456–470, Table 2 (44 elemental
-crystals, 2–3 % accuracy). The IUCr server refuses automated download; obtain
-the PDF by hand. `data.toml` is skip-worktree: commit the section only in the
-public decoy version.
+- B is keyed by structure, `[debye_waller.STRUCTURE]`, since phases of one
+  element differ (BCC and FCC Fe). `data.toml` holds the 293 K values of
+  Peng, Ren, Dudarev & Whelan (1996), supplement SUP82472, Table 1, for the
+  tabulated elements of the lattice menu; the others use `default` (October
+  2026).
 
 ---
 
@@ -146,12 +137,10 @@ the distortion.
 
 ## Suggested order
 
-1. **Debye–Waller B values:** fill `[debye_waller]` in `data.toml` (see
-   Pending data).
-2. **Electron scattering factor:** a few lines on top of the X-ray form factor;
+1. **Electron scattering factor:** a few lines on top of the X-ray form factor;
    removes the open item of `problems.md`.
-3. **Full structure factor:** changes the data model and opens the door to
+2. **Full structure factor:** changes the data model and opens the door to
    multi-element cells; the atomic form factor it needs is in place.
-4. **Non-cubic lattices:** largest scope; best tackled after the physics model
+3. **Non-cubic lattices:** largest scope; best tackled after the physics model
    is richer, so the per-system modules have complete equations to implement.
-5. **Ring-image distortion:** independent of the rest; any time.
+4. **Ring-image distortion:** independent of the rest; any time.

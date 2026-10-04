@@ -59,3 +59,6 @@ analysis/
 # git add -f results/XRD_results.csv
 # git commit -m "results update"
 # git push
+
+# Reference PDFs stay local; references/references.bib lists them
+references/*.pdf

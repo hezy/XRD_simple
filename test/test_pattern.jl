@@ -71,6 +71,23 @@ end
     @test_throws ArgumentError atomic_form_factor("Fe", 6.5)
 end
 
+@testset "electron_form_factor" begin
+    # Mott–Bethe: C (Z − f₀(s)) / s², with Z = f₀(0) of the fit
+    for el in ("Al", "Fe", "Au"), s in (0.1, 0.5, 2.0)
+        Z = atomic_form_factor(el, 0.0)
+        @test electron_form_factor(el, s) ≈ 0.023934 * (Z - atomic_form_factor(el, s)) / s^2
+    end
+    # Finite and continuous at s = 0, and falling with s
+    @test electron_form_factor("Fe", 0.0) ≈ electron_form_factor("Fe", 1e-4) rtol = 1e-6
+    @test issorted(electron_form_factor.("Fe", 0:0.1:2), rev=true)
+    # Falls faster than f₀: f_e(s)/f_e(0) < f₀(s)/Z
+    @test electron_form_factor("Fe", 0.5) / electron_form_factor("Fe", 0.0) <
+          atomic_form_factor("Fe", 0.5) / atomic_form_factor("Fe", 0.0)
+    @test_throws ArgumentError electron_form_factor("Xx", 0.1)
+    @test_throws ArgumentError electron_form_factor("Fe", -0.1)
+    @test_throws ArgumentError electron_form_factor("Fe", 6.5)
+end
+
 @testset "peak_weights" begin
     # X-ray: LP × f² × DW with s = sin θ / λ
     cfg = read_xrd_config(XRAY_TOML)
@@ -82,10 +99,13 @@ end
     @test peak_weights(cfg.mode, two_θ₀, "Fe", 0.5) ≈
           Lorentz_polarization.(two_θ₀ ./ 2) .* f² .* exp.(-2 * 0.5 .* s .^ 2)
 
-    # Electron: DW only, with s = g/2
+    # Electron: (f_e/f_e(0))² × DW with s = g/2
     cfg = read_xrd_config(ELECTRON_TOML)
-    @test peak_weights(cfg.mode, [0.3, 0.6], "Fe", 0.0) == [1.0, 1.0]
-    @test peak_weights(cfg.mode, [0.3, 0.6], "Fe", 0.5) ≈ exp.(-2 * 0.5 .* ([0.3, 0.6] ./ 2) .^ 2)
+    s = [0.3, 0.6] ./ 2
+    fe² = (electron_form_factor.("Fe", s) ./ electron_form_factor("Fe", 0.0)) .^ 2
+    @test peak_weights(cfg.mode, [0.3, 0.6], "Fe", 0.0) ≈ fe²
+    @test peak_weights(cfg.mode, [0.3, 0.6], "Fe", 0.5) ≈ fe² .* exp.(-2 * 0.5 .* s .^ 2)
+    @test 1 > fe²[1] > fe²[2] > 0
 
     # In a pattern, B lowers a high-angle peak more than a low-angle one
     x, y0 = simulate(read_xrd_config(XRAY_TOML), "SC", "Po", 3.352, 0.0)

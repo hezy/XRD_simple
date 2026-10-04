@@ -46,6 +46,9 @@ Listed for context; no further action needed.
   (September 2026).
 - Added the X-ray atomic form factor: Waasmaier–Kirfel coefficients for H–Cf
   in `src/form_factors.jl`; peak areas carry (f/Z)² (September 2026).
+- Added the electron scattering factor: `electron_form_factor` by the
+  Mott–Bethe relation on the Waasmaier–Kirfel coefficients; electron peak
+  weights carry (f_e/f_e(0))² (October 2026).
 - B is keyed by structure, `[debye_waller.STRUCTURE]`, since phases of one
   element differ (BCC and FCC Fe). `data.toml` holds the 293 K values of
   Peng, Ren, Dudarev & Whelan (1996), supplement SUP82472, Table 1, for the
@@ -57,26 +60,11 @@ Listed for context; no further action needed.
 ## Physics model (open)
 
 All enhancements operate on the intensity of each reflection. Current code:
-`I ∝ multiplicity × LP(θ) × (f/Z)² × DW` for X-rays, `I ∝ multiplicity × DW`
-for electrons.
-Missing weights:
+`I ∝ multiplicity × LP(θ) × (f/Z)² × DW` for X-rays,
+`I ∝ multiplicity × (f_e/f_e(0))² × DW` for electrons.
+Missing weight:
 
-### 1. Electron scattering factor f_e(s) (Mott–Bethe)
-
-```
-f_e(s) = 0.023934 Å · (Z − f(s)) / s²,   s = sin θ / λ = g / 2
-```
-
-Electron-mode heights carry no atomic scattering factor, so they are not
-quantitative (see `problems.md`). The Mott–Bethe relation gives f_e from the
-X-ray `atomic_form_factor` already in `src/form_factors.jl`; no new data table
-is needed. Multiply (f_e(s)/f_e(s_ref))², or another normalization of order 1,
-into `peak_weights(::Electron, g₀, element, B)`. The relation is singular at
-s = 0, but every reflection has s > 0. Optional: the relativistic factor γ at
-`voltage_kV`, which scales all f_e equally and does not change relative
-heights.
-
-### 2. Full structure factor |F|²
+### 1. Full structure factor |F|²
 
 ```
 F(hkl) = Σⱼ fⱼ · exp(2πi · (h xⱼ + k yⱼ + l zⱼ))
@@ -92,7 +80,7 @@ perovskites, alloys). Requires a data model change: unit cell = list of
 
 ## Architecture / extensibility (open)
 
-### 3. Non-cubic crystal systems
+### 2. Non-cubic crystal systems
 
 Current code is cubic-only. Generalizing to tetragonal, hexagonal,
 orthorhombic, etc. needs:
@@ -113,7 +101,7 @@ only the inner helpers become per-system.
 
 ## Electron ring image (open)
 
-### 4. Geometric distortion of the ring image
+### 3. Geometric distortion of the ring image
 
 `ring_image` now draws ideal, exactly circular rings centred in the frame.
 Real SAED patterns are distorted, and students must measure through that:
@@ -137,10 +125,8 @@ the distortion.
 
 ## Suggested order
 
-1. **Electron scattering factor:** a few lines on top of the X-ray form factor;
-   removes the open item of `problems.md`.
-2. **Full structure factor:** changes the data model and opens the door to
+1. **Full structure factor:** changes the data model and opens the door to
    multi-element cells; the atomic form factor it needs is in place.
-3. **Non-cubic lattices:** largest scope; best tackled after the physics model
+2. **Non-cubic lattices:** largest scope; best tackled after the physics model
    is richer, so the per-system modules have complete equations to implement.
-4. **Ring-image distortion:** independent of the rest; any time.
+3. **Ring-image distortion:** independent of the rest; any time.

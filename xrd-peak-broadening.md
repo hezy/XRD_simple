@@ -119,8 +119,18 @@ single-element cubic cell the structure factor is n·f (n atoms per cell), so
 the relative intensities within one pattern are unchanged by this scaling.
 Anomalous dispersion (f′, f″) is omitted.
 
-In electron mode the Lorentz–polarization factor and f are omitted and
-s = g/2; only the Debye–Waller factor applies.
+In electron mode s = g/2, the Lorentz–polarization factor is omitted, and f
+is replaced by the electron scattering factor f_e (Å), obtained from f by the
+Mott–Bethe relation:
+```
+I_hkl ∝ m · (f_e(s)/f_e(0))² · exp(−2B s²)
+f_e(s) = C (Z − f(s)) / s² = C Σᵢ aᵢ (1 − exp(−bᵢ s²)) / s²,   C = 0.023934 1/Å
+f_e(0) = C Σᵢ aᵢ bᵢ
+```
+The second form takes Z = f(0) of the fit, which removes the 0/0 at s = 0.
+f_e is the scattering of the electrostatic potential: the nucleus minus the
+electron cloud. It falls much faster with s than f, so low-g rings dominate.
+The relativistic factor γ scales every f_e equally and is omitted.
 
 ## 8. Electron Diffraction (reciprocal-space form)
 
@@ -164,5 +174,5 @@ whose tanθ terms are degenerate near θ = 0:
 
 The peak-shape functions (Gaussian, Lorentzian, pseudo-Voigt) and the
 size/strain separation are otherwise identical to the X-ray case. Heights are
-multiplicity × Debye–Waller factor (§7); the electron atomic scattering factor f_e(s) — obtainable
-from the X-ray factor via the Mott–Bethe relation — is not yet included.
+multiplicity × (f_e(s)/f_e(0))² × Debye–Waller factor, with f_e from the
+Mott–Bethe relation (§7).

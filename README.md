@@ -228,9 +228,10 @@ U/V/W terms are degenerate at θ ≈ 0). The crystallography (Miller indices,
 multiplicities, systematic absences) and the Voigt / pseudo-Voigt peak profiles
 are shared with the X-ray path.
 
-Peak **heights** are multiplicity × Debye–Waller factor (the X-ray path adds
-the Lorentz–polarization factor and the atomic form factor); the electron atomic scattering factor f_e(s) is not yet modelled, so the
-relative intensities are geometric rather than quantitative. The model is
+Peak **heights** are multiplicity × (f_e(s)/f_e(0))² × Debye–Waller factor,
+with s = g/2. The electron scattering factor f_e is computed from the X-ray
+atomic form factor by the Mott–Bethe relation, so low-g reflections dominate.
+(The X-ray path uses the Lorentz–polarization factor and (f/Z)² instead.) The model is
 kinematical — valid for thin specimens; real selected-area electron diffraction
 is dynamical.
 
@@ -269,7 +270,7 @@ XRD_simple/
 
 ## Known Issues
 
-- Electron mode: peak heights are multiplicity × Debye–Waller only — the electron scattering factor f_e(s) is not yet modelled, so relative intensities are not quantitative
+No known issues at present; see [problems.md](problems.md).
 
 ## Contributing
 

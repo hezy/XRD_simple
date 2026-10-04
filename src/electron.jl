@@ -30,6 +30,56 @@ function electron_wavelength(V::Real)::Float64
 end
 
 
+# Mott–Bethe constant m e² / (8π ε₀ h²) in 1/Å, for s = sin θ / λ
+const MOTT_BETHE = 0.023934
+
+
+"""
+    electron_form_factor(element::String, s::Real)::Float64
+
+Electron scattering factor f_e of a neutral atom, in Å, from the X-ray form
+factor by the Mott–Bethe relation:
+
+    f_e(s) = C (Z − f₀(s)) / s²,   C = 0.023934 1/Å,   s = sin θ / λ = g / 2
+
+Z is taken as f₀(0) of the Waasmaier–Kirfel fit, so that
+
+    Z − f₀(s) = Σᵢ aᵢ (1 − exp(−bᵢ s²))
+
+and the relation has the finite limit f_e(0) = C Σᵢ aᵢ bᵢ instead of a 0/0 at
+s = 0. f_e falls much faster with s than f₀, so low-g reflections dominate.
+Non-relativistic: the factor γ at the accelerating voltage scales every f_e
+equally and is omitted.
+
+# Arguments
+- `element::String`: Element symbol, e.g. "Fe"
+- `s::Real`: sin θ / λ in 1/Å, 0 ≤ s ≤ 6
+
+# Returns
+- `Float64`: f_e(s) in Å
+
+# Throws
+* ArgumentError: If the element is not in `FORM_FACTOR_COEFFICIENTS`, or s is
+  outside [0, 6]
+
+# Examples
+```julia
+electron_form_factor("Fe", 0.0)    # ≈ 7.0 Å
+```
+"""
+function electron_form_factor(element::String, s::Real)::Float64
+    haskey(FORM_FACTOR_COEFFICIENTS, element) ||
+        throw(ArgumentError("no atomic form factor for element \"$element\""))
+    0 ≤ s ≤ 6 || throw(ArgumentError("sin θ/λ must be in [0, 6] 1/Å, got $s"))
+    a₁, a₂, a₃, a₄, a₅, _, b₁, b₂, b₃, b₄, b₅ = FORM_FACTOR_COEFFICIENTS[element]
+    s² = s^2
+    # (1 − exp(−b s²)) / s², with the limit b at s = 0
+    term(a, b) = s² == 0 ? a * b : -a * expm1(-b * s²) / s²
+    return MOTT_BETHE * (term(a₁, b₁) + term(a₂, b₂) + term(a₃, b₃) +
+                         term(a₄, b₄) + term(a₅, b₅))
+end
+
+
 """
     ed_max_hkl_sq(a::Real, g_max::Real)::Int
 
@@ -96,10 +146,13 @@ max_hkl_sq(m::Electron, a::Real) = ed_max_hkl_sq(a, m.g_max)
 peak_centres(::Electron, indices::AbstractVector{<:AbstractVector{<:Integer}},
              multiplicities::AbstractVector{<:Integer}, a::Real) = g_list(indices, a), multiplicities
 
-# Debye–Waller only, with s = g/2: the Lorentz factor is constant in g, and
-# f_e(s) is not modelled (see Known Issues). `element` is not used yet.
-peak_weights(::Electron, g₀::AbstractVector{<:Real}, element::String, B::Real) =
-    Debye_Waller.(g₀ ./ 2, B)
+# (f_e/f_e(0))² × Debye–Waller, with s = g/2; the Lorentz factor is constant in
+# g. Dividing by f_e(0) keeps the weights of order 1, as (f/Z)² does for X-rays.
+function peak_weights(::Electron, g₀::AbstractVector{<:Real}, element::String, B::Real)
+    s = g₀ ./ 2
+    return (electron_form_factor.(element, s) ./ electron_form_factor(element, 0.0)) .^ 2 .*
+           Debye_Waller.(s, B)
+end
 
 peak_widths(m::Electron, g₀::Real, cfg::XRDConfig) =
     (Lorentzian_peaks_width_g(g₀, cfg.K, cfg.Epsilon, cfg.D), m.G_inst)

@@ -107,7 +107,8 @@ This file provides context for AI assistants working on the XRD_simple project.
 - **Electron path:** reciprocal-space geometry, x-axis g = 1/d (1/Å). Positions
   are `g = √(h²+k²+l²)/a` (no Bragg's law); reflection cutoff is `ed_max_hkl_sq`
   (g ≤ `g_max`), not `bragg_max_hkl_sq`. Uses `voltage_kV`, `g_min`/`g_max`,
-  `G_inst`. Heights are multiplicity × `Debye_Waller(g/2, B)` (no f_e(s) yet).
+  `G_inst`. Heights are multiplicity × (`electron_form_factor(element, g/2)`/f_e(0))² ×
+  `Debye_Waller(g/2, B)`; f_e comes from the X-ray form factor by Mott–Bethe.
 - The crystallography (`Miller_indices`, `cubic_multiplicity`, absences) and the
   peak profiles (`Voigt_peak`, `pseudo_Voigt_peak`, `peak_fwhm`, `sum_peaks`) are
   shared by both paths.
@@ -147,7 +148,9 @@ Both support:
   `Debye_Waller(s, B)`, s = sin θ/λ. LP is normalized to 1 at 2θ = 90° and f
   is divided by Z = f(0), so the weights are of order 1 and the peaks keep
   their scale relative to the background.
-- **Electron:** `Debye_Waller(g/2, B)` only (no f_e(s) yet).
+- **Electron:** (`electron_form_factor(element, s)`/f_e(0))² × `Debye_Waller(s, B)`,
+  s = g/2. f_e is Mott–Bethe on the Waasmaier–Kirfel coefficients, with
+  Z = f₀(0) of the fit, so f_e(0) is finite. No Lorentz factor (constant in g).
 - B comes from `[debye_waller]` in `data.toml` (per structure and element
   under `[debye_waller.STRUCTURE]`, else `default`, else 0) and travels in the sample tuple `(structure, element, a, B)`.
 
@@ -220,13 +223,6 @@ ignored, so both X-ray and electron parameters can coexist in one file — flip
 
 ## Known Issues
 
-### Electron intensities: no scattering factor
-- Electron-mode peak heights are weighted by multiplicity and Debye–Waller only; the electron
-  scattering factor f_e(s) is not modelled, so relative intensities are
-  geometric, not quantitative. Adding f_e(s) (Doyle–Turner/Kirkland, or
-  Mott–Bethe on the X-ray `atomic_form_factor`) would make low-g reflections
-  correctly dominant. The X-ray heights include the form factor.
-
 ### Compatibility
 - JSON.jl v1.3.0 had compatibility issues with LanguageServer (documented in JSON_compatibility_fix.md)
 - Resolved by updating dependencies
@@ -272,8 +268,6 @@ ignored, so both X-ray and electron parameters can coexist in one file — flip
   `ring_phosphor`, `ring_gamma`, `ring_noise`.
 - Electron knobs: `voltage_kV`, `g_min`/`g_max` (detector range), `G_inst`
   (instrumental Gaussian FWHM), plus the shared `K`, `Epsilon`, `D`.
-- To add the electron scattering factor f_e(s), multiply it into
-  `peak_weights(::Electron, g₀, B)` (see Known Issues).
 
 ## Testing Approach
 
@@ -348,8 +342,8 @@ Use broadcasting (`@.` macro) for element-wise operations.
 
 ## Future Enhancements (Ideas)
 
-The planned work, with its order, is in `improvements.md` (electron scattering
-factor, full structure factor, non-cubic lattices, ring-image distortion) and
+The planned work, with its order, is in `improvements.md` (full structure
+factor, non-cubic lattices, ring-image distortion) and
 the known defects are in `problems.md`. Further ideas, not planned:
 
 - Implement Rietveld refinement

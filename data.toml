@@ -9,6 +9,21 @@ g_max = 1.2                  # electron: max scattering vector (1/Å); d_min ≈
 N = 1000
 noise_level = 0.15
 
+# Ring output (electron mode): the 1D g-profile is also rendered as a 2D
+# Debye-Scherrer ring image. Ring radius r = camera_constant * g (mm), so r^2 ∝ N.
+camera_constant = 50.0       # λL (mm·Å); 50 ≈ L=2 m at 200 kV (λ≈0.025 Å). r_max≈60 mm at g_max
+image_px = 800               # ring image side length (pixels)
+beam_stop_mm = 2.5           # central beam-stop radius (mm)
+ring_phosphor = true         # phosphor-green colormap (false = grayscale)
+ring_gamma = 0.5             # display gamma (<1 lifts faint outer rings)
+ring_noise = 0.0             # per-pixel multiplicative noise on the ring image (0–1)
+# Geometric distortion of the ring image (all 0: exact circles about the image centre)
+ring_ellipticity = 0.0       # η: ellipse with semi-axes r(1 ± η); real lenses 0.005–0.02
+ring_axis_deg = 0.0          # φ₀: direction of the long axis (degrees from +x)
+ring_centre_x_mm = 0.0       # pattern centre offset from the image centre (mm)
+ring_centre_y_mm = 0.0
+ring_radial_distortion = 0.0 # κ: barrel (< 0) or pincushion (> 0); |κ| < 0.1
+
 [peak_width]
 U = 0.0001                   # X-ray: Caglioti (instrumental)
 V = 0.00005                  # X-ray: Caglioti (instrumental)
@@ -17,6 +32,13 @@ G_inst = 0.005               # electron: instrumental Gaussian FWHM (1/Å)
 K = 0.9                      # Scherrer constant (both)
 Epsilon = 0.001              # microstrain (both)
 D = 500.0                    # crystallite size, nm (both)
+
+[model]
+# How the reflections and their intensities are found:
+#   "rules"            - the fixed absence rules of SC, BCC, FCC (one atom per lattice point)
+#   "structure_factor" - the full structure factor F(hkl) over the atoms of the unit cell
+# Both give the same pattern for the [lattice.*] entries; [cell.*] needs "structure_factor".
+reflections = "rules"
 
 [lattice]
 # Lattice parameters in Angstroms (Å)
@@ -61,3 +83,77 @@ Pd = 3.859
 # Ar = 5.260   # solid (cryogenic)
 # Kr = 5.720   # solid (cryogenic)
 # Xe = 6.200   # solid (cryogenic)
+
+# Unit cells with several atoms (need reflections = "structure_factor").
+# lattice = centering; basis = one entry per atom, without its centering copies;
+# xyz in fractions of a; optional B (Å^2) per atom, else [debye_waller] default.
+#
+# [cell.NaCl]                  # rock salt
+# lattice = "FCC"
+# a = 5.640
+# basis = [ { element = "Na", xyz = [0, 0, 0] },
+#           { element = "Cl", xyz = [0.5, 0, 0] } ]
+#
+# [cell.KCl]                   # rock salt; K+ and Cl- nearly equal: odd hkl very weak
+# lattice = "FCC"
+# a = 6.293
+# basis = [ { element = "K",  xyz = [0, 0, 0] },
+#           { element = "Cl", xyz = [0.5, 0, 0] } ]
+#
+# [cell.CsCl]                  # SC with a two-atom basis (not BCC)
+# lattice = "SC"
+# a = 4.123
+# basis = [ { element = "Cs", xyz = [0, 0, 0] },
+#           { element = "Cl", xyz = [0.5, 0.5, 0.5] } ]
+#
+# [cell.Si]                    # diamond: 200, 222 absent
+# lattice = "FCC"
+# a = 5.431
+# basis = [ { element = "Si", xyz = [0, 0, 0] },
+#           { element = "Si", xyz = [0.25, 0.25, 0.25] } ]
+#
+# [cell.Cu3Au]                 # ordered L1_2: superlattice lines 100, 110
+# lattice = "SC"
+# a = 3.749
+# basis = [ { element = "Au", xyz = [0, 0, 0] },
+#           { element = "Cu", xyz = [0, 0.5, 0.5] },
+#           { element = "Cu", xyz = [0.5, 0, 0.5] },
+#           { element = "Cu", xyz = [0.5, 0.5, 0] } ]
+
+[debye_waller]
+# Debye-Waller B (Å^2) at 293 K: Peng, Ren, Dudarev & Whelan (1996),
+# Acta Cryst. A52, 456-470, supplement SUP82472, Table 1.
+# B is given per structure: phases of one element differ (BCC/FCC Fe).
+# Not tabulated (B = default): Po, Eu, Mn, Rh, Ir, Ac, Ce, Yb, FCC Sr;
+# Ne, Ar, Kr, Xe have no 293 K value (solid only at low T).
+default = 0.0
+
+[debye_waller.BCC]
+Fe = 0.3250
+Mo = 0.2155
+W  = 0.1596
+V  = 0.5718
+Nb = 0.4496
+Ta = 0.3220
+Cr = 0.2510
+Li = 4.8089
+Na = 6.6583
+K  = 10.7067
+Ba = 3.0612
+Rb = 13.1632
+Cs = 17.4803
+Ca = 2.5996
+Sr = 3.7880
+
+[debye_waller.FCC]
+Al = 0.7806
+Ni = 0.3559
+Cu = 0.5505
+Pd = 0.4456
+Ag = 0.7341
+Pt = 0.3722
+Au = 0.6198
+Pb = 2.1266
+Ca = 1.9968
+Th = 0.7298
+Fe = 0.5577

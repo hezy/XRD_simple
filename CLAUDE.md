@@ -148,8 +148,8 @@ Both support:
   is divided by Z = f(0), so the weights are of order 1 and the peaks keep
   their scale relative to the background.
 - **Electron:** `Debye_Waller(g/2, B)` only (no f_e(s) yet).
-- B comes from `[debye_waller]` in `data.toml` (per element, else `default`,
-  else 0) and travels in the sample tuple `(structure, element, a, B)`.
+- B comes from `[debye_waller]` in `data.toml` (per structure and element
+  under `[debye_waller.STRUCTURE]`, else `default`, else 0) and travels in the sample tuple `(structure, element, a, B)`.
 
 ### Miller Index Generation
 `Miller_indices(cell_type::String, max_hkl_sq::Int)` enumerates the canonical
@@ -206,7 +206,9 @@ Ag = 4.079
 
 [debye_waller]               # optional; Debye–Waller B (Å²), both modes
 default = 0.0                # elements not listed (0 = no thermal damping)
-# Fe = 0.35
+
+[debye_waller.BCC]           # B per structure: phases of one element differ
+# Fe = 0.3250
 ```
 
 **Important:** Angular parameters in config are in degrees and automatically

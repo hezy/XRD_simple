@@ -43,9 +43,12 @@ end
     @test cfg.D === 500.0                          # integer in TOML, Float64 here
     @test cfg.samples == [("FCC", "Ag", 4.079, 0.0), ("FCC", "Cu", 3.594, 0.0), ("SC", "Po", 3.352, 0.0)]
 
-    # [debye_waller]: an element entry, else the default; others are ignored
+    # [debye_waller]: an entry of the sample's structure, else the default;
+    # others are ignored (Ag under BCC does not apply to FCC Ag)
     c = deepcopy(base_config())
-    c["debye_waller"] = Dict{String,Any}("default" => 0.5, "Cu" => 0.55, "Fe" => 0.35)
+    c["debye_waller"] = Dict{String,Any}("default" => 0.5,
+        "FCC" => Dict{String,Any}("Cu" => 0.55, "Fe" => 0.56),
+        "BCC" => Dict{String,Any}("Ag" => 0.9, "Fe" => 0.33))
     @test [s[4] for s in read_xrd_config(c).samples] == [0.5, 0.55, 0.5]
 end
 
@@ -136,10 +139,14 @@ end
     @test_throws ArgumentError read_xrd_config(c)
 
     # Debye–Waller
-    c = deepcopy(b); c["debye_waller"] = Dict{String,Any}("Cu" => -0.5)
+    c = deepcopy(b); c["debye_waller"] = Dict{String,Any}("FCC" => Dict{String,Any}("Cu" => -0.5))
     @test_throws ArgumentError read_xrd_config(c)
     c = deepcopy(b); c["debye_waller"] = Dict{String,Any}("default" => -0.5)
     @test_throws ArgumentError read_xrd_config(c)
-    c = deepcopy(b); c["debye_waller"] = Dict{String,Any}("Cu" => "0.5")
+    c = deepcopy(b); c["debye_waller"] = Dict{String,Any}("FCC" => Dict{String,Any}("Cu" => "0.5"))
+    @test_throws ArgumentError read_xrd_config(c)
+    c = deepcopy(b); c["debye_waller"] = Dict{String,Any}("Cu" => 0.5)      # element without structure
+    @test_throws ArgumentError read_xrd_config(c)
+    c = deepcopy(b); c["debye_waller"] = Dict{String,Any}("HCP" => Dict{String,Any}("Mg" => 1.8))
     @test_throws ArgumentError read_xrd_config(c)
 end

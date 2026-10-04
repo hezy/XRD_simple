@@ -112,7 +112,9 @@ Pd = 3.859
 
 [debye_waller]               # optional; B in Å²
 default = 0.0                # elements not listed (0: no thermal damping)
-# Fe = 0.35
+
+[debye_waller.BCC]           # B per structure: phases of one element differ
+# Fe = 0.3250
 ```
 
 Each uncommented entry under a `[lattice.*]` block produces one pattern. The
@@ -120,8 +122,9 @@ key must be a chemical symbol (H to Cf); it selects the atomic form factor.
 Leave entries commented out to skip them; add more to run several at once.
 
 **Debye–Waller factor.** Each reflection's intensity is multiplied by
-exp(−2B (sin θ/λ)²), in both radiation modes. `[debye_waller]` gives B for each
-element; elements not listed use `default`. Without the section, B = 0.
+exp(−2B (sin θ/λ)²), in both radiation modes. `[debye_waller.STRUCTURE]` gives B
+for each element of that structure, since B differs between phases (BCC and
+FCC Fe); samples not listed use `default` of `[debye_waller]`. Without the section, B = 0.
 
 **Radiation mode.** `radiation` selects the physics path. With `"xray"` the
 X-ray-only keys are used (2θ window, `lambda`, Caglioti U/V/W); with

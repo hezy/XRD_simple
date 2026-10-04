@@ -123,8 +123,10 @@ converted from degrees to radians. Each uncommented `element = a` entry under
 `[lattice.STRUCTURE]` becomes one sample; zero samples is valid. Each element
 must be a chemical symbol with an atomic form factor (H to Cf). The optional
 section `[debye_waller]` gives the Debye–Waller parameter B (Å²) of each sample:
-an `element = B` entry, or else the key `default`. Entries for elements that
-are not samples are ignored.
+an `element = B` entry under `[debye_waller.STRUCTURE]`, or else the key
+`default` of `[debye_waller]`. B is keyed by structure because it differs
+between phases of one element (BCC and FCC Fe). Entries that are not samples
+are ignored.
 
 # Defaults
 `radiation = "xray"`, `noise_level = 0`, `voltage_kV = 200`, `g_min = 0`,
@@ -165,9 +167,13 @@ function read_xrd_config(config::Dict)
     mode = radiation == "xray" ? read_xray(inst, pw) : read_electron(inst, pw)
 
     dw = get(config, "debye_waller", Dict{String,Any}())
-    dw isa Dict || throw(ArgumentError("[debye_waller] must be a table of element = B entries"))
+    dw isa Dict || throw(ArgumentError("[debye_waller] must be a table"))
     B_default = config_value(dw, "debye_waller", "default", Float64, 0.0)
     config_check(B_default ≥ 0, "[debye_waller] default must not be negative, got $B_default")
+    for (key, value) in dw
+        key == "default" || (key in ("SC", "BCC", "FCC") && value isa Dict) ||
+            throw(ArgumentError("[debye_waller] $key: expected default or a [debye_waller.SC], [debye_waller.BCC] or [debye_waller.FCC] table of element = B entries"))
+    end
 
     samples = Tuple{String,String,Float64,Float64}[]
     for (structure, elements) in get(config, "lattice", Dict{String,Any}())
@@ -180,8 +186,9 @@ function read_xrd_config(config::Dict)
             config_check(a > 0, "[$section] $element: lattice parameter must be positive, got $a")
             config_check(haskey(FORM_FACTOR_COEFFICIENTS, element),
                 "[$section] $element: unknown element; use a symbol from H to Cf, e.g. Fe")
-            B = config_value(dw, "debye_waller", element, Float64, B_default)
-            config_check(B ≥ 0, "[debye_waller] $element: B must not be negative, got $B")
+            B = config_value(get(dw, structure, Dict{String,Any}()), "debye_waller.$structure",
+                             element, Float64, B_default)
+            config_check(B ≥ 0, "[debye_waller.$structure] $element: B must not be negative, got $B")
             push!(samples, (structure, element, a, B))
         end
     end

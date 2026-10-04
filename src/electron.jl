@@ -215,6 +215,25 @@ end
 
 
 """
+    ring_true_radius(ρ, φ, mode::Electron)
+
+Undistorted ring radius r (mm) of the point at distance `ρ` (mm) from the
+pattern centre and azimuth `φ` (radians, from the +x axis). It inverts the
+distortion model of `ring_image`,
+
+    ρ = r · (1 + η cos 2(φ − φ₀)) · (1 + κ (ρ/R)²),   R = camera_constant · g_max
+
+which is written in ρ on the right so that the inverse is explicit. Internal
+helper for `ring_image`.
+"""
+@inline function ring_true_radius(ρ::Float64, φ::Float64, mode::Electron)::Float64
+    R = mode.camera_constant * mode.g_max
+    return ρ / ((1 + mode.ring_ellipticity * cos(2 * (φ - mode.ring_axis))) *
+                (1 + mode.ring_radial_distortion * (ρ / R)^2))
+end
+
+
+"""
     ring_image(g, y, mode::Electron) -> (coords, img)
 
 Map the 1D powder electron-diffraction profile `y(g)` to a 2D Debye–Scherrer
@@ -223,18 +242,35 @@ radial lookup: a pixel at distance r (mm) from the centre maps to g = r /
 `camera_constant` (1/Å) and takes intensity `y(g)`. This is the SAED-style ring
 image students measure — ring radius r = `camera_constant`·g, so r² ∝ N.
 
+Optional geometric distortion, as in a real microscope, moves a ring of radius
+r to the distance ρ from the pattern centre at azimuth φ (see
+`ring_true_radius`):
+
+    ρ = r · (1 + η cos 2(φ − φ₀)) · (1 + κ (ρ/R)²),   R = camera_constant · g_max
+
+- η, φ₀ (`ring_ellipticity`, `ring_axis`): elliptical distortion from
+  projector-lens astigmatism; to first order an ellipse with semi-axes r(1 ± η)
+  along φ₀ and φ₀ + 90°. Typical η is 0.005–0.02.
+- κ (`ring_radial_distortion`): barrel (κ < 0) or pincushion (κ > 0)
+  distortion; the radius error grows as r³.
+- (`ring_centre_x_mm`, `ring_centre_y_mm`): pattern centre, offset from the
+  image centre. The beam stop is centred on it.
+All are zero by default, which gives exact circles about the image centre.
+
 # Arguments
 - `g::Vector{Float64}`: profile g-grid (1/Å), uniform, from `simulate`
 - `y::Vector{Float64}`: profile intensity at each g
 - `mode::Electron`: ring settings — `camera_constant` (λL, mm·Å), `image_px`
   (side length, pixels), `beam_stop_mm` (central radius blanked to the floor),
   `ring_gamma` (display gamma, <1 lifts faint outer rings), `ring_noise`
-  (per-pixel multiplicative noise, seeded upstream)
+  (per-pixel multiplicative noise, seeded upstream), and the distortion
+  settings above
 
 # Returns
 - `coords::Vector{Float64}`: pixel positions (mm) along both axes, centred on 0
 - `img::Matrix{Float64}`: `image_px × image_px` intensities, normalised to
-  [0, 1] and gamma-compressed; `img[i, j]` is at `(coords[i], coords[j])`
+  [0, 1] and gamma-compressed; `img[i, j]` is at x = `coords[j]`,
+  y = `coords[i]`, the convention of `heatmap`
 
 `plot_ring_image` in `plotting.jl` draws the result.
 """
@@ -252,12 +288,15 @@ function ring_image(g::Vector{Float64},
     coords = collect(LinRange(-r_max, r_max, image_px))   # mm, both axes
 
     img = Matrix{Float64}(undef, image_px, image_px)
+    x_c, y_c = mode.ring_centre_x_mm, mode.ring_centre_y_mm
     @inbounds for j in 1:image_px
-        yj = coords[j]
+        dx = coords[j] - x_c
         for i in 1:image_px
-            r = hypot(coords[i], yj)         # mm from centre
-            img[i, j] = r < beam_stop_mm ? floor_val :
-                        radial_profile_value(y, g_min, g_max, r / camera_constant)
+            dy = coords[i] - y_c
+            ρ = hypot(dx, dy)                # mm from the pattern centre
+            img[i, j] = ρ < beam_stop_mm ? floor_val :
+                        radial_profile_value(y, g_min, g_max,
+                                             ring_true_radius(ρ, atan(dy, dx), mode) / camera_constant)
         end
     end
 

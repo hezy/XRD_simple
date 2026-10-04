@@ -199,3 +199,56 @@ end
 
     @test_throws DimensionMismatch ring_image(g, y[1:end-1], mode)
 end
+
+@testset "ring_image distortion" begin
+    # Noise-free; the (100) ring is measured along the horizontal and the
+    # vertical line through the offset pattern centre (both on the pixel grid)
+    a = 3.352
+    function ring_radii(settings)
+        toml = TOML.parsefile(ELECTRON_TOML)
+        toml["instrument"]["image_px"] = 401             # 0.3 mm per pixel
+        merge!(toml["instrument"], settings)
+        cfg = read_xrd_config(toml)
+        mode = cfg.mode
+        g, y = simulate(cfg, "SC", "Po", a)
+        coords, img = ring_image(g, y, mode)
+        i_c = argmin(abs.(coords .- mode.ring_centre_y_mm))
+        j_c = argmin(abs.(coords .- mode.ring_centre_x_mm))
+        r₀ = mode.camera_constant / a
+        # Distance from the centre of the brightest pixel within ±0.15 r₀ of r₀;
+        # (110) at √2 r₀ stays outside even when compressed by 10 %
+        function measured(line, centre, sign)
+            near = [k for k in eachindex(coords) if abs(sign * (coords[k] - coords[centre]) - r₀) < 0.15r₀]
+            return abs(coords[near[argmax(line[near])]] - coords[centre])
+        end
+        h = [measured(img[i_c, :], j_c, s) for s in (1, -1)]   # φ = 0, π
+        v = [measured(img[:, j_c], i_c, s) for s in (1, -1)]   # φ = ±π/2
+        return r₀, h, v, coords[2] - coords[1]
+    end
+
+    # Ellipse along φ₀ = 0: semi-axes r₀(1 + η) horizontal, r₀(1 − η) vertical,
+    # about the offset centre; φ₀ = 90° exchanges them
+    for (φ₀, fh, fv) in ((0, 1.1, 0.9), (90, 0.9, 1.1))
+        r₀, h, v, px = ring_radii(Dict("ring_ellipticity" => 0.1, "ring_axis_deg" => φ₀,
+                                       "ring_centre_x_mm" => 3.0, "ring_centre_y_mm" => -2.1))
+        @test all(abs.(h .- fh * r₀) .≤ px)
+        @test all(abs.(v .- fv * r₀) .≤ px)
+    end
+
+    # Pincushion: ρ = r₀ (1 + κ (ρ/R)²), solved by iteration
+    κ = 0.05
+    r₀, h, v, px = ring_radii(Dict("ring_radial_distortion" => κ))
+    R = 50.0 * 1.2
+    ρ = r₀
+    for _ in 1:50
+        ρ = r₀ * (1 + κ * (ρ / R)^2)
+    end
+    @test all(abs.(vcat(h, v) .- ρ) .≤ px)
+
+    # Without distortion the result does not change
+    toml = TOML.parsefile(ELECTRON_TOML)
+    cfg = read_xrd_config(toml)
+    g, y = simulate(cfg, "SC", "Po", a)
+    toml["instrument"]["ring_axis_deg"] = 30.0          # an axis without ellipticity
+    @test ring_image(g, y, cfg.mode) == ring_image(g, y, read_xrd_config(toml).mode)
+end

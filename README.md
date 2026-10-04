@@ -173,6 +173,16 @@ SC/BCC/FCC selection rule → lattice constant `a`). Ring cosmetics are tunable 
 `[instrument]`: `camera_constant` (λL, mm·Å), `image_px`, `beam_stop_mm`,
 `ring_phosphor` (phosphor-green vs grayscale), `ring_gamma`, `ring_noise`.
 
+The ring image can carry the geometric distortion of a real microscope, so that
+students measure through it. A ring of radius `r` appears at the distance
+`ρ = r (1 + η cos 2(φ − φ₀)) (1 + κ (ρ/R)²)` from the pattern centre, with
+`R = camera_constant · g_max`. The keys are `ring_ellipticity` (η: an ellipse
+with semi-axes `r(1 ± η)`, typically 0.005–0.02), `ring_axis_deg` (φ₀, the
+long axis), `ring_radial_distortion` (κ: barrel if negative, pincushion if
+positive) and `ring_centre_x_mm` / `ring_centre_y_mm` (pattern centre offset
+from the image centre; the beam stop moves with it). All default to 0, which
+gives exact circles. The answer key lists the undistorted radii.
+
 The final line printed on every run reports how many samples were produced.
 
 **Note:** the `results/` directory is regenerable and is gitignored, so it doesn't

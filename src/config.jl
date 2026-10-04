@@ -43,6 +43,9 @@ Electron instrument: reciprocal-space geometry, pattern over g = 1/d.
 - `G_inst`: instrumental Gaussian FWHM (1/Å)
 - `camera_constant`, `image_px`, `beam_stop_mm`, `ring_phosphor`, `ring_gamma`,
   `ring_noise`: ring-image settings
+- `ring_ellipticity`, `ring_axis` (radians), `ring_centre_x_mm`,
+  `ring_centre_y_mm`, `ring_radial_distortion`: geometric distortion of the
+  ring image (see `ring_image`)
 """
 struct Electron <: Radiation
     voltage_kV::Float64
@@ -55,6 +58,11 @@ struct Electron <: Radiation
     ring_phosphor::Bool
     ring_gamma::Float64
     ring_noise::Float64
+    ring_ellipticity::Float64
+    ring_axis::Float64
+    ring_centre_x_mm::Float64
+    ring_centre_y_mm::Float64
+    ring_radial_distortion::Float64
 end
 
 
@@ -132,7 +140,9 @@ are ignored.
 `radiation = "xray"`, `noise_level = 0`, `voltage_kV = 200`, `g_min = 0`,
 `G_inst = 0.005`, `camera_constant = 50`, `image_px = 800`,
 `beam_stop_mm = 2.5`, `ring_phosphor = true`, `ring_gamma = 0.5`,
-`ring_noise = 0`, `[debye_waller] default = 0` (no thermal damping). All other keys of the selected mode are required.
+`ring_noise = 0`, `ring_ellipticity = 0`, `ring_axis_deg = 0`,
+`ring_centre_x_mm = 0`, `ring_centre_y_mm = 0`, `ring_radial_distortion = 0`
+(no distortion), `[debye_waller] default = 0` (no thermal damping). All other keys of the selected mode are required.
 
 # Throws
 - `ArgumentError`: missing section or key, value of the wrong type, unknown
@@ -230,6 +240,11 @@ function read_electron(inst::Dict, pw::Dict)::Electron
     ring_phosphor   = config_value(inst, "instrument", "ring_phosphor", Bool, true)
     ring_gamma      = config_value(inst, "instrument", "ring_gamma", Float64, 0.5)
     ring_noise      = config_value(inst, "instrument", "ring_noise", Float64, 0.0)
+    η               = config_value(inst, "instrument", "ring_ellipticity", Float64, 0.0)
+    ring_axis       = deg2rad(config_value(inst, "instrument", "ring_axis_deg", Float64, 0.0))
+    x_c             = config_value(inst, "instrument", "ring_centre_x_mm", Float64, 0.0)
+    y_c             = config_value(inst, "instrument", "ring_centre_y_mm", Float64, 0.0)
+    κ               = config_value(inst, "instrument", "ring_radial_distortion", Float64, 0.0)
 
     config_check(voltage_kV > 0, "[instrument] voltage_kV must be positive, got $voltage_kV")
     config_check(0 ≤ g_min < g_max, "[instrument] need 0 ≤ g_min < g_max")
@@ -239,7 +254,15 @@ function read_electron(inst::Dict, pw::Dict)::Electron
     config_check(beam_stop_mm ≥ 0, "[instrument] beam_stop_mm must not be negative, got $beam_stop_mm")
     config_check(ring_gamma > 0, "[instrument] ring_gamma must be positive, got $ring_gamma")
     config_check(0 ≤ ring_noise ≤ 1, "[instrument] ring_noise must be between 0 and 1, got $ring_noise")
+    config_check(0 ≤ η < 1, "[instrument] ring_ellipticity must be in [0, 1), got $η")
+    # The pattern centre stays inside the frame; with |κ| < 0.1 the radial
+    # correction is then monotonic up to the farthest corner.
+    r_max = camera_constant * g_max
+    config_check(max(abs(x_c), abs(y_c)) ≤ r_max,
+        "[instrument] ring_centre_x_mm and ring_centre_y_mm must lie within ±$r_max mm (camera_constant · g_max)")
+    config_check(abs(κ) < 0.1, "[instrument] ring_radial_distortion must be between -0.1 and 0.1, got $κ")
 
     return Electron(voltage_kV, g_min, g_max, G_inst, camera_constant, image_px,
-                    beam_stop_mm, ring_phosphor, ring_gamma, ring_noise)
+                    beam_stop_mm, ring_phosphor, ring_gamma, ring_noise,
+                    η, ring_axis, x_c, y_c, κ)
 end

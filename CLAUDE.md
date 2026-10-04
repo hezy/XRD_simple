@@ -184,6 +184,11 @@ beam_stop_mm = 2.5           # electron rings: central beam-stop radius (mm)
 ring_phosphor = true         # electron rings: phosphor-green colormap (false = grayscale)
 ring_gamma = 0.5             # electron rings: display gamma (<1 lifts faint outer rings)
 ring_noise = 0.0             # electron rings: per-pixel multiplicative noise (0–1)
+ring_ellipticity = 0.0       # electron rings: ellipticity η, semi-axes r(1 ± η)
+ring_axis_deg = 0.0          # electron rings: long-axis direction φ₀ (degrees from +x)
+ring_centre_x_mm = 0.0       # electron rings: pattern-centre offset (mm)
+ring_centre_y_mm = 0.0
+ring_radial_distortion = 0.0 # electron rings: barrel (< 0) / pincushion (> 0) κ
 
 [peak_width]
 U = 0.0001                   # X-ray: Caglioti parameter (instrumental)
@@ -266,6 +271,14 @@ ignored, so both X-ray and electron parameters can coexist in one file — flip
   `{title}_reflections.csv`. Sanity check: `test/ring_sanity.jl` (ring radii vs
   analytic g=√N/a). Knobs: `camera_constant`, `image_px`, `beam_stop_mm`,
   `ring_phosphor`, `ring_gamma`, `ring_noise`.
+- **Ring distortion:** `ring_image` looks up each pixel at the undistorted
+  radius `ring_true_radius(ρ, φ, mode)`, the inverse of
+  ρ = r (1 + η cos 2(φ − φ₀)) (1 + κ (ρ/R)²), R = camera_constant·g_max, with ρ
+  measured from the offset pattern centre (where the beam stop sits). Keys
+  `ring_ellipticity`, `ring_axis_deg`, `ring_centre_x_mm`, `ring_centre_y_mm`,
+  `ring_radial_distortion`, all 0 by default. The answer key keeps the
+  undistorted radii. `img[i, j]` is at x = `coords[j]`, y = `coords[i]`
+  (`heatmap` convention).
 - Electron knobs: `voltage_kV`, `g_min`/`g_max` (detector range), `G_inst`
   (instrumental Gaussian FWHM), plus the shared `K`, `Epsilon`, `D`.
 
@@ -343,7 +356,7 @@ Use broadcasting (`@.` macro) for element-wise operations.
 ## Future Enhancements (Ideas)
 
 The planned work, with its order, is in `improvements.md` (full structure
-factor, non-cubic lattices, ring-image distortion) and
+factor, non-cubic lattices) and
 the known defects are in `problems.md`. Further ideas, not planned:
 
 - Implement Rietveld refinement

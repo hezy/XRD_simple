@@ -70,6 +70,9 @@ end
     @test e.ring_phosphor == true
     @test e.ring_gamma == 0.5
     @test e.ring_noise == 0.0
+    @test (e.ring_ellipticity, e.ring_axis, e.ring_centre_x_mm, e.ring_centre_y_mm,
+           e.ring_radial_distortion) == (0.0, 0.0, 0.0, 0.0, 0.0)
+    @test read_xrd_config(with(base_config("electron"), "instrument", "ring_axis_deg", 90)).mode.ring_axis ≈ π / 2
 
     # Zero samples is valid, with or without a [lattice] section
     c = deepcopy(base_config()); delete!(c, "lattice")
@@ -126,6 +129,11 @@ end
     @test_throws ArgumentError read_xrd_config(with(e, "peak_width", "G_inst", -0.005))
     @test_throws ArgumentError read_xrd_config(with(e, "instrument", "g_min", 2.0))
     @test_throws ArgumentError read_xrd_config(with(e, "instrument", "image_px", 1))
+    @test_throws ArgumentError read_xrd_config(with(e, "instrument", "ring_ellipticity", -0.01))
+    @test_throws ArgumentError read_xrd_config(with(e, "instrument", "ring_ellipticity", 1.0))
+    @test_throws ArgumentError read_xrd_config(with(e, "instrument", "ring_centre_x_mm", 61.0))   # r_max = 60 mm
+    @test_throws ArgumentError read_xrd_config(with(e, "instrument", "ring_centre_y_mm", -61.0))
+    @test_throws ArgumentError read_xrd_config(with(e, "instrument", "ring_radial_distortion", 0.1))
 
     # A negative V is valid when the Caglioti FWHM² stays positive
     @test read_xrd_config(with(b, "peak_width", "V", -5e-5)).mode.V == -5e-5

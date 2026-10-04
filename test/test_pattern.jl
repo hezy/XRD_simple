@@ -88,24 +88,36 @@ end
     @test_throws ArgumentError electron_form_factor("Fe", 6.5)
 end
 
-@testset "peak_weights" begin
+# The peak weight of a monatomic sample under the absence rules: angular
+# factor × scattering weight
+weights(cfg, x₀, element, B) = angular_factor(cfg.mode, x₀) .*
+    scattering_weights(AbsenceRules(), cfg.mode, lattice_sample("SC", element, 3.0, B),
+                       [[1, 0, 0] for _ in x₀], scattering_s(cfg.mode, x₀))
+
+@testset "peak weights" begin
     # X-ray: LP × f² × DW with s = sin θ / λ
     cfg = read_xrd_config(XRAY_TOML)
     λ = cfg.mode.lambda
     two_θ₀ = deg2rad.([20.0, 90.0])
     s = sin.(two_θ₀ ./ 2) ./ λ
+    @test scattering_s(cfg.mode, two_θ₀) ≈ s
     f² = (atomic_form_factor.("Fe", s) ./ atomic_form_factor("Fe", 0.0)) .^ 2
-    @test peak_weights(cfg.mode, two_θ₀, "Fe", 0.0) ≈ Lorentz_polarization.(two_θ₀ ./ 2) .* f²
-    @test peak_weights(cfg.mode, two_θ₀, "Fe", 0.5) ≈
+    @test weights(cfg, two_θ₀, "Fe", 0.0) ≈ Lorentz_polarization.(two_θ₀ ./ 2) .* f²
+    @test weights(cfg, two_θ₀, "Fe", 0.5) ≈
           Lorentz_polarization.(two_θ₀ ./ 2) .* f² .* exp.(-2 * 0.5 .* s .^ 2)
 
     # Electron: (f_e/f_e(0))² × DW with s = g/2
     cfg = read_xrd_config(ELECTRON_TOML)
     s = [0.3, 0.6] ./ 2
+    @test scattering_s(cfg.mode, [0.3, 0.6]) ≈ s
     fe² = (electron_form_factor.("Fe", s) ./ electron_form_factor("Fe", 0.0)) .^ 2
-    @test peak_weights(cfg.mode, [0.3, 0.6], "Fe", 0.0) ≈ fe²
-    @test peak_weights(cfg.mode, [0.3, 0.6], "Fe", 0.5) ≈ fe² .* exp.(-2 * 0.5 .* s .^ 2)
+    @test weights(cfg, [0.3, 0.6], "Fe", 0.0) ≈ fe²
+    @test weights(cfg, [0.3, 0.6], "Fe", 0.5) ≈ fe² .* exp.(-2 * 0.5 .* s .^ 2)
     @test 1 > fe²[1] > fe²[2] > 0
+
+    # The absence rules need a one-atom basis
+    two = Sample("CsCl", "SC", 4.12, [Atom("Cs", (0.0, 0.0, 0.0), 0.0), Atom("Cl", (0.5, 0.5, 0.5), 0.0)])
+    @test_throws ArgumentError reflections(AbsenceRules(), two, 10)
 
     # In a pattern, B lowers a high-angle peak more than a low-angle one
     x, y0 = simulate(read_xrd_config(XRAY_TOML), "SC", "Po", 3.352, 0.0)

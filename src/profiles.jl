@@ -186,7 +186,7 @@ end
 Sum pseudo-Voigt peak profiles at given peak centres, each with its own area.
 
 Each entry in `x_list` is one canonical reflection; its area is the
-multiplicity of that family times any intensity weight (see `peak_weights`).
+multiplicity of that family times any intensity weight (see `simulate`).
 Summing one weighted peak per family is mathematically identical to summing
 every sign+permutation variant separately, and far cheaper.
 

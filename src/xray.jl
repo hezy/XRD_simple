@@ -200,22 +200,21 @@ grid(m::XRay, N::Int) = collect(LinRange(m.two_theta_min, m.two_theta_max, N))
 
 max_hkl_sq(m::XRay, a::Real) = bragg_max_hkl_sq(a, m.lambda)
 
-# Reflections without a real Bragg angle are dropped with their multiplicities.
+# Reflections without a real Bragg angle are dropped with their indices and
+# multiplicities.
 function peak_centres(m::XRay, indices::AbstractVector{<:AbstractVector{<:Integer}},
                       multiplicities::AbstractVector{<:Integer}, a::Real)
     θ_B, visible = bragg_angles(m.lambda, d_list(indices, a))
-    return 2 .* θ_B, multiplicities[visible]
+    return 2 .* θ_B, indices[visible], multiplicities[visible]
 end
 
-# LP · (f/Z)² · exp(−2B s²), with s = sin θ / λ. f is divided by Z = f(0), so
-# that the weights, like LP, are of order 1 and keep the scale of the peaks
-# relative to the background.
-function peak_weights(m::XRay, two_θ₀::AbstractVector{<:Real}, element::String, B::Real)
-    s = sin.(two_θ₀ ./ 2) ./ m.lambda
-    Z = atomic_form_factor(element, 0.0)
-    return @. Lorentz_polarization(two_θ₀ / 2) * (atomic_form_factor(element, s) / Z)^2 *
-              Debye_Waller(s, B)
-end
+# The Lorentz–polarization factor, normalized to 1 at 2θ = 90°, so that the
+# weights are of order 1 and keep the scale of the peaks relative to the background.
+angular_factor(::XRay, two_θ₀::AbstractVector{<:Real}) = Lorentz_polarization.(two_θ₀ ./ 2)
+
+scattering_s(m::XRay, two_θ₀::AbstractVector{<:Real}) = sin.(two_θ₀ ./ 2) ./ m.lambda
+
+form_factor(::XRay, element::String, s::Real) = atomic_form_factor(element, s)
 
 function peak_widths(m::XRay, two_θ₀::Real, cfg::XRDConfig)
     θ_B = two_θ₀ / 2

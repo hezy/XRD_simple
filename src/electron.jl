@@ -144,15 +144,16 @@ grid(m::Electron, N::Int) = collect(LinRange(m.g_min, m.g_max, N))
 max_hkl_sq(m::Electron, a::Real) = ed_max_hkl_sq(a, m.g_max)
 
 peak_centres(::Electron, indices::AbstractVector{<:AbstractVector{<:Integer}},
-             multiplicities::AbstractVector{<:Integer}, a::Real) = g_list(indices, a), multiplicities
+             multiplicities::AbstractVector{<:Integer}, a::Real) =
+    g_list(indices, a), indices, multiplicities
 
-# (f_e/f_e(0))² × Debye–Waller, with s = g/2; the Lorentz factor is constant in
-# g. Dividing by f_e(0) keeps the weights of order 1, as (f/Z)² does for X-rays.
-function peak_weights(::Electron, g₀::AbstractVector{<:Real}, element::String, B::Real)
-    s = g₀ ./ 2
-    return (electron_form_factor.(element, s) ./ electron_form_factor(element, 0.0)) .^ 2 .*
-           Debye_Waller.(s, B)
-end
+# The Lorentz factor is constant in g.
+angular_factor(::Electron, g₀::AbstractVector{<:Real}) = ones(length(g₀))
+
+# s = sin θ / λ = g/2
+scattering_s(::Electron, g₀::AbstractVector{<:Real}) = g₀ ./ 2
+
+form_factor(::Electron, element::String, s::Real) = electron_form_factor(element, s)
 
 peak_widths(m::Electron, g₀::Real, cfg::XRDConfig) =
     (Lorentzian_peaks_width_g(g₀, cfg.K, cfg.Epsilon, cfg.D), m.G_inst)

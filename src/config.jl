@@ -5,8 +5,9 @@
 
 Radiation mode of a simulation: `XRay` or `Electron`. Each subtype holds the
 instrument parameters of its mode, and the mode-specific steps of `simulate`
-(`grid`, `max_hkl_sq`, `peak_centres`, `peak_weights`, `peak_widths`, `background`,
-`display_axis`, `axis_label`) are methods on it. The plot title of each mode
+(`grid`, `max_hkl_sq`, `peak_centres`, `angular_factor`, `scattering_s`,
+`form_factor`, `peak_widths`, `background`, `display_axis`, `axis_label`) are
+methods on it. The plot title of each mode
 (`plot_title`) is in `plotting.jl`.
 """
 abstract type Radiation end

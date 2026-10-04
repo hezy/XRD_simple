@@ -9,14 +9,15 @@ Compute the powder pattern of one sample in the radiation mode `cfg.mode`.
 The second method simulates the monatomic sample `lattice_sample(structure,
 element, a, B)`.
 
-The steps are the same for every mode; each step is a method on the mode type:
-grid (`grid`), reflections up to the cutoff (`max_hkl_sq`, `Miller_indices`),
-their centres and multiplicities (`peak_centres`), an angle-dependent weight of
-each (`peak_weights`: the Debye–Waller factor, and for X-rays also the
-Lorentz–polarization factor and the squared atomic form factor f²/Z²), their widths
-at each centre (`peak_widths`), the sum of pseudo-Voigt peaks of area
-multiplicity × weight (`sum_peaks`) on the `background`, and multiplicative noise of standard
-deviation `cfg.noise_level`.
+The steps are the same for every mode and model. The mode gives the grid
+(`grid`), the cutoff (`max_hkl_sq`), the centres of the reflections
+(`peak_centres`), the Lorentz–polarization factor (`angular_factor`), s = sin θ / λ
+(`scattering_s`) and the widths at each centre (`peak_widths`). The model
+`cfg.model` gives the reflections (`reflections`) and their scattering weights
+(`scattering_weights`: the form factors and the Debye–Waller factor). The pattern
+is the sum of pseudo-Voigt peaks of area multiplicity × angular factor ×
+scattering weight (`sum_peaks`) on the `background`, with multiplicative noise
+of standard deviation `cfg.noise_level`.
 
 # Arguments
 - `cfg::XRDConfig`: Configuration from `read_xrd_config`
@@ -33,19 +34,16 @@ deviation `cfg.noise_level`.
 function simulate(cfg::XRDConfig, sample::Sample)::Tuple{Vector{Float64}, Vector{Float64}}
     cfg.model isa AbsenceRules ||
         throw(ArgumentError("reflections = \"structure_factor\" is not implemented yet"))
-    length(sample.atoms) == 1 ||
-        throw(ArgumentError("sample $(sample.name): the absence rules need a one-atom basis"))
-    atom = only(sample.atoms)
-    mode = cfg.mode
-    a = sample.a
+    mode, model, a = cfg.mode, cfg.model, sample.a
     x = grid(mode, cfg.N)
 
-    indices, multiplicities = Miller_indices(sample.centering, max_hkl_sq(mode, a))
-    x₀, m = peak_centres(mode, indices, multiplicities, a)
+    indices, multiplicities = reflections(model, sample, max_hkl_sq(mode, a))
+    x₀, indices, m = peak_centres(mode, indices, multiplicities, a)
     widths = [peak_widths(mode, xᵢ, cfg) for xᵢ in x₀]
     w_L, w_G = first.(widths), last.(widths)
 
-    A = m .* peak_weights(mode, x₀, atom.element, atom.B)
+    A = m .* angular_factor(mode, x₀) .*
+        scattering_weights(model, mode, sample, indices, scattering_s(mode, x₀))
 
     y = background(mode, x) .+ sum_peaks(x, x₀, A, w_L, w_G)
 

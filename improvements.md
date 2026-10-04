@@ -4,6 +4,16 @@ Open suggestions for XRD_simple, collected during the April 2026 code review
 and refactor. Grouped by category and ordered roughly by value-per-effort
 within each section.
 
+## Current state (2026-10-05)
+
+- **Done:** the full structure factor as a second reflection method (commits
+  808351d, 5ea05af, 9fa8210, d09a036), and the public `data.toml` updated with
+  the ring, Debye–Waller, `[model]` and example-cell sections (b97aaa0).
+- **Not done:** non-cubic lattices (item 1 below); the private analysis repo
+  cannot read cell samples (item 2 below).
+- **Next step:** write a plan for non-cubic lattices, starting with which
+  crystal systems the course needs.
+
 ---
 
 ## Already completed
@@ -84,10 +94,25 @@ The current refactor was designed to generalize here cleanly: the pipeline
 shape (per-family multiplicity weighting, physics-driven cutoff) is unchanged;
 only the inner helpers become per-system.
 
+The structure-factor method adds two cubic-only helpers that must also become
+per-system: `family_members` (the m-3m sign and permutation variants; a
+non-cubic family has the members of its Laue group) and
+`CENTERING_TRANSLATIONS` in `unit_cell` (only P, I, F today; C and R
+centerings are needed).
+
+### 2. Analysis tool cannot read cell samples (private repo)
+
+`analysis/analyze_results.jl` (private repo `hezy/XRD-analysis`) takes the
+sample names in `results/XRD_results.csv` to be `element-STRUCTURE`. A
+`[cell.NAME]` sample is named `NAME` (e.g. `NaCl`), so the tool cannot parse
+it, and its SC/BCC/FCC identification does not cover multi-atom cells.
+
 ---
 
 ## Suggested order
 
-1. **Non-cubic lattices:** the remaining item; the structure factor, the form
-   factors and the Debye–Waller factor are in place, and need only the
-   per-system d-spacing, multiplicity and enumeration.
+1. **Non-cubic lattices:** the main remaining item; the structure factor, the
+   form factors and the Debye–Waller factor are in place, and need only the
+   per-system d-spacing, multiplicity, enumeration and family members.
+2. **Analysis tool and cell samples:** only when multi-atom cells are given
+   to students as unknowns.
